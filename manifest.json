@@ -1,0 +1,35 @@
+{
+  "generated": "2026-06-12T16:43:27.819Z",
+  "sessions": [
+    {
+      "id": "s04",
+      "title": "S04 — Image Filter Tools",
+      "tools": [
+        {
+          "slug": "sample-halftone",
+          "name": "Halftone Machine",
+          "author": "Sasha",
+          "path": "tools/s04/sample-halftone/index.html"
+        }
+      ]
+    },
+    {
+      "id": "s05",
+      "title": "S05 — Typographic Tools",
+      "tools": [
+        {
+          "slug": "brush-tool-eddie",
+          "name": "INK",
+          "author": "Eddie",
+          "path": "tools/s05/brush-tool-eddie/index.html"
+        },
+        {
+          "slug": "wiggling-type-claudia",
+          "name": "WiggleType",
+          "author": "Claudia",
+          "path": "tools/s05/wiggling-type-claudia/index.html"
+        }
+      ]
+    }
+  ]
+}

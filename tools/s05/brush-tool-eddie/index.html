@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INK</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,400;1,400&family=Space+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        :root {
+            --bg-panel: #0f0f0f;
+            --bg-desk: #2a2a2a;
+            --border: #1e1e1e;
+            --border-hover: #555;
+            --text-main: #ffffff;
+            --text-dim: #444;
+            --text-btn: #888;
+            --ui-bg: #1a1a1a;
+            --ui-border: #2a2a2a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        
+        body, html {
+            width: 100vw; height: 100vh; overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-desk); color: var(--text-main);
+            display: flex;
+        }
+
+        #panel {
+            width: 280px; min-width: 280px; height: 100vh;
+            background: var(--bg-panel); border-right: 1px solid var(--border);
+            overflow-y: auto; overflow-x: hidden;
+            display: flex; flex-direction: column;
+            -ms-overflow-style: none; scrollbar-width: none;
+        }
+        #panel::-webkit-scrollbar { display: none; }
+
+        .panel-header {
+            padding: 20px; border-bottom: 1px solid var(--border);
+            font-size: 13px; color: var(--text-main); text-transform: uppercase;
+        }
+
+        .section { padding: 15px 20px; border-bottom: 1px solid var(--border); }
+        .section-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .section-row:last-child { margin-bottom: 0; }
+
+        label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+
+        .btn-toggle-main {
+            width: 100%; padding: 8px; text-align: center; cursor: pointer;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+            border-radius: 2px; transition: all 0.2s;
+            background: var(--ui-bg); color: #555; border: 1px solid var(--ui-border);
+        }
+        .btn-toggle-main.active { background: #fff; color: #000; }
+
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; margin: 5px 0;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 2px; cursor: pointer; background: var(--ui-border);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 10px; width: 10px; border-radius: 50%; background: #ffffff;
+            cursor: pointer; -webkit-appearance: none; margin-top: -4px;
+        }
+
+        input[type=color] {
+            width: 100%; height: 28px; padding: 0; border: 1px solid var(--ui-border);
+            border-radius: 2px; cursor: pointer; background: var(--ui-bg);
+        }
+        input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type=color]::-webkit-color-swatch { border: none; }
+
+        select {
+            width: 100%; padding: 6px; background: var(--ui-bg); color: #ccc;
+            border: 1px solid var(--ui-border); border-radius: 2px;
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+            outline: none; cursor: pointer; appearance: none;
+        }
+
+        .switch { position: relative; display: inline-block; width: 28px; height: 14px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--ui-border); transition: .2s; border-radius: 14px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 2px;
+            background-color: var(--text-dim); transition: .2s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #ffffff; }
+        input:checked + .slider:before { transform: translateX(14px); background-color: var(--bg-panel); }
+
+        .btn-export {
+            width: 100%; padding: 8px; margin-top: 5px; background: var(--ui-bg);
+            color: var(--text-btn); border: 1px solid var(--ui-border); border-radius: 2px;
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-export:hover { color: #fff; border-color: var(--border-hover); }
+
+        input[type=text] {
+            width: 100%; padding: 6px; background: var(--ui-bg); color: #fff;
+            border: 1px solid var(--ui-border); border-radius: 2px;
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; outline: none;
+        }
+
+        #desk { flex-grow: 1; position: relative; cursor: crosshair; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        #displayCanvas { pointer-events: auto; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="panel">
+    <div class="panel-header">INK</div>
+    
+    <div class="section">
+        <div id="modeToggle" class="btn-toggle-main active">DRAW / TYPE</div>
+    </div>
+
+    <div class="section">
+        <label>Ink Colour</label>
+        <input type="color" id="inkColor" value="#1a1008" style="margin-top: 5px;">
+    </div>
+
+    <div id="drawControls">
+        <div class="section">
+            <label style="display:block; margin-bottom:8px;">Nib Presets</label>
+            <select id="nibPreset">
+                <option value="broad">Broad Nib</option>
+                <option value="pointed">Pointed Pen</option>
+                <option value="round">Round Brush</option>
+                <option value="dry">Dry Brush</option>
+                <option value="bamboo">Bamboo</option>
+                <option value="monoline">Monoline</option>
+            </select>
+        </div>
+        <div class="section">
+            <label>Min Width</label><input type="range" id="minWidth" min="1" max="8" step="0.1" value="2">
+            <label>Max Width</label><input type="range" id="maxWidth" min="4" max="60" step="1" value="25">
+            <label>Nib Angle</label><input type="range" id="nibAngle" min="0" max="180" value="45">
+            <label>Texture</label><input type="range" id="fiberTexture" min="0" max="1" step="0.05" value="0.2">
+        </div>
+    </div>
+
+    <div id="typeControls" class="hidden">
+        <div class="section">
+            <input type="text" id="typeInput" placeholder="Type here..." style="margin-bottom:10px;">
+            <select id="typeFont" style="margin-bottom:10px;">
+                <option value="serif">Serif</option>
+                <option value="sans-serif">Sans-serif</option>
+                <option value="monospace">Monospace</option>
+                <option value="display">Display (Bold)</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Space Mono', monospace">Space Mono</option>
+            </select>
+            <label>Size</label><input type="range" id="typeSize" min="24" max="400" value="120">
+            <label>Tracking</label><input type="range" id="typeTracking" min="-20" max="80" value="0">
+            <button class="btn-export" id="btnRenderType">Render</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-row">
+            <label>Bleed Mode A/B</label>
+            <label class="switch"><input type="checkbox" id="bleedModeToggle"><span class="slider"></span></label>
+        </div>
+        <div class="section-row">
+            <label>Pause Bleed</label>
+            <label class="switch"><input type="checkbox" id="bleedPauseToggle"><span class="slider"></span></label>
+        </div>
+        <label>Master Amount</label><input type="range" id="bleedMaster" min="0" max="100" value="50">
+        
+        <div class="section-row" style="margin-top:15px;"><label>Diffusion Bleed</label><label class="switch"><input type="checkbox" id="diffToggle" checked><span class="slider"></span></label></div>
+        <label>Speed</label><input type="range" id="diffSpeed" min="1" max="10" value="3">
+        <label>Radius</label><input type="range" id="diffRadius" min="0" max="200" value="40">
+        <label>Noise Scale</label><input type="range" id="diffNoise" min="1" max="100" value="20">
+        
+        <div class="section-row" style="margin-top:15px;"><label>Tendril Bleed</label><label class="switch"><input type="checkbox" id="tendrilToggle" checked><span class="slider"></span></label></div>
+        <label>Lifetime</label><input type="range" id="tendrilLife" min="20" max="300" value="100">
+        <label>Density</label><input type="range" id="tendrilDensity" min="1" max="10" value="4">
+        <label>Weight</label><input type="range" id="tendrilWeight" min="0.3" max="3" step="0.1" value="1">
+    </div>
+
+    <div class="section">
+        <div class="section-row"><label>Live Hover</label><label class="switch"><input type="checkbox" id="liveHover"><span class="slider"></span></label></div>
+    </div>
+
+    <div class="section">
+        <label style="display:block; margin-bottom:8px;">Filters</label>
+        <div class="section-row"><label>Chromatic Ab.</label><label class="switch"><input type="checkbox" id="fChromToggle"><span class="slider"></span></label></div>
+        <input type="range" id="fChromInt" min="0" max="12" step="0.5" value="2" style="margin-bottom:10px;">
+        
+        <div class="section-row"><label>Grain</label><label class="switch"><input type="checkbox" id="fGrainToggle" checked><span class="slider"></span></label></div>
+        <input type="range" id="fGrainInt" min="0" max="1" step="0.01" value="0.08" style="margin-bottom:10px;">
+        
+        <div class="section-row"><label>Vignette</label><label class="switch"><input type="checkbox" id="fVigToggle" checked><span class="slider"></span></label></div>
+        <input type="range" id="fVigInt" min="0" max="1" step="0.05" value="0.5" style="margin-bottom:10px;">
+        
+        <div class="section-row"><label>Wet Warp</label><label class="switch"><input type="checkbox" id="fWarpToggle"><span class="slider"></span></label></div>
+        <input type="range" id="fWarpInt" min="0" max="4" step="0.1" value="1.5" style="margin-bottom:10px;">
+        
+        <div class="section-row"><label>Hue Shift</label><label class="switch"><input type="checkbox" id="fHueToggle"><span class="slider"></span></label></div>
+        <label>Hue</label><input type="range" id="fHueVal" min="0" max="360" value="0">
+        <label>Sat</label><input type="range" id="fSatVal" min="0" max="100" value="50" style="margin-bottom:10px;">
+        
+        <div class="section-row"><label>Halftone</label><label class="switch"><input type="checkbox" id="fHalfToggle"><span class="slider"></span></label></div>
+        <label>Size</label><input type="range" id="fHalfSize" min="1" max="12" value="4">
+        <label>Angle</label><input type="range" id="fHalfAngle" min="0" max="90" value="45">
+    </div>
+
+    <div class="section" style="border-bottom:none;">
+        <button class="btn-export" id="btnExportPNG">Export PNG</button>
+        <button class="btn-export" id="btnExportJPG">Export JPG</button>
+    </div>
+</div>
+
+<div id="desk">
+    <canvas id="displayCanvas"></canvas>
+</div>
+
+<script>
+// --- Core Math & Perlin Noise ---
+const MathUtils = {
+    lerp: (a, b, t) => a + (b - a) * t,
+    clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
+    dist: (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y),
+    hexToRgb: hex => {
+        let r = 0, g = 0, b = 0;
+        if(hex.length===7){r=parseInt(hex.slice(1,3),16);g=parseInt(hex.slice(3,5),16);b=parseInt(hex.slice(5,7),16);}
+        return {r, g, b};
+    }
+};
+
+const Perlin = new function() {
+    this.p = new Uint8Array(256);
+    for (let i=0; i<256; i++) this.p[i] = Math.floor(Math.random()*256);
+    this.perm = new Uint8Array(512);
+    for(let i=0; i<512; i++) this.perm[i] = this.p[i & 255];
+    this.gradP = [ [1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[1,0],[-1,0],[0,1],[0,-1],[0,1],[0,-1] ];
+    this.dot = (g, x, y) => g[0]*x + g[1]*y;
+    this.fade = t => t*t*t*(t*(t*6-15)+10);
+    this.noise = (x, y) => {
+        let X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        let u = this.fade(x), v = this.fade(y);
+        let A = this.perm[X]+Y, B = this.perm[X+1]+Y;
+        let g00 = this.gradP[this.perm[A] % 12], g10 = this.gradP[this.perm[B] % 12];
+        let g01 = this.gradP[this.perm[A+1] % 12], g11 = this.gradP[this.perm[B+1] % 12];
+        return MathUtils.lerp(
+            MathUtils.lerp(this.dot(g00,x,y), this.dot(g10,x-1,y), u),
+            MathUtils.lerp(this.dot(g01,x,y-1), this.dot(g11,x-1,y-1), u), v
+        );
+    }
+};
+
+// --- Config & State ---
+const state = {
+    mode: 'DRAW', // DRAW, TYPE
+    pan: { x: 0, y: 0 }, zoom: 1,
+    isDrawing: false, isPanning: false,
+    points: [], lastTime: 0, history: [], historyPtr: -1,
+    particles: [], activeStrokes: [],
+    ghostText: null, ghostPos: {x:0, y:0},
+    animFrame: 0, deskWidth: 0, deskHeight: 0
+};
+
+const A4_RATIO = 1.4142;
+let paperW = 1000;
+let paperH = paperW * A4_RATIO;
+
+// --- DOM Elements ---
+const displayCvs = document.getElementById('displayCanvas');
+const dCtx = displayCvs.getContext('2d', { alpha: false });
+
+const deskEl = document.getElementById('desk');
+const UI = {
+    modeToggle: document.getElementById('modeToggle'), drawControls: document.getElementById('drawControls'), typeControls: document.getElementById('typeControls'),
+    inkColor: document.getElementById('inkColor'), nibPreset: document.getElementById('nibPreset'),
+    minWidth: document.getElementById('minWidth'), maxWidth: document.getElementById('maxWidth'), nibAngle: document.getElementById('nibAngle'), fiberTexture: document.getElementById('fiberTexture'),
+    typeInput: document.getElementById('typeInput'), typeFont: document.getElementById('typeFont'), typeSize: document.getElementById('typeSize'), typeTracking: document.getElementById('typeTracking'), btnRenderType: document.getElementById('btnRenderType'),
+    bleedModeToggle: document.getElementById('bleedModeToggle'), bleedPauseToggle: document.getElementById('bleedPauseToggle'), bleedMaster: document.getElementById('bleedMaster'),
+    diffToggle: document.getElementById('diffToggle'), diffSpeed: document.getElementById('diffSpeed'), diffRadius: document.getElementById('diffRadius'), diffNoise: document.getElementById('diffNoise'),
+    tendrilToggle: document.getElementById('tendrilToggle'), tendrilLife: document.getElementById('tendrilLife'), tendrilDensity: document.getElementById('tendrilDensity'), tendrilWeight: document.getElementById('tendrilWeight'),
+    liveHover: document.getElementById('liveHover'),
+    fChromToggle: document.getElementById('fChromToggle'), fChromInt: document.getElementById('fChromInt'),
+    fGrainToggle: document.getElementById('fGrainToggle'), fGrainInt: document.getElementById('fGrainInt'),
+    fVigToggle: document.getElementById('fVigToggle'), fVigInt: document.getElementById('fVigInt'),
+    fWarpToggle: document.getElementById('fWarpToggle'), fWarpInt: document.getElementById('fWarpInt'),
+    fHueToggle: document.getElementById('fHueToggle'), fHueVal: document.getElementById('fHueVal'), fSatVal: document.getElementById('fSatVal'),
+    fHalfToggle: document.getElementById('fHalfToggle'), fHalfSize: document.getElementById('fHalfSize'), fHalfAngle: document.getElementById('fHalfAngle'),
+    btnPNG: document.getElementById('btnExportPNG'), btnJPG: document.getElementById('btnExportJPG')
+};
+
+// --- Offscreen Canvases ---
+const createOffscreen = () => {
+    let cvs = document.createElement('canvas');
+    cvs.width = paperW; cvs.height = paperH;
+    return cvs;
+};
+let paperCvs = createOffscreen(); let pCtx = paperCvs.getContext('2d', {alpha: false});
+let inkCvs = createOffscreen();   let iCtx = inkCvs.getContext('2d', {willReadFrequently: true});
+let compCvs = createOffscreen();  let cCtx = compCvs.getContext('2d', {willReadFrequently: true});
+let textCvs = document.createElement('canvas'); let tCtx = textCvs.getContext('2d', {willReadFrequently: true});
+
+// --- Initialize Paper Texture ---
+function generatePaperTexture() {
+    pCtx.fillStyle = '#f5f0e8';
+    pCtx.fillRect(0, 0, paperW, paperH);
+    let imgData = pCtx.getImageData(0,0,paperW,paperH);
+    let data = imgData.data;
+    for(let i=0; i<data.length; i+=4) {
+        let noise = (Math.random()-0.5)*255*0.08;
+        data[i] = MathUtils.clamp(data[i]+noise,0,255);
+        data[i+1] = MathUtils.clamp(data[i+1]+noise,0,255);
+        data[i+2] = MathUtils.clamp(data[i+2]+noise,0,255);
+    }
+    pCtx.putImageData(imgData, 0, 0);
+    pCtx.fillStyle = 'rgba(0,0,0,0.03)';
+    for(let y=0; y<paperH; y+=4) pCtx.fillRect(0, y, paperW, 1);
+}
+
+// --- Presets ---
+const PRESETS = {
+    broad: { min: 2, max: 25, angle: 45, texture: 0.1 },
+    pointed: { min: 1, max: 40, angle: 70, texture: 0.0 },
+    round: { min: 8, max: 30, angle: 0, texture: 0.3 },
+    dry: { min: 15, max: 50, angle: 90, texture: 0.9 },
+    bamboo: { min: 5, max: 20, angle: 30, texture: 0.6 },
+    monoline: { min: 15, max: 15, angle: 0, texture: 0.0 }
+};
+
+UI.nibPreset.addEventListener('change', (e) => {
+    let p = PRESETS[e.target.value];
+    if(p) {
+        UI.minWidth.value = p.min; UI.maxWidth.value = p.max;
+        UI.nibAngle.value = p.angle; UI.fiberTexture.value = p.texture;
+    }
+});
+
+// --- History ---
+function saveHistory() {
+    if (state.historyPtr < state.history.length - 1) state.history = state.history.slice(0, state.historyPtr + 1);
+    state.history.push(iCtx.getImageData(0,0,paperW,paperH));
+    if (state.history.length > 40) state.history.shift();
+    else state.historyPtr++;
+}
+function undo() {
+    if (state.historyPtr > 0) {
+        state.historyPtr--;
+        iCtx.putImageData(state.history[state.historyPtr], 0, 0);
+        state.particles = []; state.activeStrokes = [];
+    } else if (state.historyPtr === 0) {
+        state.historyPtr--;
+        iCtx.clearRect(0,0,paperW,paperH);
+    }
+}
+function redo() {
+    if (state.historyPtr < state.history.length - 1) {
+        state.historyPtr++;
+        iCtx.putImageData(state.history[state.historyPtr], 0, 0);
+    }
+}
+
+// --- Input Handling ---
+function getCanvasPoint(e) {
+    let rect = displayCvs.getBoundingClientRect();
+    let sx = e.clientX - rect.left;
+    let sy = e.clientY - rect.top;
+    return { x: (sx - state.pan.x) / state.zoom, y: (sy - state.pan.y) / state.zoom };
+}
+
+deskEl.addEventListener('contextmenu', e => e.preventDefault());
+
+deskEl.addEventListener('mousedown', e => {
+    if (e.button === 2) { state.isPanning = true; return; }
+    if (e.button !== 0) return;
+
+    let pt = getCanvasPoint(e);
+    
+    if (state.mode === 'TYPE' && state.ghostText) {
+        renderTextToInk(pt);
+        return;
+    }
+
+    state.isDrawing = true;
+    state.points = [{x: pt.x, y: pt.y, t: performance.now(), w: parseFloat(UI.maxWidth.value)}];
+    state.lastTime = performance.now();
+    
+    let color = MathUtils.hexToRgb(UI.inkColor.value);
+    state.currentStroke = { points: [], color, bounds: {minX:pt.x, minY:pt.y, maxX:pt.x, maxY:pt.y} };
+});
+
+window.addEventListener('mousemove', e => {
+    if (state.isPanning) {
+        state.pan.x += e.movementX; state.pan.y += e.movementY;
+        return;
+    }
+    
+    let pt = getCanvasPoint(e);
+    state.ghostPos = pt;
+
+    if (UI.liveHover.checked && !state.isDrawing) {
+        // very basic hover check: spawn some particles if hovering over ink
+        if(pt.x>0 && pt.x<paperW && pt.y>0 && pt.y<paperH) {
+            let px = iCtx.getImageData(pt.x, pt.y, 1, 1).data;
+            if(px[3] > 50 && Math.random()<0.3 && state.particles.length<2000) {
+                spawnParticle(pt.x, pt.y, MathUtils.hexToRgb(UI.inkColor.value));
+            }
+        }
+    }
+
+    if (!state.isDrawing) return;
+
+    let t = performance.now();
+    let dTime = t - state.lastTime;
+    if (dTime < 5) return;
+    state.lastTime = t;
+
+    let lastPt = state.points[state.points.length - 1];
+    let dist = MathUtils.dist(lastPt, pt);
+    let v = dist / dTime; // velocity
+
+    let minW = parseFloat(UI.minWidth.value) / state.zoom;
+    let maxW = parseFloat(UI.maxWidth.value) / state.zoom;
+    
+    // Dwell pooling
+    let targetW;
+    if (v < 0.05 && dTime > 80) targetW = maxW * 1.5; 
+    else targetW = MathUtils.clamp(maxW - v * 15, minW, maxW);
+    
+    let w = MathUtils.lerp(lastPt.w, targetW, 0.3);
+
+    let newPt = {x: pt.x, y: pt.y, t, w};
+    state.points.push(newPt);
+    
+    // Update stroke bounds
+    let cb = state.currentStroke.bounds;
+    cb.minX = Math.min(cb.minX, pt.x); cb.minY = Math.min(cb.minY, pt.y);
+    cb.maxX = Math.max(cb.maxX, pt.x); cb.maxY = Math.max(cb.maxY, pt.y);
+
+    if (state.points.length >= 4) {
+        drawCatmullRom(state.points.slice(-4));
+    }
+});
+
+window.addEventListener('mouseup', e => {
+    if (e.button === 2) state.isPanning = false;
+    if (e.button === 0 && state.isDrawing) {
+        state.isDrawing = false;
+        if(state.points.length < 4 && state.points.length > 0) {
+            // Draw dot
+            drawCatmullRom([state.points[0], state.points[0], state.points[0], state.points[0]]);
+        }
+        if(state.currentStroke && state.currentStroke.points.length > 0) {
+            state.activeStrokes.push(state.currentStroke);
+        }
+        saveHistory();
+    }
+});
+
+deskEl.addEventListener('wheel', e => {
+    let zoomSens = 0.001;
+    let delta = -e.deltaY * zoomSens;
+    let newZoom = MathUtils.clamp(state.zoom * Math.exp(delta), 0.25, 4);
+    
+    let rect = displayCvs.getBoundingClientRect();
+    let mx = e.clientX - rect.left;
+    let my = e.clientY - rect.top;
+    
+    state.pan.x = mx - (mx - state.pan.x) * (newZoom / state.zoom);
+    state.pan.y = my - (my - state.pan.y) * (newZoom / state.zoom);
+    state.zoom = newZoom;
+});
+
+// --- Drawing Engine ---
+function drawCatmullRom(pts) {
+    let p0=pts[0], p1=pts[1], p2=pts[2], p3=pts[3];
+    let steps = 10;
+    let angle = (parseFloat(UI.nibAngle.value) * Math.PI) / 180;
+    let tex = parseFloat(UI.fiberTexture.value);
+    let color = MathUtils.hexToRgb(UI.inkColor.value);
+
+    iCtx.globalCompositeOperation = 'multiply';
+
+    for (let i = 1; i <= steps; i++) {
+        let t = i / steps;
+        let t2 = t * t, t3 = t2 * t;
+        
+        let x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+        let y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
+        let w = MathUtils.lerp(p1.w, p2.w, t);
+
+        state.currentStroke.points.push({x, y, w});
+
+        drawBrushMark(x, y, w, angle, tex, color);
+        
+        if (UI.tendrilToggle.checked && Math.random() < (1/parseFloat(UI.tendrilDensity.value))) {
+            spawnParticle(x, y, color);
+        }
+    }
+}
+
+function drawBrushMark(x, y, w, angle, tex, color) {
+    let hW = w / 2;
+    let aspect = 0.15 + (1-tex)*0.2; 
+    
+    iCtx.save();
+    iCtx.translate(x, y);
+    iCtx.rotate(angle);
+    
+    if (tex > 0) {
+        let fibers = Math.floor(w * (1 + tex));
+        for(let f=0; f<fibers; f++) {
+            let fx = (Math.random() - 0.5) * w;
+            let alpha = Math.random() > tex ? 1.0 : 0.2;
+            iCtx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
+            iCtx.beginPath();
+            iCtx.ellipse(fx, 0, 0.5, hW*aspect, 0, 0, Math.PI*2);
+            iCtx.fill();
+        }
+    } else {
+        iCtx.fillStyle = `rgba(${color.r},${color.g},${color.b}, 0.9)`;
+        iCtx.beginPath();
+        iCtx.ellipse(0, 0, hW, hW*aspect, 0, 0, Math.PI*2);
+        iCtx.fill();
+    }
+    iCtx.restore();
+}
+
+// --- Bleed Engine ---
+function spawnParticle(x, y, color) {
+    if (state.particles.length >= 2000) state.particles.shift();
+    state.particles.push({
+        x, y, vx: 0, vy: 0,
+        life: parseInt(UI.tendrilLife.value) * (0.8 + Math.random()*0.4),
+        maxLife: parseInt(UI.tendrilLife.value),
+        color
+    });
+}
+
+function updateBleed() {
+    if (UI.bleedPauseToggle.checked) return;
+    let master = parseFloat(UI.bleedMaster.value) / 100;
+    if (master === 0) return;
+
+    let isModeA = !UI.bleedModeToggle.checked; // Mode A = Individual stroke. But for perf in vanilla, we simulate bounds.
+
+    // System 2: Tendrils
+    if (UI.tendrilToggle.checked) {
+        iCtx.globalCompositeOperation = 'multiply';
+        let weight = parseFloat(UI.tendrilWeight.value);
+        let noiseScale = parseFloat(UI.diffNoise.value) * 0.001;
+        
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+            let p = state.particles[i];
+            
+            let nAngle = Perlin.noise(p.x * noiseScale, p.y * noiseScale + state.animFrame*0.01) * Math.PI * 4;
+            p.vx += Math.cos(nAngle) * 0.5 * master;
+            p.vy += Math.sin(nAngle) * 0.5 * master;
+            
+            p.vx *= 0.92; p.vy *= 0.92;
+            
+            let nx = p.x + p.vx;
+            let ny = p.y + p.vy;
+
+            let alpha = (p.life / p.maxLife) * 0.15 * master;
+            iCtx.strokeStyle = `rgba(${p.color.r},${p.color.g},${p.color.b},${alpha})`;
+            iCtx.lineWidth = weight;
+            iCtx.beginPath();
+            iCtx.moveTo(p.x, p.y);
+            iCtx.lineTo(nx, ny);
+            iCtx.stroke();
+
+            p.x = nx; p.y = ny;
+            p.life--;
+            if (p.life <= 0) state.particles.splice(i, 1);
+        }
+    }
+
+    // System 1: Diffusion
+    if (UI.diffToggle.checked && state.animFrame % 2 === 0) {
+        // Highly simplified bounding-box localized diffusion for vanilla JS perf
+        let speed = parseInt(UI.diffSpeed.value);
+        let noiseS = parseFloat(UI.diffNoise.value) * 0.01;
+        
+        let strokes = isModeA ? state.activeStrokes : [{bounds: {minX:0, minY:0, maxX:paperW, maxY:paperH}}];
+        
+        for(let s=0; s<strokes.length; s++) {
+            let b = strokes[s].bounds;
+            if(!b) continue;
+            let pad = parseInt(UI.diffRadius.value);
+            let x1 = Math.max(0, Math.floor(b.minX - pad));
+            let y1 = Math.max(0, Math.floor(b.minY - pad));
+            let w = Math.min(paperW - x1, Math.ceil(b.maxX - b.minX + pad*2));
+            let h = Math.min(paperH - y1, Math.ceil(b.maxY - b.minY + pad*2));
+            
+            if (w <= 0 || h <= 0) continue;
+
+            // To avoid massive slowdown, we just apply a slight directional blur/smudge on the ink canvas based on noise
+            let idata = iCtx.getImageData(x1, y1, w, h);
+            let d = idata.data;
+            let out = new Uint8ClampedArray(d);
+            
+            for(let iter=0; iter<speed * master; iter++) {
+                for (let y=1; y<h-1; y+=2) { // step by 2 for speed
+                    for(let x=1; x<w-1; x+=2) {
+                        let idx = (y*w+x)*4;
+                        if(d[idx+3] > 10) {
+                            let n = Perlin.noise((x1+x)*noiseS, (y1+y)*noiseS);
+                            let dirX = n > 0 ? 1 : -1;
+                            let dirY = Math.abs(n) > 0.1 ? 1 : -1;
+                            let tIdx = ((y+dirY)*w+(x+dirX))*4;
+                            
+                            if (out[tIdx+3] < 200) {
+                                out[tIdx] = d[idx]; out[tIdx+1] = d[idx+1]; out[tIdx+2] = d[idx+2];
+                                out[tIdx+3] = Math.min(255, out[tIdx+3] + d[idx+3]*0.2 * master);
+                            }
+                        }
+                    }
+                }
+            }
+            idata.data.set(out);
+            iCtx.putImageData(idata, x1, y1);
+        }
+        
+        // Culling settled strokes in Mode A
+        if (isModeA) {
+            state.activeStrokes = state.activeStrokes.filter(s => Math.random() > 0.05); 
+        }
+    }
+}
+
+// --- Text Engine ---
+function renderTextToInk(pos) {
+    let text = UI.typeInput.value || state.ghostText;
+    if (!text) return;
+    
+    let size = parseInt(UI.typeSize.value);
+    let tracking = parseInt(UI.typeTracking.value);
+    
+    tCtx.canvas.width = paperW; tCtx.canvas.height = paperH;
+    tCtx.clearRect(0,0,paperW,paperH);
+    tCtx.font = `${size}px ${UI.typeFont.value}`;
+    tCtx.fillStyle = '#000';
+    tCtx.textBaseline = 'top';
+    
+    let x = pos.x;
+    for(let i=0; i<text.length; i++) {
+        tCtx.fillText(text[i], x, pos.y);
+        x += tCtx.measureText(text[i]).width + tracking;
+    }
+    
+    let idata = tCtx.getImageData(0,0,paperW,paperH);
+    let d = idata.data;
+    
+    let color = MathUtils.hexToRgb(UI.inkColor.value);
+    let angle = (parseFloat(UI.nibAngle.value) * Math.PI) / 180;
+    let tex = parseFloat(UI.fiberTexture.value);
+    let w = parseFloat(UI.maxWidth.value) / state.zoom;
+    
+    iCtx.globalCompositeOperation = 'multiply';
+    state.currentStroke = { points: [], color, bounds: {minX:pos.x, minY:pos.y, maxX:pos.x+x, maxY:pos.y+size} };
+
+    // Edge extraction & drawing
+    for(let y=0; y<paperH; y+=3) {
+        for(let rx=0; rx<paperW; rx+=3) {
+            let idx = (y*paperW + rx)*4;
+            if(d[idx+3] > 128) {
+                // simple edge check
+                let rIdx = (y*paperW + rx+3)*4;
+                if(rIdx < d.length && d[rIdx+3] < 128) {
+                    drawBrushMark(rx, y, w, angle, tex, color);
+                    if (UI.tendrilToggle.checked && Math.random()<0.1) spawnParticle(rx, y, color);
+                }
+            }
+        }
+    }
+    
+    state.activeStrokes.push(state.currentStroke);
+    saveHistory();
+    state.ghostText = null;
+    UI.typeInput.value = '';
+}
+
+// --- Filters & Composite ---
+function applyFiltersAndDraw() {
+    cCtx.clearRect(0, 0, paperW, paperH);
+    
+    // Base: Paper
+    cCtx.drawImage(paperCvs, 0, 0);
+
+    // Ink layer with optional hue shift
+    if (UI.fHueToggle.checked) {
+        let h = UI.fHueVal.value; let s = UI.fSatVal.value;
+        cCtx.filter = `hue-rotate(${h}deg) saturate(${s}%)`;
+    }
+    cCtx.drawImage(inkCvs, 0, 0);
+    cCtx.filter = 'none';
+
+    let idata = cCtx.getImageData(0,0,paperW,paperH);
+    let d = idata.data;
+    let w = paperW, h = paperH;
+
+    // Wet Warp
+    if (UI.fWarpToggle.checked) {
+        let out = new Uint8ClampedArray(d);
+        let int = parseFloat(UI.fWarpInt.value);
+        let t = state.animFrame * 0.01;
+        for(let y=0; y<h; y+=2) {
+            for(let x=0; x<w; x+=2) {
+                let dx = Math.floor(Perlin.noise(x*0.01, y*0.01 + t) * int * 4);
+                let dy = Math.floor(Perlin.noise(x*0.01 + 100, y*0.01 + t) * int * 4);
+                let sx = MathUtils.clamp(x+dx, 0, w-1);
+                let sy = MathUtils.clamp(y+dy, 0, h-1);
+                let tIdx = (sy*w + sx)*4;
+                let idx = (y*w + x)*4;
+                
+                out[idx] = d[tIdx]; out[idx+1] = d[tIdx+1]; out[idx+2] = d[tIdx+2]; out[idx+3] = d[tIdx+3];
+                // fill block for perf
+                if(x+1<w) { out[idx+4]=out[idx]; out[idx+5]=out[idx+1]; out[idx+6]=out[idx+2]; out[idx+7]=out[idx+3]; }
+            }
+        }
+        d.set(out);
+    }
+
+    // Chromatic Aberration
+    if (UI.fChromToggle.checked) {
+        let shift = Math.floor(parseFloat(UI.fChromInt.value));
+        let out = new Uint8ClampedArray(d);
+        for(let y=0; y<h; y++) {
+            for(let x=0; x<w; x++) {
+                let idx = (y*w + x)*4;
+                let sl = (y*w + Math.max(0, x-shift))*4;
+                let sr = (y*w + Math.min(w-1, x+shift))*4;
+                out[idx] = d[sl];       // R
+                out[idx+1] = d[idx+1];  // G
+                out[idx+2] = d[sr+2];   // B
+            }
+        }
+        d.set(out);
+    }
+
+    // Halftone
+    if (UI.fHalfToggle.checked) {
+        let size = parseInt(UI.fHalfSize.value);
+        let ang = parseFloat(UI.fHalfAngle.value) * Math.PI/180;
+        let s = Math.sin(ang), c = Math.cos(ang);
+        let out = new Uint8ClampedArray(d);
+        out.fill(245); // offwhite base
+        
+        for(let y=0; y<h; y+=size) {
+            for(let x=0; x<w; x+=size) {
+                let idx = (y*w + x)*4;
+                let luma = 0.299*d[idx] + 0.587*d[idx+1] + 0.114*d[idx+2];
+                let r = (1 - luma/255) * size * 0.7;
+                
+                if (r > 0) {
+                    let rx = x*c - y*s; let ry = x*s + y*c;
+                    let dotX = Math.floor(rx/size)*size; let dotY = Math.floor(ry/size)*size;
+                    let origX = Math.floor(dotX*c + dotY*s);
+                    let origY = Math.floor(-dotX*s + dotY*c);
+                    
+                    if(origX>=0 && origX<w && origY>=0 && origY<h) {
+                        for(let dy=0; dy<size; dy++) {
+                            for(let dx=0; dx<size; dx++) {
+                                if((dx-size/2)**2 + (dy-size/2)**2 < r*r) {
+                                    let didx = ((origY+dy)*w + (origX+dx))*4;
+                                    out[didx]=0; out[didx+1]=0; out[didx+2]=0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        d.set(out);
+    }
+
+    // Grain
+    if (UI.fGrainToggle.checked) {
+        let amt = parseFloat(UI.fGrainInt.value) * 255;
+        for(let i=0; i<d.length; i+=4) {
+            let n = (Math.random()-0.5)*amt;
+            d[i] = MathUtils.clamp(d[i]+n,0,255);
+            d[i+1] = MathUtils.clamp(d[i+1]+n,0,255);
+            d[i+2] = MathUtils.clamp(d[i+2]+n,0,255);
+        }
+    }
+
+    // Vignette
+    if (UI.fVigToggle.checked) {
+        let amt = parseFloat(UI.fVigInt.value);
+        let cx = w/2, cy = h/2, maxD = Math.hypot(cx,cy);
+        for(let y=0; y<h; y+=2) {
+            for(let x=0; x<w; x+=2) {
+                let dist = Math.hypot(x-cx, y-cy);
+                let f = 1 - Math.pow(dist/maxD, 2) * amt;
+                let idx = (y*w + x)*4;
+                d[idx]*=f; d[idx+1]*=f; d[idx+2]*=f;
+                if(x+1<w) { d[idx+4]*=f; d[idx+5]*=f; d[idx+6]*=f; }
+            }
+        }
+    }
+
+    cCtx.putImageData(idata, 0, 0);
+
+    // Ghost text
+    if (state.mode === 'TYPE' && state.ghostText) {
+        cCtx.font = `${UI.typeSize.value}px ${UI.typeFont.value}`;
+        cCtx.fillStyle = 'rgba(0,0,0,0.3)';
+        cCtx.textBaseline = 'top';
+        let x = state.ghostPos.x;
+        for(let i=0; i<state.ghostText.length; i++) {
+            cCtx.fillText(state.ghostText[i], x, state.ghostPos.y);
+            x += cCtx.measureText(state.ghostText[i]).width + parseInt(UI.typeTracking.value);
+        }
+    }
+}
+
+// --- Main Loop ---
+function renderLoop() {
+    state.animFrame++;
+
+    let rect = deskEl.getBoundingClientRect();
+    if (rect.width !== state.deskWidth || rect.height !== state.deskHeight) {
+        state.deskWidth = rect.width; state.deskHeight = rect.height;
+        displayCvs.width = state.deskWidth; displayCvs.height = state.deskHeight;
+        
+        // fit A4 to desk
+        let scale = Math.min(state.deskWidth * 0.9 / paperW, state.deskHeight * 0.9 / paperH);
+        state.zoom = scale;
+        state.pan.x = (state.deskWidth - paperW * scale) / 2;
+        state.pan.y = (state.deskHeight - paperH * scale) / 2;
+    }
+
+    updateBleed();
+    applyFiltersAndDraw();
+
+    // Render to display
+    dCtx.fillStyle = '#2a2a2a';
+    dCtx.fillRect(0,0, state.deskWidth, state.deskHeight);
+    
+    dCtx.save();
+    dCtx.setTransform(state.zoom, 0, 0, state.zoom, state.pan.x, state.pan.y);
+    
+    // Desk drop shadow
+    dCtx.shadowColor = 'rgba(0,0,0,0.5)';
+    dCtx.shadowBlur = 40 / state.zoom;
+    dCtx.shadowOffsetX = 10 / state.zoom;
+    dCtx.shadowOffsetY = 10 / state.zoom;
+    dCtx.fillRect(0,0, paperW, paperH);
+    
+    dCtx.shadowColor = 'transparent';
+    dCtx.drawImage(compCvs, 0, 0);
+    dCtx.restore();
+
+    requestAnimationFrame(renderLoop);
+}
+
+// --- UI & Keys ---
+UI.modeToggle.addEventListener('click', () => {
+    if(state.mode === 'DRAW') {
+        state.mode = 'TYPE';
+        UI.modeToggle.innerText = 'TYPE / DRAW';
+        UI.modeToggle.classList.add('active');
+        UI.drawControls.classList.add('hidden');
+        UI.typeControls.classList.remove('hidden');
+    } else {
+        state.mode = 'DRAW';
+        UI.modeToggle.innerText = 'DRAW / TYPE';
+        UI.modeToggle.classList.remove('active');
+        UI.drawControls.classList.remove('hidden');
+        UI.typeControls.classList.add('hidden');
+        state.ghostText = null;
+    }
+});
+
+UI.btnRenderType.addEventListener('click', () => {
+    if(UI.typeInput.value) state.ghostText = UI.typeInput.value;
+});
+
+window.addEventListener('keydown', e => {
+    if(e.target.tagName === 'INPUT' && e.target.type === 'text') {
+        if(e.key === 'Enter') UI.btnRenderType.click();
+        return;
+    }
+    
+    let k = e.key.toLowerCase();
+    if (k === 'z') undo();
+    if (k === 'x') redo();
+    if (k === ' ') { e.preventDefault(); UI.bleedPauseToggle.checked = !UI.bleedPauseToggle.checked; }
+    if (k === 'c') {
+        displayCvs.style.transition = 'opacity 0.4s';
+        displayCvs.style.opacity = '0';
+        setTimeout(() => {
+            iCtx.clearRect(0,0,paperW,paperH);
+            state.particles = []; state.activeStrokes = [];
+            saveHistory();
+            displayCvs.style.opacity = '1';
+        }, 400);
+    }
+    if (k === 't') UI.modeToggle.click();
+});
+
+// --- Exports ---
+function exportImage(type) {
+    let link = document.createElement('a');
+    let ts = new Date().toISOString().replace(/[:.]/g,'-');
+    link.download = `ink-${ts}.${type}`;
+    link.href = compCvs.toDataURL(`image/${type === 'jpg' ? 'jpeg' : 'png'}`, 0.95);
+    link.click();
+}
+UI.btnPNG.addEventListener('click', () => exportImage('png'));
+UI.btnJPG.addEventListener('click', () => exportImage('jpg'));
+
+// --- Init ---
+generatePaperTexture();
+saveHistory();
+requestAnimationFrame(renderLoop);
+
+</script>
+</body>
+</html>

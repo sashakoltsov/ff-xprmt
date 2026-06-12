@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halftone Machine</title>
+<style>
+  :root { --bg:#111; --fg:#eee; --line:#333; --accent:#E8A33D; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.4 ui-monospace,Menlo,monospace; background:var(--bg);
+    color:var(--fg); display:grid; grid-template-columns:240px 1fr; height:100vh; }
+  .panel { border-right:1px solid var(--line); padding:20px; overflow:auto; }
+  .panel h1 { font-size:14px; letter-spacing:.05em; text-transform:uppercase;
+    margin:0 0 20px; color:var(--accent); }
+  label { display:block; margin:16px 0 6px; color:#aaa; font-size:12px; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .val { float:right; color:var(--fg); }
+  .row { display:flex; gap:8px; margin-top:20px; flex-wrap:wrap; }
+  button, .file { background:#1d1d1d; color:var(--fg); border:1px solid var(--line);
+    padding:8px 12px; border-radius:6px; cursor:pointer; font:inherit; }
+  button:hover, .file:hover { border-color:var(--accent); }
+  .file input { display:none; }
+  .stage { display:flex; align-items:center; justify-content:center; padding:24px; overflow:auto; }
+  canvas { max-width:100%; max-height:100%; background:#fff; box-shadow:0 0 0 1px var(--line); }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Halftone</h1>
+    <label>Cell size <span class="val" id="vCell">7</span></label>
+    <input id="cell" type="range" min="5" max="24" value="7">
+    <label>Contrast <span class="val" id="vGamma">1.00</span></label>
+    <input id="gamma" type="range" min="20" max="300" value="100">
+    <label>Angle <span class="val" id="vAngle">45</span></label>
+    <input id="angle" type="range" min="0" max="90" value="45">
+    <div class="row">
+      <label class="file">Load image<input id="file" type="file" accept="image/*"></label>
+      <button id="invert">Invert</button>
+    </div>
+    <div class="row"><button id="save">Download PNG</button></div>
+  </div>
+  <div class="stage"><canvas id="c"></canvas></div>
+<script>
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+let invert = false, src = null;
+const W = 720, H = 540;
+
+function buildDefault() {
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  const o = off.getContext('2d');
+  const g = o.createRadialGradient(W*0.35, H*0.4, 40, W*0.5, H*0.5, W*0.7);
+  g.addColorStop(0, '#fff'); g.addColorStop(1, '#000');
+  o.fillStyle = g; o.fillRect(0, 0, W, H);
+  o.globalCompositeOperation = 'overlay';
+  for (let i = -H; i < W; i += 46) { o.fillStyle = i % 92 ? '#555' : '#bbb'; o.fillRect(i, 0, 23, H); }
+  src = o.getImageData(0, 0, W, H);
+  render();
+}
+
+function loadImage(file) {
+  const img = new Image();
+  img.onload = () => {
+    const off = document.createElement('canvas'); off.width = W; off.height = H;
+    const o = off.getContext('2d');
+    const r = Math.min(W / img.width, H / img.height);
+    const w = img.width * r, h = img.height * r;
+    o.fillStyle = '#fff'; o.fillRect(0, 0, W, H);
+    o.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+    src = o.getImageData(0, 0, W, H);
+    render();
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+const lum = (d, i) => (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+
+function render() {
+  if (!src) return;
+  const cell = +cellEl.value, gamma = +gammaEl.value / 100;
+  const ang = +angleEl.value * Math.PI / 180;
+  c.width = W; c.height = H;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#000';
+  const d = src.data, cos = Math.cos(ang), sin = Math.sin(ang);
+  for (let gy = -H; gy < H * 2; gy += cell) {
+    for (let gx = -W; gx < W * 2; gx += cell) {
+      const sx = Math.round(gx * cos - gy * sin + W / 2);
+      const sy = Math.round(gx * sin + gy * cos + H / 2);
+      if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
+      let v = lum(d, (sy * W + sx) * 4);
+      v = Math.pow(invert ? v : 1 - v, gamma);
+      const rad = Math.max(0, Math.min(cell / 2, v * cell / 1.4));
+      if (rad < 0.3) continue;
+      ctx.beginPath();
+      ctx.arc(gx * cos - gy * sin + W / 2, gx * sin + gy * cos + H / 2, rad, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+}
+
+const cellEl = document.getElementById('cell');
+const gammaEl = document.getElementById('gamma');
+const angleEl = document.getElementById('angle');
+
+cellEl.addEventListener('input', e => { vCell.textContent = e.target.value; render(); });
+gammaEl.addEventListener('input', e => { vGamma.textContent = (e.target.value / 100).toFixed(2); render(); });
+angleEl.addEventListener('input', e => { vAngle.textContent = e.target.value; render(); });
+document.getElementById('invert').addEventListener('click', () => { invert = !invert; render(); });
+document.getElementById('file').addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+document.getElementById('save').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png'); a.download = 'halftone.png'; a.click();
+});
+
+buildDefault();
+</script>
+</body>
+</html>
