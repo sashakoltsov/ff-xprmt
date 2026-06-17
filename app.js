@@ -26,12 +26,15 @@ function parseHash() {
 
 // ---- level 1: sessions ----
 function sessionsView(m) {
-  const cards = m.sessions.map(s => {
-    const covers = s.tools.filter(t => t.cover).map(t => t.cover);
-    const live = covers.length > 0;
+  const cards = m.sessions.map((s, i) => {
+    const toolCovers = s.tools.filter(t => t.cover).map(t => t.cover);
+    // static session cover is the resting image; the slideshow plays on hover
+    // (layered above the static cover) whenever the session has tool covers
+    const live = toolCovers.length > 0;
     return `
-    <a class="card${live ? ' session-card' : ''}" href="#/${encodeURIComponent(s.id)}"${
-      live ? ` data-covers='${esc(JSON.stringify(covers))}'` : ''}>
+    <a class="card${live ? ' session-card' : ''}" style="--i:${i}" href="#/${encodeURIComponent(s.id)}"${
+      live ? ` data-covers='${esc(JSON.stringify(toolCovers))}'` : ''}>
+      ${s.cover ? `<div class="cover" style="background-image:url('${esc(s.cover)}')"></div>` : ''}
       ${live ? `<div class="session-covers" aria-hidden="true"><div class="frame"></div><div class="frame"></div></div>` : ''}
       <div class="code${s.id === 'work' ? ' is-work' : ''}">${esc(s.id.toUpperCase())}</div>
       <div class="foot">
@@ -52,8 +55,8 @@ function sessionView(m, id) {
   const s = m.sessions.find(x => x.id === id);
   if (!s) return notFound();
   const body = s.tools.length
-    ? `<div class="grid">${s.tools.map(t => `
-        <a class="card" href="#/${encodeURIComponent(s.id)}/${encodeURIComponent(t.slug)}">
+    ? `<div class="grid">${s.tools.map((t, i) => `
+        <a class="card" style="--i:${i}" href="#/${encodeURIComponent(s.id)}/${encodeURIComponent(t.slug)}">
           ${t.cover ? `<div class="cover" style="background-image:url('${esc(t.cover)}')"></div>` : ''}
           <div class="code${s.id === 'work' ? ' is-work' : ''}">${esc(s.id.toUpperCase())}</div>
           <div class="foot">
@@ -112,8 +115,8 @@ function toolView(m, sid, slug) {
       <div class="code-veil"></div>
       <div class="ai-card">
         <p class="ai-eyebrow">Code</p>
-        <h2 class="ai-title">Take this tool's code</h2>
-        <p class="ai-text">Copy the code below and keep exploring the tool — or paste it into Gemini or Claude to build your own version by prompting.</p>
+        <h2 class="ai-title">Make your own version</h2>
+        <p class="ai-text">Copy this tool's code and paste it into Gemini or Claude.</p>
         <textarea class="code-text" readonly spellcheck="false">Loading the tool source…</textarea>
         <div class="ai-actions">
           <button class="code-copy" type="button">Copy code</button>
@@ -294,6 +297,18 @@ function enhanceSessionCovers() {
   });
 }
 
+// stagger the tile entrance by ROW (tiles on the same row share a delay).
+// Column count is responsive, so derive rows from each card's offsetTop.
+function staggerByRow() {
+  const cards = document.querySelectorAll('.grid .card');
+  let row = -1, lastTop = -Infinity;
+  cards.forEach(card => {
+    const top = card.offsetTop;
+    if (top > lastTop + 1) { row++; lastTop = top; }
+    card.style.setProperty('--i', row);
+  });
+}
+
 // ---- render loop ----
 async function render() {
   let m;
@@ -308,8 +323,8 @@ async function render() {
   }
   const { session, tool } = parseHash();
   document.body.classList.toggle('is-tool', !!tool);
-  if (!session) { $app.innerHTML = sessionsView(m); enhanceSessionCovers(); }
-  else if (!tool) $app.innerHTML = sessionView(m, session);
+  if (!session) { $app.innerHTML = sessionsView(m); enhanceSessionCovers(); staggerByRow(); }
+  else if (!tool) { $app.innerHTML = sessionView(m, session); staggerByRow(); }
   else { $app.innerHTML = toolView(m, session, tool); enhanceToolView(); }
   if (!tool) window.scrollTo(0, 0);
 }

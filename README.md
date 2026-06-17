@@ -50,6 +50,12 @@ Edit `sessions.json` (ordered; controls the landing page):
 Then `mkdir tools/s06` and start dropping tools in. Empty sessions show on the
 landing page with a "no tools yet" state.
 
+Optional session cover: drop a `cover.png` (or `.jpg`/`.jpeg`/`.webp`/`.gif`/`.avif`)
+directly into the session folder (`tools/s06/cover.jpg`) and `build.mjs` picks it
+up as the landing-tile image. With a session cover, the tile shows that single
+image; without one, it falls back to the hover slideshow of the session's tool
+covers.
+
 ## Sandbox / origin note
 
 Tools load with `sandbox="allow-scripts allow-downloads"` (see `app.js`). That

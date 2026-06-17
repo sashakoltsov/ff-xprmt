@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T17:54:43.441Z",
+  "generated": "2026-06-17T19:24:40.838Z",
   "sessions": [
     {
       "id": "s04",
@@ -83,6 +83,13 @@
       "title": "Project Tools",
       "tools": [
         {
+          "slug": "advanced-grids",
+          "name": "Advanced grid generator",
+          "author": "David H.",
+          "path": "tools/work/advanced-grids/index.html",
+          "cover": "tools/work/advanced-grids/cover.jpg"
+        },
+        {
           "slug": "colour-worlds",
           "name": "Colour palette generator",
           "author": "Sasha",
@@ -97,6 +104,13 @@
           "cover": "tools/work/cupra-hse/cover.jpg"
         },
         {
+          "slug": "grid-studio",
+          "name": "Basic grid generator",
+          "author": "David H.",
+          "path": "tools/work/grid-studio/index.html",
+          "cover": "tools/work/grid-studio/cover.jpg"
+        },
+        {
           "slug": "jed-tool",
           "name": "JED Tool",
           "author": "Sasha",
@@ -104,11 +118,32 @@
           "cover": "tools/work/jed-tool/cover.jpg"
         },
         {
+          "slug": "orbit",
+          "name": "Orbit",
+          "author": "David H.",
+          "path": "tools/work/orbit/index.html",
+          "cover": "tools/work/orbit/cover.jpg"
+        },
+        {
           "slug": "randomizer",
           "name": "Randomizer",
           "author": "Juan F.",
           "path": "tools/work/randomizer/index.html",
           "cover": "tools/work/randomizer/cover.jpg"
+        },
+        {
+          "slug": "sphere-mapper",
+          "name": "Sphere mapper",
+          "author": "David H.",
+          "path": "tools/work/sphere-mapper/index.html",
+          "cover": "tools/work/sphere-mapper/cover.jpg"
+        },
+        {
+          "slug": "texture-generator",
+          "name": "Texture generator",
+          "author": "David H.",
+          "path": "tools/work/texture-generator/index.html",
+          "cover": "tools/work/texture-generator/cover.jpg"
         }
       ]
     }

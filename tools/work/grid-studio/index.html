@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #d1d5db; }
+        .pattern-dots { background-image: radial-gradient(currentColor 1px, transparent 1px); }
+        .pattern-bg-transparent { background-color: transparent; }
+        .pattern-gray-300 { color: #e5e7eb; }
+        .pattern-size-4 { background-size: 1rem 1rem; }
+    </style>
+</head>
+<body class="flex h-screen bg-white text-gray-900 font-sans overflow-hidden selection:bg-gray-200">
+    
+    <!-- Área principal izquierda (Lienzo) -->
+    <div class="flex-1 flex flex-col bg-gray-100 relative">
+        <!-- Barra de herramientas superior -->
+        <div class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 bg-black rounded-sm flex items-center justify-center">
+                    <i class="ph ph-grid-four text-white text-sm"></i>
+                </div>
+                <h1 class="font-semibold text-sm tracking-tight">Grid Studio</h1>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button id="btn-preview" class="p-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors flex items-center gap-2 text-xs font-medium">
+                    <i id="icon-preview" class="ph ph-eye-slash text-base"></i> Previsualizar
+                </button>
+                <button id="btn-seed" class="p-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors flex items-center gap-2 text-xs font-medium">
+                    <i class="ph ph-arrows-clockwise text-base"></i> Semilla (Deformación)
+                </button>
+                <button id="btn-export" class="ml-2 bg-black text-white px-4 py-2 rounded text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-2">
+                    <i class="ph ph-download-simple text-base"></i> Exportar SVG
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenedor del Lienzo SVG -->
+        <div class="flex-1 overflow-auto flex items-center justify-center p-8 bg-[#f0f0f0] pattern-dots pattern-gray-300 pattern-bg-transparent pattern-size-4">
+            <div id="svg-container" class="relative shadow-xl transition-transform duration-300 ease-out">
+                <svg id="grid-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" vector-effect="non-scaling-stroke"></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel derecho de propiedades -->
+    <div class="w-80 bg-white border-l border-gray-200 flex flex-col h-full overflow-y-auto z-20 custom-scrollbar">
+        <div class="p-6">
+            
+            <!-- Estructura -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-bounding-box text-gray-500 text-sm"></i> Estructura
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-1 text-xs text-gray-600">Sistema de Cuadrícula</label>
+                        <select data-bind="type" class="w-full bg-gray-50 border border-gray-200 text-sm rounded p-2 outline-none focus:border-black transition-colors">
+                            <option value="modular">Modular / Ortogonal</option>
+                            <option value="radial">Radial / Polar</option>
+                            <option value="isometric">Isométrica</option>
+                            <option value="perspective1">Perspectiva (1 Punto)</option>
+                            <option value="perspective2">Perspectiva (2 Puntos)</option>
+                            <option value="perspective3">Perspectiva (3 Puntos)</option>
+                            <option value="spherical">Esférica</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-1 text-xs text-gray-600">Formato</label>
+                            <select data-bind="preset" class="w-full bg-gray-50 border border-gray-200 text-sm rounded p-2 outline-none focus:border-black transition-colors">
+                                <option value="1:1">Cuadrado (1:1)</option>
+                                <option value="4:5">Retrato (4:5)</option>
+                                <option value="16:9">Paisaje (16:9)</option>
+                                <option value="A4">A4 Documento</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1 text-xs text-gray-600">
+                                <label>Rotación</label><span class="font-mono text-gray-900"><span data-display="rotation"></span>°</span>
+                            </div>
+                            <input data-bind="rotation" type="range" min="0" max="360" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geometría -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-squares-four text-gray-500 text-sm"></i> Geometría
+                </h3>
+                <div id="group-rows-cols" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label id="label-rows">Filas</label><span class="font-mono text-gray-900" data-display="rows"></span>
+                        </div>
+                        <input data-bind="rows" type="range" min="2" max="100" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label id="label-cols">Columnas</label><span class="font-mono text-gray-900" data-display="columns"></span>
+                        </div>
+                        <input data-bind="columns" type="range" min="2" max="100" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                </div>
+                <div id="group-scale" style="display: none;" class="mt-4">
+                    <div class="flex justify-between mb-1 text-xs text-gray-600">
+                        <label>Escala de Cuadrícula</label><span class="font-mono text-gray-900" data-display="scale"></span>
+                    </div>
+                    <input data-bind="scale" type="range" min="0.2" max="5" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                </div>
+            </div>
+
+            <!-- Márgenes -->
+            <div id="group-spacing" class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-arrows-out text-gray-500 text-sm"></i> Márgenes
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label>Margen X</label><span class="font-mono text-gray-900" data-display="marginX"></span>
+                        </div>
+                        <input data-bind="marginX" type="range" min="0" max="200" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label>Margen Y</label><span class="font-mono text-gray-900" data-display="marginY"></span>
+                        </div>
+                        <input data-bind="marginY" type="range" min="0" max="200" step="1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progresión -->
+            <div id="group-progression" class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-arrow-right text-gray-500 text-sm"></i> Progresión
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label>Intensidad X (H)</label><span class="font-mono text-gray-900" data-display="progressionX"></span>
+                        </div>
+                        <input data-bind="progressionX" type="range" min="0.5" max="1.5" step="0.01" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                    <div id="control-progression-y">
+                        <div class="flex justify-between mb-1 text-xs text-gray-600">
+                            <label>Intensidad Y (V)</label><span class="font-mono text-gray-900" data-display="progressionY"></span>
+                        </div>
+                        <input data-bind="progressionY" type="range" min="0.5" max="1.5" step="0.01" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deformación -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-waves text-gray-500 text-sm"></i> Deformación
+                </h3>
+                <div>
+                    <div class="flex justify-between mb-1 text-xs text-gray-600">
+                        <label>Intensidad de Curva</label><span class="font-mono text-gray-900" data-display="warp"></span>
+                    </div>
+                    <input data-bind="warp" type="range" min="0" max="1" step="0.01" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                </div>
+            </div>
+
+            <!-- Estilo Visual -->
+            <div class="mb-6 pb-6 border-0">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="ph ph-palette text-gray-500 text-sm"></i> Estilo Visual
+                </h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block mb-1 text-xs text-gray-600">Color Cuadrícula</label>
+                        <div class="flex items-center gap-2">
+                            <input data-bind="strokeColor" type="color" class="w-6 h-6 rounded cursor-pointer border-0 p-0">
+                            <span class="text-xs font-mono text-gray-500" data-display="strokeColor"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-xs text-gray-600">Fondo</label>
+                        <div class="flex items-center gap-2">
+                            <input data-bind="bgColor" type="color" class="w-6 h-6 rounded cursor-pointer border-0 p-0">
+                            <span class="text-xs font-mono text-gray-500" data-display="bgColor"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="flex justify-between mb-1 text-xs text-gray-600">
+                        <label>Grosor de Línea</label><span class="font-mono text-gray-900"><span data-display="strokeWidth"></span>px</span>
+                    </div>
+                    <input data-bind="strokeWidth" type="range" min="0.1" max="10" step="0.1" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                </div>
+                <div class="mb-4">
+                    <div class="flex justify-between mb-1 text-xs text-gray-600">
+                        <label>Opacidad</label><span class="font-mono text-gray-900" data-display="opacity"></span>
+                    </div>
+                    <input data-bind="opacity" type="range" min="0.1" max="1" step="0.05" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs text-gray-600">Estilo de Línea</label>
+                    <select data-bind="lineStyle" class="w-full bg-gray-50 border border-gray-200 text-sm rounded p-2 outline-none focus:border-black transition-colors">
+                        <option value="solid">Línea Sólida</option>
+                        <option value="dashed">Discontinua</option>
+                        <option value="dotted">Punteada</option>
+                        <option value="mixed">Mixta (Punto y Raya)</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts de la Aplicación -->
+    <script>
+        // --- Estado de la Aplicación ---
+        const state = {
+            preset: '1:1', width: 800, height: 800,
+            type: 'modular',
+            rows: 12, columns: 12,
+            marginX: 40, marginY: 40,
+            progressionX: 1, progressionY: 1,
+            scale: 1, rotation: 0, warp: 0,
+            strokeWidth: 1, strokeColor: '#111111', bgColor: '#f9f9f9',
+            opacity: 1, lineStyle: 'solid', 
+            previewMode: true // True = solo malla limpia, False = muestra margenes rojos constructivos
+        };
+
+        let seedOffset = 0;
+
+        // --- Utilidades Matemáticas ---
+        const calculateProgressiveSteps = (totalSize, count, intensity) => {
+            if (count <= 1) return [totalSize];
+            if (Math.abs(intensity - 1) < 0.01) {
+                return Array(count).fill(totalSize / count);
+            }
+            const baseSize = totalSize * (1 - intensity) / (1 - Math.pow(intensity, count));
+            const steps = [];
+            for (let i = 0; i < count; i++) {
+                steps.push(baseSize * Math.pow(intensity, i));
+            }
+            return steps;
+        };
+
+        // --- Algoritmo Cohen-Sutherland para Recorte de Líneas ---
+        const INSIDE = 0, LEFT = 1, RIGHT = 2, BOTTOM = 4, TOP = 8;
+        const computeCode = (x, y, xmin, ymin, xmax, ymax) => {
+            let code = INSIDE;
+            if (x < xmin) code |= LEFT;
+            else if (x > xmax) code |= RIGHT;
+            if (y < ymin) code |= TOP;
+            else if (y > ymax) code |= BOTTOM;
+            return code;
+        };
+        const clipLine = (x0, y0, x1, y1, xmin, ymin, xmax, ymax) => {
+            let code0 = computeCode(x0, y0, xmin, ymin, xmax, ymax);
+            let code1 = computeCode(x1, y1, xmin, ymin, xmax, ymax);
+            let accept = false;
+            while (true) {
+                if (!(code0 | code1)) { accept = true; break; }
+                else if (code0 & code1) { break; }
+                else {
+                    let x, y;
+                    let outcodeOut = code0 ? code0 : code1;
+                    if (outcodeOut & TOP) { x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0); y = ymin; }
+                    else if (outcodeOut & BOTTOM) { x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0); y = ymax; }
+                    else if (outcodeOut & RIGHT) { y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0); x = xmax; }
+                    else if (outcodeOut & LEFT) { y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0); x = xmin; }
+                    if (outcodeOut === code0) { x0 = x; y0 = y; code0 = computeCode(x0, y0, xmin, ymin, xmax, ymax); }
+                    else { x1 = x; y1 = y; code1 = computeCode(x1, y1, xmin, ymin, xmax, ymax); }
+                }
+            }
+            if (accept) return { type: 'line', x1: x0, y1: y0, x2: x1, y2: y1 };
+            return null;
+        };
+
+        // --- Generadores de Cuadrículas ---
+        const generateModular = () => {
+            const { width, height, rows, columns, marginX, marginY, progressionX, progressionY, warp } = state;
+            const lines = [];
+            const effectiveW = width - (marginX * 2);
+            const effectiveH = height - (marginY * 2);
+
+            const colWidths = calculateProgressiveSteps(effectiveW, columns, progressionX);
+            const rowHeights = calculateProgressiveSteps(effectiveH, rows, progressionY);
+
+            const deform = (x, y) => {
+                if (warp === 0) return { x, y };
+                const nx = x / width;
+                const ny = y / height;
+                const warpFactor = warp * 50;
+                return {
+                    x: x + Math.sin(ny * Math.PI * 2 + seedOffset) * warpFactor,
+                    y: y + Math.cos(nx * Math.PI * 2 + seedOffset) * warpFactor
+                };
+            };
+
+            // Verticales
+            let currentX = marginX;
+            for (let i = 0; i <= columns; i++) {
+                const p1 = deform(currentX, marginY);
+                const p2 = deform(currentX, height - marginY);
+                lines.push({ type: 'line', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+                if (i < columns) currentX += colWidths[i];
+            }
+
+            // Horizontales
+            let currentY = marginY;
+            for (let j = 0; j <= rows; j++) {
+                const p1 = deform(marginX, currentY);
+                const p2 = deform(width - marginX, currentY);
+                lines.push({ type: 'line', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+                if (j < rows) currentY += rowHeights[j];
+            }
+
+            return lines;
+        };
+
+        const generateRadial = () => {
+            const { width, height, rows: rings, columns: segments, progressionX: radialProg, warp } = state;
+            const lines = [];
+            const cx = width / 2;
+            const cy = height / 2;
+            const maxRadius = Math.min(width, height) / 2 * 0.9;
+
+            const radii = calculateProgressiveSteps(maxRadius, rings, radialProg);
+            
+            let currentR = 0;
+            const absoluteRadii = radii.map(r => { currentR += r; return currentR; });
+
+            // Anillos Concéntricos
+            absoluteRadii.forEach(r => {
+                if (warp === 0) {
+                    lines.push({ type: 'circle', cx, cy, r });
+                } else {
+                    const points = [];
+                    const res = 64;
+                    for (let i = 0; i <= res; i++) {
+                        const theta = (i / res) * Math.PI * 2;
+                        let x = cx + Math.cos(theta) * r;
+                        let y = cy + Math.sin(theta) * r;
+                        const warpFactor = warp * 20;
+                        x += Math.sin(y / 50 + seedOffset) * warpFactor;
+                        y += Math.cos(x / 50 + seedOffset) * warpFactor;
+                        points.push(`${x},${y}`);
+                    }
+                    lines.push({ type: 'polyline', points: points.join(' ') });
+                }
+            });
+
+            // Radios
+            for (let i = 0; i < segments; i++) {
+                const theta = (i / segments) * Math.PI * 2;
+                if (warp === 0) {
+                    lines.push({
+                        type: 'line',
+                        x1: cx, y1: cy,
+                        x2: cx + Math.cos(theta) * maxRadius,
+                        y2: cy + Math.sin(theta) * maxRadius
+                    });
+                } else {
+                    const points = [];
+                    const steps = 20;
+                    for (let j = 0; j <= steps; j++) {
+                        const r = (j / steps) * maxRadius;
+                        let x = cx + Math.cos(theta) * r;
+                        let y = cy + Math.sin(theta) * r;
+                        const warpFactor = warp * 20;
+                        x += Math.sin(y / 50 + seedOffset) * warpFactor;
+                        y += Math.cos(x / 50 + seedOffset) * warpFactor;
+                        points.push(`${x},${y}`);
+                    }
+                    lines.push({ type: 'polyline', points: points.join(' ') });
+                }
+            }
+
+            return lines;
+        };
+
+        const generateIsometric = () => {
+            const { width, height, scale, marginX, marginY } = state;
+            const lines = [];
+            const gridSize = 40 * scale;
+            
+            const w = width - marginX * 2;
+            const h = height - marginY * 2;
+            
+            const diag = Math.sqrt(w*w + h*h);
+            const steps = Math.ceil(diag / gridSize) * 2;
+            
+            const cx = width / 2;
+            const cy = height / 2;
+
+            const drawLineSet = (angleDeg) => {
+                const angleRad = angleDeg * (Math.PI / 180);
+                const dx = Math.cos(angleRad);
+                const dy = Math.sin(angleRad);
+                const nx = -dy;
+                const ny = dx;
+
+                for (let i = -steps; i <= steps; i++) {
+                    const offset = i * gridSize;
+                    const px = cx + nx * offset;
+                    const py = cy + ny * offset;
+                    const ext = diag;
+                    lines.push({
+                        type: 'line',
+                        x1: px - dx * ext, y1: py - dy * ext,
+                        x2: px + dx * ext, y2: py + dy * ext
+                    });
+                }
+            };
+
+            drawLineSet(30);
+            drawLineSet(90);
+            drawLineSet(150);
+
+            return lines;
+        };
+
+        const generatePerspective1 = () => {
+            const { width, height, rows, columns, marginX, marginY, progressionY } = state;
+            const lines = [];
+            const xmin = marginX, ymin = marginY, xmax = width - marginX, ymax = height - marginY;
+            
+            const vpX = width / 2;
+            const vpY = height * 0.2; 
+            const groundY = ymax;
+            
+            // Líneas Radiales
+            for (let i = 0; i <= columns; i++) {
+                const x = xmin + ((xmax - xmin) * (i / columns));
+                const l = clipLine(vpX, vpY, x, groundY, xmin, ymin, xmax, ymax);
+                if (l) lines.push(l);
+            }
+            
+            // Líneas Transversales
+            const depthArea = groundY - vpY;
+            const depths = calculateProgressiveSteps(depthArea, rows, progressionY < 1 ? progressionY : 0.8);
+            
+            let currentY = groundY;
+            for (let i = 0; i <= rows; i++) {
+                const t = (currentY - vpY) / (groundY - vpY);
+                const xLeft = vpX + (xmin - vpX) * t;
+                const xRight = vpX + (xmax - vpX) * t;
+                
+                const l = clipLine(xLeft, currentY, xRight, currentY, xmin, ymin, xmax, ymax);
+                if (l) lines.push(l);
+                if (i < rows) currentY -= depths[rows - 1 - i]; 
+            }
+
+            return lines;
+        };
+
+        const generatePerspective2 = () => {
+            const { width, height, rows, columns, marginX, marginY } = state;
+            const lines = [];
+            const xmin = marginX, ymin = marginY, xmax = width - marginX, ymax = height - marginY;
+            
+            const vp1X = xmin - width * 0.5, vpY = height * 0.4; 
+            const vp2X = xmax + width * 0.5;
+
+            // Líneas desde Puntos de Fuga Laterales
+            for (let i = 0; i <= rows; i++) {
+                const ty = ymin + ((ymax - ymin) * (i / rows));
+                
+                const dx1 = (width/2) - vp1X;
+                const dy1 = ty - vpY;
+                const l1 = clipLine(vp1X, vpY, vp1X + dx1 * 10, vpY + dy1 * 10, xmin, ymin, xmax, ymax);
+                if (l1) lines.push(l1);
+
+                const dx2 = (width/2) - vp2X;
+                const dy2 = ty - vpY;
+                const l2 = clipLine(vp2X, vpY, vp2X + dx2 * 10, vpY + dy2 * 10, xmin, ymin, xmax, ymax);
+                if (l2) lines.push(l2);
+            }
+
+            // Líneas Verticales
+            for (let i = 0; i <= columns; i++) {
+                const tx = xmin + ((xmax - xmin) * (i / columns));
+                const l3 = clipLine(tx, ymin, tx, ymax, xmin, ymin, xmax, ymax);
+                if (l3) lines.push(l3);
+            }
+            return lines;
+        };
+
+        const generatePerspective3 = () => {
+            const { width, height, rows, columns, marginX, marginY } = state;
+            const lines = [];
+            const xmin = marginX, ymin = marginY, xmax = width - marginX, ymax = height - marginY;
+            
+            const vp1X = xmin - width * 0.3, vp1Y = height * 0.3; // Superior Izquierdo
+            const vp2X = xmax + width * 0.3, vp2Y = height * 0.3; // Superior Derecho
+            const vp3X = width / 2, vp3Y = ymax + height * 0.8;   // Inferior (Nadir)
+
+            // Líneas desde Puntos de Fuga Laterales
+            for (let i = 0; i <= rows; i++) {
+                const ty = ymin + ((ymax - ymin) * (i / rows));
+                const dx1 = (width/2) - vp1X;
+                const dy1 = ty - vp1Y;
+                const l1 = clipLine(vp1X, vp1Y, vp1X + dx1 * 10, vp1Y + dy1 * 10, xmin, ymin, xmax, ymax);
+                if (l1) lines.push(l1);
+
+                const dx2 = (width/2) - vp2X;
+                const dy2 = ty - vp2Y;
+                const l2 = clipLine(vp2X, vp2Y, vp2X + dx2 * 10, vp2Y + dy2 * 10, xmin, ymin, xmax, ymax);
+                if (l2) lines.push(l2);
+            }
+
+            // Líneas desde Punto de Fuga Inferior
+            for (let i = 0; i <= columns; i++) {
+                const tx = xmin + ((xmax - xmin) * (i / columns));
+                const dx3 = tx - vp3X;
+                const dy3 = ymin - vp3Y;
+                const l3 = clipLine(vp3X, vp3Y, vp3X + dx3 * 10, vp3Y + dy3 * 10, xmin, ymin, xmax, ymax);
+                if (l3) lines.push(l3);
+            }
+            return lines;
+        };
+
+        const generateSpherical = () => {
+            const { width, height, rows, columns, marginX, marginY, warp } = state;
+            const lines = [];
+            const cx = width / 2;
+            const cy = height / 2;
+            const r = Math.min(width - marginX * 2, height - marginY * 2) / 2;
+
+            // Inclinación 3D de la esfera para mejorar la visualización geométrica
+            const tiltX = 0.3; 
+            const tiltY = 0.2; 
+
+            // Función de proyección Ortogonal 3D -> 2D
+            const project = (lat, lon) => {
+                let x = r * Math.cos(lat) * Math.cos(lon);
+                let y = r * Math.sin(lat);
+                let z = r * Math.cos(lat) * Math.sin(lon);
+
+                // Rotación en el eje X
+                let y1 = y * Math.cos(tiltX) - z * Math.sin(tiltX);
+                let z1 = y * Math.sin(tiltX) + z * Math.cos(tiltX);
+                y = y1; z = z1;
+
+                // Rotación en el eje Y
+                let x2 = x * Math.cos(tiltY) + z * Math.sin(tiltY);
+                let z2 = -x * Math.sin(tiltY) + z * Math.cos(tiltY);
+                x = x2; z = z2;
+
+                let px = cx + x;
+                let py = cy + y;
+
+                // Deformación opcional
+                if (warp > 0) {
+                    const warpFactor = warp * 20;
+                    px += Math.sin(py / 50 + seedOffset) * warpFactor;
+                    py += Math.cos(px / 50 + seedOffset) * warpFactor;
+                }
+                return `${px},${py}`;
+            };
+
+            // Meridianos (Longitudes)
+            for (let i = 0; i < columns; i++) {
+                const lon = (i / columns) * Math.PI * 2; 
+                const points = [];
+                for (let j = 0; j <= 64; j++) {
+                    const lat = -Math.PI / 2 + (j / 64) * Math.PI; // De polo a polo
+                    points.push(project(lat, lon));
+                }
+                lines.push({ type: 'polyline', points: points.join(' ') });
+            }
+
+            // Paralelos (Latitudes)
+            for (let i = 1; i < rows; i++) {
+                const lat = -Math.PI / 2 + (i / rows) * Math.PI;
+                const points = [];
+                for (let j = 0; j <= 64; j++) {
+                    const lon = (j / 64) * Math.PI * 2; // Círculo completo
+                    points.push(project(lat, lon));
+                }
+                lines.push({ type: 'polyline', points: points.join(' ') });
+            }
+
+            // Contorno exterior (Proyección ortográfica límite)
+            const outlinePoints = [];
+            for (let j = 0; j <= 64; j++) {
+                const a = (j / 64) * Math.PI * 2;
+                let px = cx + r * Math.cos(a);
+                let py = cy + r * Math.sin(a);
+                if (warp > 0) {
+                    const warpFactor = warp * 20;
+                    px += Math.sin(py / 50 + seedOffset) * warpFactor;
+                    py += Math.cos(px / 50 + seedOffset) * warpFactor;
+                }
+                outlinePoints.push(`${px},${py}`);
+            }
+            lines.push({ type: 'polyline', points: outlinePoints.join(' ') });
+
+            return lines;
+        };
+
+        // --- Lógica de Renderizado ---
+        const getStrokeDasharray = () => {
+            const w = state.strokeWidth;
+            switch(state.lineStyle) {
+                case 'dashed': return `${w * 4},${w * 4}`;
+                case 'dotted': return `${w},${w * 4}`;
+                case 'mixed': return `${w * 8},${w * 4},${w},${w * 4}`;
+                default: return 'none';
+            }
+        };
+
+        const render = () => {
+            const svg = document.getElementById('grid-svg');
+            let elements = [];
+            
+            switch (state.type) {
+                case 'modular': elements = generateModular(); break;
+                case 'radial': elements = generateRadial(); break;
+                case 'isometric': elements = generateIsometric(); break;
+                case 'perspective1': elements = generatePerspective1(); break;
+                case 'perspective2': elements = generatePerspective2(); break;
+                case 'perspective3': elements = generatePerspective3(); break;
+                case 'spherical': elements = generateSpherical(); break;
+            }
+
+            let innerHTML = '';
+
+            // Márgenes de construcción (si no estamos en modo previsualización)
+            if (!state.previewMode && (state.type === 'modular' || state.type.startsWith('perspective') || state.type === 'isometric' || state.type === 'spherical')) {
+                innerHTML += `<rect x="${state.marginX}" y="${state.marginY}" width="${state.width - state.marginX*2}" height="${state.height - state.marginY*2}" fill="none" stroke="#ff0000" stroke-width="1" stroke-dasharray="4 4" opacity="0.3" />`;
+            }
+
+            // Elementos de la Cuadrícula
+            let gContent = '';
+            elements.forEach(el => {
+                if (el.type === 'line') {
+                    gContent += `<line x1="${el.x1}" y1="${el.y1}" x2="${el.x2}" y2="${el.y2}" />`;
+                } else if (el.type === 'circle') {
+                    gContent += `<circle cx="${el.cx}" cy="${el.cy}" r="${el.r}" fill="none" />`;
+                } else if (el.type === 'polyline') {
+                    gContent += `<polyline points="${el.points}" fill="none" />`;
+                }
+            });
+
+            innerHTML += `<g stroke="${state.strokeColor}" stroke-width="${state.strokeWidth}" stroke-opacity="${state.opacity}" stroke-linecap="square" stroke-linejoin="miter" stroke-dasharray="${getStrokeDasharray()}">${gContent}</g>`;
+
+            svg.setAttribute('viewBox', `0 0 ${state.width} ${state.height}`);
+            svg.style.backgroundColor = state.bgColor;
+            svg.style.transform = `rotate(${state.rotation}deg)`;
+            svg.style.transition = 'background-color 0.3s ease';
+            svg.innerHTML = innerHTML;
+
+            // Escalar contenedor visualmente
+            const container = document.getElementById('svg-container');
+            container.style.width = `${state.width}px`;
+            container.style.height = `${state.height}px`;
+            const scale = Math.min(1, 800 / Math.max(state.width, state.height));
+            container.style.transform = `scale(${scale})`;
+        };
+
+        // --- Lógica de Interfaz y Eventos ---
+        const updateUI = () => {
+            // Actualizar valores de los inputs
+            document.querySelectorAll('[data-bind]').forEach(el => {
+                const key = el.getAttribute('data-bind');
+                el.value = state[key];
+            });
+
+            // Actualizar textos de visualización
+            document.querySelectorAll('[data-display]').forEach(el => {
+                const key = el.getAttribute('data-display');
+                let val = state[key];
+                if (typeof val === 'number') {
+                    const inputEl = document.querySelector(`[data-bind="${key}"]`);
+                    const step = parseFloat(inputEl?.step || 1);
+                    val = val.toFixed(step < 1 ? 2 : 0);
+                }
+                el.textContent = val;
+            });
+
+            // Mostrar/Ocultar paneles según el tipo de sistema
+            const t = state.type;
+            const isPersp = t.startsWith('perspective');
+            document.getElementById('group-rows-cols').style.display = ['modular', 'radial', 'spherical'].includes(t) || isPersp ? 'grid' : 'none';
+            document.getElementById('group-scale').style.display = t === 'isometric' ? 'block' : 'none';
+            document.getElementById('group-spacing').style.display = ['modular', 'isometric', 'spherical'].includes(t) || isPersp ? 'block' : 'none';
+            document.getElementById('group-progression').style.display = ['modular', 'radial'].includes(t) || isPersp ? 'block' : 'none';
+            document.getElementById('control-progression-y').style.display = t !== 'radial' ? 'block' : 'none';
+
+            // Etiquetas dinámicas
+            document.getElementById('label-rows').textContent = t === 'radial' ? 'Anillos' : (t === 'spherical' ? 'Paralelos' : 'Filas');
+            document.getElementById('label-cols').textContent = t === 'radial' ? 'Radios' : (t === 'spherical' ? 'Meridianos' : 'Columnas');
+            
+            // Icono de previsualización
+            document.getElementById('icon-preview').className = state.previewMode ? "ph ph-eye-slash text-base" : "ph ph-eye text-base";
+        };
+
+        const updateState = (key, value) => {
+            if (key === 'preset') {
+                const presets = {
+                    '1:1': { w: 800, h: 800 },
+                    '4:5': { w: 800, h: 1000 },
+                    '16:9': { w: 1280, h: 720 },
+                    'A4': { w: 794, h: 1123 }
+                };
+                if (presets[value]) {
+                    state.width = presets[value].w;
+                    state.height = presets[value].h;
+                }
+            }
+            state[key] = value;
+            render();
+            updateUI();
+        };
+
+        // Asignar Event Listeners
+        document.querySelectorAll('[data-bind]').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const key = e.target.getAttribute('data-bind');
+                let val = e.target.value;
+                if (e.target.type === 'range' || e.target.type === 'number') val = parseFloat(val);
+                updateState(key, val);
+            });
+        });
+
+        document.getElementById('btn-preview').addEventListener('click', () => {
+            state.previewMode = !state.previewMode;
+            render();
+            updateUI();
+        });
+
+        document.getElementById('btn-seed').addEventListener('click', () => {
+            seedOffset = Math.random() * 1000;
+            render();
+        });
+
+        document.getElementById('btn-export').addEventListener('click', () => {
+            const svg = document.getElementById('grid-svg');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `grid-studio-${state.type}-${Date.now()}.svg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Inicialización
+        updateUI();
+        render();
+
+    </script>
+</body>
+</html>

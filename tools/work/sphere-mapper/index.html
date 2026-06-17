@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Sphere Mapper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #27272a;
+            height: 2px;
+            border-radius: 9999px;
+            width: 100%;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        #canvasWrapper { cursor: grab; }
+        #canvasWrapper:active { cursor: grabbing; }
+
+        /* Hidden staging area for parsing SVG metrics */
+        #svgStagingArea {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-[#09090b] text-[#fafafa] font-sans antialiased h-screen overflow-hidden flex flex-col selection:bg-white selection:text-black">
+
+    <!-- Top Navigation -->
+    <header class="h-14 border-b border-zinc-800 px-6 flex items-center justify-between shrink-0 bg-[#09090b] z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-4 h-4 rounded-full border-[1.5px] border-white relative overflow-hidden flex items-center justify-center">
+                <div class="w-full h-[1px] bg-white absolute"></div>
+                <div class="h-full w-[1px] bg-white absolute"></div>
+            </div>
+            <span class="text-xs font-semibold tracking-[0.2em] uppercase text-zinc-200">SVG Sphere Mapper</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs">
+            <button id="uploadBtn" class="bg-zinc-900 border border-zinc-800 hover:border-zinc-500 text-white px-4 py-1.5 rounded transition flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Upload SVG
+            </button>
+            <input type="file" id="fileInput" accept=".svg" class="hidden">
+            <button id="exportBtn" class="bg-white text-black font-medium px-4 py-1.5 rounded hover:bg-zinc-200 transition shadow-sm flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export Output
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Center Viewport -->
+        <main class="flex-1 flex flex-col bg-[#0e0e11] relative overflow-hidden">
+            
+            <!-- View Controls -->
+            <div class="absolute top-4 left-6 z-10 flex gap-2">
+                <div class="bg-[#09090b]/80 backdrop-blur border border-zinc-800 rounded flex text-[10px] uppercase font-medium tracking-wider overflow-hidden p-1">
+                    <button id="viewSphereBtn" class="px-3 py-1.5 rounded bg-zinc-800 text-white transition">Sphere</button>
+                    <button id="viewSplitBtn" class="px-3 py-1.5 rounded text-zinc-500 hover:text-white transition">Split View</button>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div id="canvasWrapper" class="flex-1 flex items-center justify-center relative bg-[#09090b] transition-colors duration-300">
+                
+                <!-- Flat Map View (Hidden by default) -->
+                <div id="flatMapContainer" class="hidden w-1/2 h-full border-r border-zinc-900 flex items-center justify-center p-8 bg-zinc-950/50">
+                    <svg id="flatSvg" class="w-full max-w-sm h-auto opacity-70"></svg>
+                </div>
+
+                <!-- Sphere Projection View -->
+                <div id="sphereContainer" class="flex-1 h-full flex items-center justify-center">
+                    <svg id="renderSvg" viewBox="-300 -300 600 600" class="w-[600px] h-[600px] overflow-visible drop-shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
+                        <defs id="svgDefs">
+                            <clipPath id="sphereClip">
+                                <circle cx="0" cy="0" r="250" />
+                            </clipPath>
+                        </defs>
+                        <!-- Grid Guides -->
+                        <g id="guidesLayer" opacity="0.15" stroke="#ffffff" stroke-width="1" fill="none"></g>
+                        <!-- Projected Artwork -->
+                        <g id="artworkLayer" clip-path="url(#sphereClip)"></g>
+                    </svg>
+                </div>
+                
+                <!-- Helper Overlay -->
+                <div class="absolute bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-zinc-500 tracking-widest uppercase pointer-events-none">
+                    Drag to Rotate Matrix • Scroll to Scale
+                </div>
+            </div>
+
+            <!-- Variant Gallery Strip -->
+            <div class="h-32 border-t border-zinc-800 bg-[#09090b] flex flex-col shrink-0">
+                <div class="px-4 py-1.5 border-b border-zinc-900 flex justify-between items-center text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">
+                    <span>Snapshot Memory</span>
+                    <button id="saveSnapshotBtn" class="hover:text-white transition flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Save Current
+                    </button>
+                </div>
+                <div id="galleryContainer" class="flex-1 flex items-center gap-3 p-3 overflow-x-auto no-scrollbar scroll-smooth">
+                    <!-- Snapshots injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel: Parameters -->
+        <aside class="w-80 border-l border-zinc-800 flex flex-col h-full bg-[#09090b] shrink-0 overflow-y-auto no-scrollbar relative z-10">
+            
+            <div class="p-5 border-b border-zinc-800 flex justify-between items-center sticky top-0 bg-[#09090b]/95 backdrop-blur z-20">
+                <span class="text-xs font-semibold tracking-wider uppercase text-white">Mapping Engine</span>
+                <button id="randomizeBtn" class="text-xs text-zinc-400 hover:text-white transition">Randomize</button>
+            </div>
+
+            <div class="p-5 space-y-7 text-xs pb-12">
+                
+                <!-- Projection Type -->
+                <div class="space-y-3">
+                    <span class="text-zinc-400 uppercase tracking-wider font-semibold block">Projection Method</span>
+                    <select id="projectionType" class="w-full bg-zinc-900 border border-zinc-800 text-white rounded px-3 py-2 focus:outline-none focus:border-zinc-600 cursor-pointer">
+                        <option value="spherical">Spherical Wrap (Lat/Lon)</option>
+                        <option value="cylindrical">Cylindrical Projection</option>
+                        <option value="fisheye">Fisheye Lens Distortion</option>
+                        <option value="planar">Planar Front Projection</option>
+                    </select>
+                </div>
+
+                <!-- 3D Transform -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-zinc-400">
+                        <span class="uppercase tracking-wider font-semibold">Global Transform</span>
+                        <button id="resetTransformBtn" class="text-[10px] hover:text-white">Reset</button>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Rotation X</span><span id="rotXVal" class="font-mono">0°</span></div>
+                        <input type="range" id="rotXSlider" min="0" max="360" step="1" value="20">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Rotation Y</span><span id="rotYVal" class="font-mono">0°</span></div>
+                        <input type="range" id="rotYSlider" min="0" max="360" step="1" value="45">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Rotation Z</span><span id="rotZVal" class="font-mono">0°</span></div>
+                        <input type="range" id="rotZSlider" min="0" max="360" step="1" value="0">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Sphere Size</span><span id="sizeVal" class="font-mono">250</span></div>
+                        <input type="range" id="sizeSlider" min="100" max="400" step="5" value="250">
+                    </div>
+                </div>
+
+                <!-- Proportions, Distortions & Aspect Tuning -->
+                <div class="space-y-4 pt-4 border-t border-zinc-900">
+                    <span class="text-zinc-400 uppercase tracking-wider font-semibold block">Aspect & Mapping Correction</span>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="preserveAspectCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Preserve Aspect Ratio</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="autoCorrectCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Auto-Correct Spherical Flattening</span>
+                        </label>
+
+                        <select id="fitMode" class="w-full bg-zinc-900 border border-zinc-800 text-white rounded px-3 py-2 focus:outline-none focus:border-zinc-600 cursor-pointer">
+                            <option value="contain">Contain (Fit Intact)</option>
+                            <option value="cover">Cover (Fill Frame)</option>
+                            <option value="stretch">Stretch (Force X/Y)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Scale X</span><span id="scaleXVal" class="font-mono">1.0</span></div>
+                            <input type="range" id="scaleXSlider" min="0.1" max="5.0" step="0.05" value="1.0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Scale Y</span><span id="scaleYVal" class="font-mono">1.0</span></div>
+                            <input type="range" id="scaleYSlider" min="0.1" max="5.0" step="0.05" value="1.0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Aspect Correction</span><span id="aspectCorrVal" class="font-mono">1.0</span></div>
+                            <input type="range" id="aspectCorrSlider" min="0.1" max="3.0" step="0.05" value="1.0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Sphere Compression</span><span id="sphereCompVal" class="font-mono">1.0</span></div>
+                            <input type="range" id="sphereCompSlider" min="0.1" max="3.0" step="0.05" value="1.0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Horizontal Comp</span><span id="hCompVal" class="font-mono">0.0</span></div>
+                            <input type="range" id="hCompSlider" min="-1.0" max="1.0" step="0.05" value="0.0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-zinc-500 mb-1"><span>Vertical Comp</span><span id="vCompVal" class="font-mono">0.0</span></div>
+                            <input type="range" id="vCompSlider" min="-1.0" max="1.0" step="0.05" value="0.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Texture Coordinates -->
+                <div class="space-y-3 pt-4 border-t border-zinc-900">
+                    <span class="text-zinc-400 uppercase tracking-wider font-semibold block">UV Coordinates</span>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Mapping Scale (Global)</span><span id="scaleVal" class="font-mono">1.0</span></div>
+                        <input type="range" id="scaleSlider" min="0.1" max="5.0" step="0.05" value="1.0">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Offset X (Pan)</span><span id="offsetXVal" class="font-mono">0.0</span></div>
+                        <input type="range" id="offsetXSlider" min="-3.14" max="3.14" step="0.05" value="0.0">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Offset Y (Tilt)</span><span id="offsetYVal" class="font-mono">0.0</span></div>
+                        <input type="range" id="offsetYSlider" min="-1.57" max="1.57" step="0.05" value="0.0">
+                    </div>
+                </div>
+
+                <!-- Vector Geometry -->
+                <div class="space-y-4 pt-4 border-t border-zinc-900">
+                    <span class="text-zinc-400 uppercase tracking-wider font-semibold block">Geometry Resolution</span>
+                    
+                    <div>
+                        <div class="flex justify-between text-zinc-500 mb-1"><span>Subdivision Fidelity</span><span id="qualityVal" class="font-mono">80</span></div>
+                        <input type="range" id="qualitySlider" min="10" max="300" step="5" value="80">
+                        <p class="text-[9px] text-zinc-600 mt-1">Higher values create smoother curves but increase export payload size.</p>
+                    </div>
+
+                    <!-- Toggles -->
+                    <div class="space-y-2 pt-2">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="frontOnlyCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Front Visibility Only</span>
+                        </label>
+
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="clipCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Clip to Sphere Boundary</span>
+                        </label>
+
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="guidesCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Show Matrix Guides</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-3 cursor-pointer group pt-2">
+                            <div class="relative w-8 h-4 bg-zinc-800 rounded-full transition-colors group-hover:bg-zinc-700">
+                                <input type="checkbox" id="overrideColorCheck" class="sr-only peer" checked>
+                                <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                            </div>
+                            <span class="text-zinc-300">Monochrome Override</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+    </div>
+
+    <div id="svgStagingArea">
+        <svg id="stagingSvg"></svg>
+    </div>
+
+    <!-- Core Application Engine -->
+    <script>
+        // -- App State --
+        const state = {
+            projectionType: 'spherical',
+            rotX: 20,
+            rotY: 45,
+            rotZ: 0,
+            radius: 250,
+            
+            preserveAspect: true,
+            fitMode: 'contain',
+            scaleX: 1.0,
+            scaleY: 1.0,
+            aspectCorr: 1.0,
+            sphereComp: 1.0,
+            hComp: 0.0,
+            vComp: 0.0,
+            autoCorrect: true,
+
+            mapScale: 1.0,
+            offsetX: 0.0,
+            offsetY: 0.0,
+            quality: 80,
+            frontOnly: true,
+            clipSphere: true,
+            showGuides: true,
+            overrideColor: true,
+            splitView: false,
+            
+            // Parsed SVG Cache
+            sourcePaths: [], // { domPath, length, fill, stroke, width, height }
+            originalWidth: 100,
+            originalHeight: 100
+        };
+
+        // -- DOM Elements --
+        const UI = {
+            uploadBtn: document.getElementById('uploadBtn'),
+            fileInput: document.getElementById('fileInput'),
+            exportBtn: document.getElementById('exportBtn'),
+            viewSphereBtn: document.getElementById('viewSphereBtn'),
+            viewSplitBtn: document.getElementById('viewSplitBtn'),
+            flatMapContainer: document.getElementById('flatMapContainer'),
+            sphereContainer: document.getElementById('sphereContainer'),
+            flatSvg: document.getElementById('flatSvg'),
+            renderSvg: document.getElementById('renderSvg'),
+            artworkLayer: document.getElementById('artworkLayer'),
+            guidesLayer: document.getElementById('guidesLayer'),
+            sphereClip: document.getElementById('sphereClip'),
+            stagingSvg: document.getElementById('stagingSvg'),
+            galleryContainer: document.getElementById('galleryContainer'),
+            canvasWrapper: document.getElementById('canvasWrapper'),
+            saveSnapshotBtn: document.getElementById('saveSnapshotBtn'),
+            
+            // Controls
+            projectionType: document.getElementById('projectionType'),
+            rotXSlider: document.getElementById('rotXSlider'), rotXVal: document.getElementById('rotXVal'),
+            rotYSlider: document.getElementById('rotYSlider'), rotYVal: document.getElementById('rotYVal'),
+            rotZSlider: document.getElementById('rotZSlider'), rotZVal: document.getElementById('rotZVal'),
+            sizeSlider: document.getElementById('sizeSlider'), sizeVal: document.getElementById('sizeVal'),
+
+            preserveAspectCheck: document.getElementById('preserveAspectCheck'),
+            fitMode: document.getElementById('fitMode'),
+            autoCorrectCheck: document.getElementById('autoCorrectCheck'),
+            scaleXSlider: document.getElementById('scaleXSlider'), scaleXVal: document.getElementById('scaleXVal'),
+            scaleYSlider: document.getElementById('scaleYSlider'), scaleYVal: document.getElementById('scaleYVal'),
+            aspectCorrSlider: document.getElementById('aspectCorrSlider'), aspectCorrVal: document.getElementById('aspectCorrVal'),
+            sphereCompSlider: document.getElementById('sphereCompSlider'), sphereCompVal: document.getElementById('sphereCompVal'),
+            hCompSlider: document.getElementById('hCompSlider'), hCompVal: document.getElementById('hCompVal'),
+            vCompSlider: document.getElementById('vCompSlider'), vCompVal: document.getElementById('vCompVal'),
+
+            scaleSlider: document.getElementById('scaleSlider'), scaleVal: document.getElementById('scaleVal'),
+            offsetXSlider: document.getElementById('offsetXSlider'), offsetXVal: document.getElementById('offsetXVal'),
+            offsetYSlider: document.getElementById('offsetYSlider'), offsetYVal: document.getElementById('offsetYVal'),
+            qualitySlider: document.getElementById('qualitySlider'), qualityVal: document.getElementById('qualityVal'),
+            frontOnlyCheck: document.getElementById('frontOnlyCheck'),
+            clipCheck: document.getElementById('clipCheck'),
+            guidesCheck: document.getElementById('guidesCheck'),
+            overrideColorCheck: document.getElementById('overrideColorCheck'),
+            resetTransformBtn: document.getElementById('resetTransformBtn'),
+            randomizeBtn: document.getElementById('randomizeBtn')
+        };
+
+        // -- PRNG --
+        function xoshiro128ss(a, b, c, d) {
+            return function() {
+                var t = b << 9, r = a * 5; r = (r << 7 | r >>> 25) * 9;
+                c ^= a; d ^= b; b ^= c; a ^= d; c ^= t;
+                d = d << 11 | d >>> 21;
+                return (r >>> 0) / 4294967296;
+            }
+        }
+        let rand = xoshiro128ss(1, 2, 3, 4);
+
+        // -- Initialization & Default Artwork --
+        function init() {
+            generateDefaultSVG();
+            bindEvents();
+            updateUIFromState();
+            render();
+        }
+
+        function generateDefaultSVG() {
+            // Generate a non-square typography/geometric grid to clearly demonstrate aspect logic
+            let svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" width="600" height="300">`;
+            
+            // Checkerboard
+            for(let i=0; i<15; i++) {
+                for(let j=0; j<8; j++) {
+                    if((i+j)%2 === 0) {
+                        svgStr += `<rect x="${i*40}" y="${j*40}" width="40" height="40" fill="#ffffff" />`;
+                    }
+                }
+            }
+            // Add central graphics
+            svgStr += `<circle cx="300" cy="150" r="120" fill="none" stroke="#ffffff" stroke-width="20"/>`;
+            svgStr += `<circle cx="300" cy="150" r="60" fill="#ffffff" />`;
+            svgStr += `<path d="M 50 150 L 550 150" stroke="#000000" stroke-width="15"/>`;
+            svgStr += `<path d="M 300 50 L 300 250" stroke="#000000" stroke-width="15"/>`;
+            svgStr += `</svg>`;
+            
+            processRawSVGString(svgStr);
+        }
+
+        // -- SVG Parsing & Conversion Engine --
+        function processRawSVGString(svgStr) {
+            UI.stagingSvg.innerHTML = svgStr;
+            const svgDoc = UI.stagingSvg.querySelector('svg') || UI.stagingSvg;
+            
+            // Get viewbox or dimensions
+            const vb = svgDoc.getAttribute('viewBox');
+            if (vb) {
+                const parts = vb.split(/[\s,]+/).map(Number);
+                state.originalWidth = parts[2] || 400;
+                state.originalHeight = parts[3] || 400;
+            } else {
+                state.originalWidth = parseFloat(svgDoc.getAttribute('width') || 400);
+                state.originalHeight = parseFloat(svgDoc.getAttribute('height') || 400);
+            }
+
+            convertToPaths(svgDoc);
+
+            state.sourcePaths = [];
+            const paths = svgDoc.querySelectorAll('path');
+            
+            paths.forEach(p => {
+                const length = p.getTotalLength();
+                if (length < 1) return;
+                
+                const ctm = p.getCTM();
+                
+                state.sourcePaths.push({
+                    domPath: p,
+                    length: length,
+                    ctm: ctm,
+                    fill: p.getAttribute('fill') || p.style.fill || '#ffffff',
+                    stroke: p.getAttribute('stroke') || p.style.stroke || 'none',
+                    strokeWidth: p.getAttribute('stroke-width') || p.style.strokeWidth || '1'
+                });
+            });
+
+            UI.flatSvg.innerHTML = svgDoc.innerHTML;
+            UI.flatSvg.setAttribute('viewBox', `0 0 ${state.originalWidth} ${state.originalHeight}`);
+
+            render();
+        }
+
+        function convertToPaths(svgDoc) {
+            svgDoc.querySelectorAll('rect').forEach(el => {
+                const x = parseFloat(el.getAttribute('x')||0);
+                const y = parseFloat(el.getAttribute('y')||0);
+                const w = parseFloat(el.getAttribute('width')||0);
+                const h = parseFloat(el.getAttribute('height')||0);
+                const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+                p.setAttribute('d', `M${x},${y} h${w} v${h} h${-w} Z`);
+                copyStyles(el, p); el.replaceWith(p);
+            });
+            svgDoc.querySelectorAll('circle').forEach(el => {
+                const cx = parseFloat(el.getAttribute('cx')||0);
+                const cy = parseFloat(el.getAttribute('cy')||0);
+                const r = parseFloat(el.getAttribute('r')||0);
+                const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+                p.setAttribute('d', `M${cx-r},${cy} a${r},${r} 0 1,0 ${r*2},0 a${r},${r} 0 1,0 -${r*2},0`);
+                copyStyles(el, p); el.replaceWith(p);
+            });
+            svgDoc.querySelectorAll('polygon').forEach(el => {
+                const pts = el.getAttribute('points').trim().split(/[\s,]+/);
+                if(pts.length < 2) return;
+                let d = `M${pts[0]},${pts[1]} `;
+                for(let i=2; i<pts.length; i+=2) d += `L${pts[i]},${pts[i+1]} `;
+                d += 'Z';
+                const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+                p.setAttribute('d', d);
+                copyStyles(el, p); el.replaceWith(p);
+            });
+            svgDoc.querySelectorAll('line').forEach(el => {
+                const x1 = parseFloat(el.getAttribute('x1')||0);
+                const y1 = parseFloat(el.getAttribute('y1')||0);
+                const x2 = parseFloat(el.getAttribute('x2')||0);
+                const y2 = parseFloat(el.getAttribute('y2')||0);
+                const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+                p.setAttribute('d', `M${x1},${y1} L${x2},${y2}`);
+                copyStyles(el, p); el.replaceWith(p);
+            });
+            svgDoc.querySelectorAll('polyline').forEach(el => {
+                const pts = el.getAttribute('points').trim().split(/[\s,]+/);
+                if(pts.length < 2) return;
+                let d = `M${pts[0]},${pts[1]} `;
+                for(let i=2; i<pts.length; i+=2) d += `L${pts[i]},${pts[i+1]} `;
+                const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+                p.setAttribute('d', d);
+                copyStyles(el, p); el.replaceWith(p);
+            });
+        }
+
+        function copyStyles(src, dest) {
+            ['fill', 'stroke', 'stroke-width', 'opacity', 'transform', 'class'].forEach(attr => {
+                if (src.hasAttribute(attr)) dest.setAttribute(attr, src.getAttribute(attr));
+            });
+        }
+
+        // -- Math & 3D Projection Engine --
+        const DEG2RAD = Math.PI / 180;
+
+        function applyRotation(x, y, z) {
+            let rx = state.rotX * DEG2RAD;
+            let y1 = y * Math.cos(rx) - z * Math.sin(rx);
+            let z1 = y * Math.sin(rx) + z * Math.cos(rx);
+
+            let ry = state.rotY * DEG2RAD;
+            let x2 = x * Math.cos(ry) + z1 * Math.sin(ry);
+            let z2 = -x * Math.sin(ry) + z1 * Math.cos(ry);
+
+            let rz = state.rotZ * DEG2RAD;
+            let x3 = x2 * Math.cos(rz) - y1 * Math.sin(rz);
+            let y3 = x2 * Math.sin(rz) + y1 * Math.cos(rz);
+            
+            return { x: x3, y: y3, z: z2 };
+        }
+
+        function map2DTo3D(px, py, R) {
+            // Stage 1: Normalize SVG coordinates to 1:1 UV mapping block 
+            // Calculate starting normalized anchors
+            let nx = (px / state.originalWidth - 0.5);
+            let ny = (py / state.originalHeight - 0.5);
+            
+            // Manage natural Aspect preservation bounds mapping
+            if (state.preserveAspect && state.fitMode !== 'stretch') {
+                const aspect = state.originalWidth / state.originalHeight;
+                if (state.fitMode === 'contain') {
+                    if (aspect > 1) { ny /= aspect; } else { nx *= aspect; }
+                } else if (state.fitMode === 'cover') {
+                    if (aspect > 1) { nx *= aspect; } else { ny /= aspect; }
+                }
+            }
+
+            // Stage 2: Apply user-controlled explicit uniform and non-uniform independent scales
+            nx *= state.scaleX * state.aspectCorr;
+            ny *= state.scaleY / state.aspectCorr;
+            
+            // Stage 3: Projection logic and spatial mathematical distortions applied to UVs
+            let x, y, z;
+            
+            const hComp = 1.0 + state.hComp;
+            const vComp = 1.0 + state.vComp;
+            
+            // Auto Correct fixes equirectangular 2:1 horizontal stretch ratio mathematically
+            const sphAutoCorrectV = state.autoCorrect ? 2.0 : 1.0; 
+
+            if (state.projectionType === 'spherical') {
+                const u = (nx * 2 * Math.PI * state.mapScale * hComp) + state.offsetX;
+                const v = (ny * Math.PI * state.mapScale * vComp * sphAutoCorrectV * state.sphereComp) + state.offsetY;
+                x = R * Math.cos(v) * Math.sin(u);
+                y = R * Math.sin(v);
+                z = R * Math.cos(v) * Math.cos(u);
+            } 
+            else if (state.projectionType === 'cylindrical') {
+                const u = (nx * 2 * Math.PI * state.mapScale * hComp) + state.offsetX;
+                const v = (ny * 2 * R * state.mapScale * vComp * state.sphereComp) + (state.offsetY * R);
+                x = R * Math.sin(u);
+                y = v;
+                z = R * Math.cos(u);
+            }
+            else if (state.projectionType === 'fisheye') {
+                const scaledNx = nx * state.mapScale * hComp;
+                const scaledNy = ny * state.mapScale * vComp * state.sphereComp;
+                const d = Math.sqrt(scaledNx*scaledNx + scaledNy*scaledNy);
+                const r = (d + Math.pow(d, 3) * 2) * R * 2;
+                const angle = Math.atan2(scaledNy, scaledNx) + state.offsetX;
+                
+                let px2 = Math.cos(angle) * r;
+                let py2 = Math.sin(angle) * r;
+                let z2Sq = R*R - px2*px2 - py2*py2;
+                
+                x = px2;
+                y = py2;
+                z = z2Sq > 0 ? Math.sqrt(z2Sq) : -1;
+            }
+            else if (state.projectionType === 'planar') {
+                x = (nx * 2 * R * state.mapScale * hComp) + (state.offsetX * R);
+                y = (ny * 2 * R * state.mapScale * vComp * state.sphereComp) + (state.offsetY * R);
+                let zSq = R*R - x*x - y*y;
+                z = zSq > 0 ? Math.sqrt(zSq) : -1;
+            }
+
+            return { x, y, z };
+        }
+
+        // -- Rendering Pipeline --
+        function render() {
+            UI.artworkLayer.innerHTML = '';
+            UI.guidesLayer.innerHTML = '';
+            
+            const R = state.radius;
+            UI.sphereClip.querySelector('circle').setAttribute('r', R);
+
+            // 1. Draw Guides
+            if (state.showGuides) {
+                const guidePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                let dGuides = '';
+                
+                for(let i=0; i<12; i++) {
+                    const u = (i / 12) * Math.PI * 2;
+                    let linePts = [];
+                    for(let j=0; j<=40; j++) {
+                        const v = (j / 40) * Math.PI - Math.PI/2;
+                        let x = R * Math.cos(v) * Math.sin(u);
+                        let y = R * Math.sin(v);
+                        let z = R * Math.cos(v) * Math.cos(u);
+                        
+                        let rot = applyRotation(x, y, z);
+                        if (rot.z >= 0 || !state.frontOnly) {
+                            linePts.push(rot);
+                        } else {
+                            const len = Math.sqrt(rot.x*rot.x + rot.y*rot.y);
+                            if(len > 0) linePts.push({x: (rot.x/len)*R, y: (rot.y/len)*R});
+                        }
+                    }
+                    dGuides += buildPathString(linePts);
+                }
+                
+                for(let j=1; j<12; j++) {
+                    const v = (j / 12) * Math.PI - Math.PI/2;
+                    let linePts = [];
+                    for(let i=0; i<=40; i++) {
+                        const u = (i / 40) * Math.PI * 2;
+                        let x = R * Math.cos(v) * Math.sin(u);
+                        let y = R * Math.sin(v);
+                        let z = R * Math.cos(v) * Math.cos(u);
+                        let rot = applyRotation(x, y, z);
+                        if (rot.z >= 0 || !state.frontOnly) {
+                            linePts.push(rot);
+                        } else {
+                            const len = Math.sqrt(rot.x*rot.x + rot.y*rot.y);
+                            if(len > 0) linePts.push({x: (rot.x/len)*R, y: (rot.y/len)*R});
+                        }
+                    }
+                    dGuides += buildPathString(linePts);
+                }
+                
+                dGuides += ` M ${-R} 0 A ${R} ${R} 0 1 0 ${R} 0 A ${R} ${R} 0 1 0 ${-R} 0`;
+                guidePath.setAttribute('d', dGuides);
+                UI.guidesLayer.appendChild(guidePath);
+            }
+
+            if (state.clipSphere) {
+                UI.artworkLayer.setAttribute('clip-path', 'url(#sphereClip)');
+            } else {
+                UI.artworkLayer.removeAttribute('clip-path');
+            }
+
+            // 2. Render Artwork Matrix Structure
+            const renderedShapes = [];
+            const ptObj = UI.stagingSvg.createSVGPoint();
+
+            state.sourcePaths.forEach(sp => {
+                const steps = Math.max(10, state.quality);
+                const stepSize = sp.length / steps;
+                let projectedPts = [];
+                let avgZ = 0;
+                let visibleCount = 0;
+
+                for (let i = 0; i <= steps; i++) {
+                    const rawPt = sp.domPath.getPointAtLength(Math.min(i * stepSize, sp.length));
+                    
+                    ptObj.x = rawPt.x; ptObj.y = rawPt.y;
+                    const screenPt = sp.ctm ? ptObj.matrixTransform(sp.ctm) : ptObj;
+
+                    const p3d = map2DTo3D(screenPt.x, screenPt.y, R);
+                    const rot = applyRotation(p3d.x, p3d.y, p3d.z);
+                    
+                    avgZ += rot.z;
+                    if (rot.z >= 0) visibleCount++;
+
+                    if (rot.z < 0 && state.frontOnly) {
+                        const len = Math.sqrt(rot.x*rot.x + rot.y*rot.y);
+                        if (len > 0) {
+                            projectedPts.push({ x: (rot.x/len)*R, y: (rot.y/len)*R, z: 0 });
+                        } else {
+                            projectedPts.push(rot);
+                        }
+                    } else {
+                        projectedPts.push(rot);
+                    }
+                }
+
+                avgZ /= (steps + 1);
+
+                if (state.frontOnly && visibleCount === 0) return;
+
+                const startPt = sp.domPath.getPointAtLength(0);
+                const endPt = sp.domPath.getPointAtLength(sp.length);
+                const isClosed = (Math.abs(startPt.x - endPt.x) < 1 && Math.abs(startPt.y - endPt.y) < 1) || sp.domPath.getAttribute('d').toUpperCase().endsWith('Z');
+                
+                renderedShapes.push({
+                    pathStr: buildPathString(projectedPts, isClosed),
+                    fill: state.overrideColor ? (sp.fill !== 'none' ? '#ffffff' : 'none') : sp.fill,
+                    stroke: state.overrideColor ? (sp.stroke !== 'none' ? '#ffffff' : 'none') : sp.stroke,
+                    strokeWidth: sp.strokeWidth,
+                    avgZ: avgZ
+                });
+            });
+
+            renderedShapes.sort((a, b) => a.avgZ - b.avgZ);
+
+            renderedShapes.forEach(shape => {
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('d', shape.pathStr);
+                if (shape.fill !== 'none') p.setAttribute('fill', shape.fill);
+                if (shape.stroke !== 'none') {
+                    p.setAttribute('stroke', shape.stroke);
+                    p.setAttribute('stroke-width', shape.strokeWidth);
+                    p.setAttribute('stroke-linejoin', 'round');
+                }
+                UI.artworkLayer.appendChild(p);
+            });
+        }
+
+        function buildPathString(pts, close = false) {
+            if (!pts || pts.length === 0) return '';
+            let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)} `;
+            for(let i=1; i<pts.length; i++) {
+                d += `L ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)} `;
+            }
+            if (close) d += 'Z';
+            return d;
+        }
+
+        // -- Event Handlers --
+        function bindEvents() {
+            const binds = [
+                ['rotXSlider', 'rotXVal', 'rotX', (v) => `${v}°`],
+                ['rotYSlider', 'rotYVal', 'rotY', (v) => `${v}°`],
+                ['rotZSlider', 'rotZVal', 'rotZ', (v) => `${v}°`],
+                ['sizeSlider', 'sizeVal', 'radius', (v) => v],
+                ['scaleXSlider', 'scaleXVal', 'scaleX', (v) => Number(v).toFixed(2)],
+                ['scaleYSlider', 'scaleYVal', 'scaleY', (v) => Number(v).toFixed(2)],
+                ['aspectCorrSlider', 'aspectCorrVal', 'aspectCorr', (v) => Number(v).toFixed(2)],
+                ['sphereCompSlider', 'sphereCompVal', 'sphereComp', (v) => Number(v).toFixed(2)],
+                ['hCompSlider', 'hCompVal', 'hComp', (v) => Number(v).toFixed(2)],
+                ['vCompSlider', 'vCompVal', 'vComp', (v) => Number(v).toFixed(2)],
+                ['scaleSlider', 'scaleVal', 'mapScale', (v) => Number(v).toFixed(2)],
+                ['offsetXSlider', 'offsetXVal', 'offsetX', (v) => Number(v).toFixed(2)],
+                ['offsetYSlider', 'offsetYVal', 'offsetY', (v) => Number(v).toFixed(2)],
+                ['qualitySlider', 'qualityVal', 'quality', (v) => v]
+            ];
+
+            binds.forEach(([sliderId, valId, stateKey, formatFn]) => {
+                UI[sliderId].addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    state[stateKey] = val;
+                    UI[valId].innerText = formatFn(val);
+                    render();
+                });
+            });
+
+            UI.projectionType.addEventListener('change', (e) => { state.projectionType = e.target.value; render(); });
+            UI.fitMode.addEventListener('change', (e) => { state.fitMode = e.target.value; render(); });
+            
+            UI.preserveAspectCheck.addEventListener('change', (e) => { state.preserveAspect = e.target.checked; render(); });
+            UI.autoCorrectCheck.addEventListener('change', (e) => { state.autoCorrect = e.target.checked; render(); });
+            
+            UI.frontOnlyCheck.addEventListener('change', (e) => { state.frontOnly = e.target.checked; render(); });
+            UI.clipCheck.addEventListener('change', (e) => { state.clipSphere = e.target.checked; render(); });
+            UI.guidesCheck.addEventListener('change', (e) => { state.showGuides = e.target.checked; render(); });
+            UI.overrideColorCheck.addEventListener('change', (e) => { state.overrideColor = e.target.checked; render(); });
+
+            UI.resetTransformBtn.addEventListener('click', () => {
+                state.rotX = 0; state.rotY = 0; state.rotZ = 0;
+                updateUIFromState();
+                render();
+            });
+
+            UI.randomizeBtn.addEventListener('click', () => {
+                state.rotX = Math.floor(rand() * 360);
+                state.rotY = Math.floor(rand() * 360);
+                state.rotZ = Math.floor(rand() * 360);
+                state.offsetX = (rand() * 6.28) - 3.14;
+                state.offsetY = (rand() * 3.14) - 1.57;
+                state.mapScale = 0.5 + (rand() * 2.5);
+                const types = ['spherical', 'cylindrical', 'fisheye', 'planar'];
+                state.projectionType = types[Math.floor(rand() * types.length)];
+                updateUIFromState();
+                render();
+            });
+
+            UI.uploadBtn.addEventListener('click', () => UI.fileInput.click());
+            
+            UI.fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const result = event.target.result;
+                    if (result.includes('<svg')) {
+                        processRawSVGString(result);
+                    } else {
+                        alert("Please upload a valid SVG file.");
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            UI.viewSphereBtn.addEventListener('click', () => {
+                state.splitView = false;
+                UI.flatMapContainer.classList.add('hidden');
+                UI.viewSphereBtn.classList.replace('text-zinc-500', 'bg-zinc-800');
+                UI.viewSphereBtn.classList.add('text-white');
+                UI.viewSplitBtn.classList.replace('bg-zinc-800', 'text-zinc-500');
+                UI.viewSplitBtn.classList.remove('text-white');
+            });
+
+            UI.viewSplitBtn.addEventListener('click', () => {
+                state.splitView = true;
+                UI.flatMapContainer.classList.remove('hidden');
+                UI.viewSplitBtn.classList.replace('text-zinc-500', 'bg-zinc-800');
+                UI.viewSplitBtn.classList.add('text-white');
+                UI.viewSphereBtn.classList.replace('bg-zinc-800', 'text-zinc-500');
+                UI.viewSphereBtn.classList.remove('text-white');
+            });
+
+            let isDragging = false;
+            let lastX, lastY;
+
+            UI.canvasWrapper.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            });
+            window.addEventListener('mouseup', () => isDragging = false);
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - lastX;
+                const dy = e.clientY - lastY;
+                
+                state.rotY = (state.rotY + dx * 0.5) % 360;
+                if(state.rotY < 0) state.rotY += 360;
+                state.rotX = (state.rotX - dy * 0.5) % 360;
+                if(state.rotX < 0) state.rotX += 360;
+                
+                updateUIFromState();
+                render();
+                
+                lastX = e.clientX;
+                lastY = e.clientY;
+            });
+
+            UI.canvasWrapper.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                state.radius = Math.max(50, Math.min(500, state.radius - e.deltaY * 0.5));
+                updateUIFromState();
+                render();
+            }, { passive: false });
+
+            UI.exportBtn.addEventListener('click', () => {
+                const exportSvg = UI.renderSvg.cloneNode(true);
+                exportSvg.removeAttribute('class');
+                exportSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                exportSvg.setAttribute('width', '600');
+                exportSvg.setAttribute('height', '600');
+                
+                const blob = new Blob([exportSvg.outerHTML], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `sphere-mapped-${Date.now()}.svg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            UI.saveSnapshotBtn.addEventListener('click', () => {
+                const thumbData = UI.renderSvg.outerHTML;
+                const wrapper = document.createElement('div');
+                wrapper.className = "w-20 h-20 bg-zinc-950 border border-zinc-800 rounded shrink-0 hover:border-zinc-500 cursor-pointer transition flex items-center justify-center p-1 group";
+                
+                const mini = document.createElement('div');
+                mini.className = "w-full h-full pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity";
+                mini.innerHTML = thumbData;
+                
+                const snapState = { ...state };
+                
+                wrapper.appendChild(mini);
+                wrapper.addEventListener('click', () => {
+                    Object.assign(state, snapState);
+                    updateUIFromState();
+                    render();
+                });
+
+                UI.galleryContainer.insertBefore(wrapper, UI.galleryContainer.firstChild);
+            });
+        }
+
+        function updateUIFromState() {
+            UI.projectionType.value = state.projectionType;
+            UI.rotXSlider.value = state.rotX; UI.rotXVal.innerText = `${Math.round(state.rotX)}°`;
+            UI.rotYSlider.value = state.rotY; UI.rotYVal.innerText = `${Math.round(state.rotY)}°`;
+            UI.rotZSlider.value = state.rotZ; UI.rotZVal.innerText = `${Math.round(state.rotZ)}°`;
+            UI.sizeSlider.value = state.radius; UI.sizeVal.innerText = Math.round(state.radius);
+            
+            UI.preserveAspectCheck.checked = state.preserveAspect;
+            UI.fitMode.value = state.fitMode;
+            UI.autoCorrectCheck.checked = state.autoCorrect;
+            UI.scaleXSlider.value = state.scaleX; UI.scaleXVal.innerText = state.scaleX.toFixed(2);
+            UI.scaleYSlider.value = state.scaleY; UI.scaleYVal.innerText = state.scaleY.toFixed(2);
+            UI.aspectCorrSlider.value = state.aspectCorr; UI.aspectCorrVal.innerText = state.aspectCorr.toFixed(2);
+            UI.sphereCompSlider.value = state.sphereComp; UI.sphereCompVal.innerText = state.sphereComp.toFixed(2);
+            UI.hCompSlider.value = state.hComp; UI.hCompVal.innerText = state.hComp.toFixed(2);
+            UI.vCompSlider.value = state.vComp; UI.vCompVal.innerText = state.vComp.toFixed(2);
+
+            UI.scaleSlider.value = state.mapScale; UI.scaleVal.innerText = state.mapScale.toFixed(2);
+            UI.offsetXSlider.value = state.offsetX; UI.offsetXVal.innerText = state.offsetX.toFixed(2);
+            UI.offsetYSlider.value = state.offsetY; UI.offsetYVal.innerText = state.offsetY.toFixed(2);
+            UI.qualitySlider.value = state.quality; UI.qualityVal.innerText = state.quality;
+            UI.frontOnlyCheck.checked = state.frontOnly;
+            UI.clipCheck.checked = state.clipSphere;
+            UI.guidesCheck.checked = state.showGuides;
+            UI.overrideColorCheck.checked = state.overrideColor;
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>

@@ -21,6 +21,17 @@ const findCover = (dir, sessionId, slug) => {
   return null;
 };
 
+// Optional session cover: drop a `cover.<ext>` directly into the session folder.
+const findSessionCover = (sessionId) => {
+  const dir = join(TOOLS, sessionId);
+  for (const ext of COVER_EXTS) {
+    if (existsSync(join(dir, `cover.${ext}`))) {
+      return `tools/${sessionId}/cover.${ext}`;
+    }
+  }
+  return null;
+};
+
 async function readMeta(sessionId, slug) {
   const dir = join(TOOLS, sessionId, slug);
   if (!existsSync(join(dir, 'index.html'))) {
@@ -76,8 +87,11 @@ async function build() {
   const out = { generated: new Date().toISOString(), sessions: [] };
   for (const s of sessions) {
     const tools = await scanSession(s.id);
-    out.sessions.push({ id: s.id, title: s.title, tools });
-    console.log(`· ${s.id}: ${tools.length} tool(s)`);
+    const entry = { id: s.id, title: s.title, tools };
+    const cover = findSessionCover(s.id);
+    if (cover) entry.cover = cover;
+    out.sessions.push(entry);
+    console.log(`· ${s.id}: ${tools.length} tool(s)${cover ? ' + cover' : ''}`);
   }
   await writeFile(join(ROOT, 'manifest.json'), JSON.stringify(out, null, 2) + '\n');
   console.log('✓ manifest.json written');
