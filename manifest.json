@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T19:39:19.659Z",
+  "generated": "2026-06-17T19:52:27.532Z",
   "sessions": [
     {
       "id": "s04",
@@ -34,7 +34,8 @@
           "path": "tools/s04/risograph/index.html",
           "cover": "tools/s04/risograph/cover.jpg"
         }
-      ]
+      ],
+      "cover": "tools/s04/cover.jpg"
     },
     {
       "id": "s05",
@@ -83,7 +84,8 @@
           "path": "tools/s05/wiggling-type-claudia/index.html",
           "cover": "tools/s05/wiggling-type-claudia/cover.jpg"
         }
-      ]
+      ],
+      "cover": "tools/s05/cover.jpg"
     },
     {
       "id": "work",
