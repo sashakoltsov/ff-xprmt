@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T12:51:40.083Z",
+  "generated": "2026-06-17T12:59:46.396Z",
   "sessions": [
     {
       "id": "s04",
@@ -16,12 +16,6 @@
           "name": "Halftone Kaleidoscope",
           "author": "Juan E.",
           "path": "tools/s04/halftone-kaleidoscope/index.html"
-        },
-        {
-          "slug": "randomizer",
-          "name": "Randomizer",
-          "author": "Juan E.",
-          "path": "tools/s04/randomizer/index.html"
         },
         {
           "slug": "rasterizer",
@@ -76,7 +70,14 @@
     {
       "id": "work",
       "title": "Project Tools",
-      "tools": []
+      "tools": [
+        {
+          "slug": "randomizer",
+          "name": "Randomizer",
+          "author": "Juan E.",
+          "path": "tools/work/randomizer/index.html"
+        }
+      ]
     }
   ]
 }
