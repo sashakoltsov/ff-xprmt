@@ -1,12 +1,31 @@
+/* ---- fonts ---- */
+@font-face {
+  font-family: "Aeonik";
+  src: url("fonts/Aeonik-Medium.woff2") format("woff2"),
+       url("fonts/Aeonik-Medium.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Mono";
+  src: url("fonts/AeonikMono-Regular.woff2") format("woff2"),
+       url("fonts/AeonikMono-Regular.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #FBFAF7;
   --ink: #1A1916;
   --ink-soft: #6F6B63;
   --line: #E5E2DB;
   --saffron: #E8A33D;
+  --yellow: #FDF578;
   --nav-h: 40px;
-  --sans: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Aeonik", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "Aeonik Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -22,19 +41,39 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
+/* index-page gradient: FDF578 → transparent across the lower quarter,
+   sitting behind the cards. Hidden on the tool view. */
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 25vh;
+  background: linear-gradient(to top, var(--yellow), rgba(253, 245, 120, 0));
+  pointer-events: none;
+  z-index: 0;
+}
+body.is-tool::after { display: none; }
+
 /* ---- layout ---- */
 .wrap {
+  position: relative;
+  z-index: 1;
   max-width: 960px;
   margin: 0 auto;
   padding: clamp(24px, 6vw, 72px) clamp(20px, 5vw, 40px);
 }
 
 .eyebrow {
+  display: flex;
+  align-items: center;
+  height: 25px;              /* match the session-head row so titles align */
   font-family: var(--mono);
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: #000;
   margin: 0 0 28px;
 }
 
@@ -48,12 +87,43 @@ a { color: inherit; text-decoration: none; }
 
 .backlink {
   font-family: var(--mono);
-  font-size: 13px;
-  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #000;
   display: inline-block;
   margin: 0 0 28px;
+  text-transform: uppercase;
+  transition: color 200ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 .backlink:hover { color: var(--saffron); }
+
+/* session page: backlink + session tag on one row */
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 25px;              /* match the landing eyebrow row */
+  margin: 0 0 28px;
+}
+.session-head .backlink { margin: 0; }
+
+/* WORK pills: inverted — black fill, yellow text */
+.session-tag.is-work,
+.card .code.is-work { background: #1D1D1B; color: var(--yellow); }
+.session-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  margin-left: 12px;         /* nudge the tag right */
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--yellow);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #000;
+}
 
 /* ---- grids + cards ---- */
 .grid {
@@ -63,87 +133,371 @@ a { color: inherit; text-decoration: none; }
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  justify-content: space-between;
+  border: none;
+  border-radius: 20px;
   padding: 22px 20px;
   background: #fff;
   aspect-ratio: 1;
-  transition: border-color .15s ease, transform .15s ease;
+  overflow: hidden;
+  /* promote to its own layer so the rounded clip is AA'd cleanly
+     (kills the dark hairline at the corners) */
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
-.card:hover { border-color: var(--ink); transform: translateY(-2px); }
+/* hover: dissolve the whole tile to solid FDF578 (crossfade, no movement) */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background: var(--yellow);
+  opacity: 0;
+  /* return to default: quick 200ms ease-out */
+  transition: opacity 200ms cubic-bezier(0.33, 1, 0.68, 1);
+  pointer-events: none;
+}
+.card:hover::before {
+  opacity: 1;
+  /* hover-in: ease-out over 500ms (fast start, easing to a stop) */
+  transition: opacity 500ms cubic-bezier(0.5, 1, 0.89, 1);
+}
+
+/* keyboard focus ring kept for accessibility */
 .card:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
 
+/* optional cover image: fills the card, with an FDF578 75% wash on top so
+   the type always reads. */
+.card .cover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background-size: cover;
+  background-position: center;
+  /* no return transition: on unhover the scale resets instantly (hidden
+     behind the still-opaque yellow), so the tile just dissolves back */
+}
+.card:hover .cover {
+  transform: scale(1.07);
+  /* hover-in: ease-out over 500ms (fast start, easing to a stop) */
+  transition: transform 500ms cubic-bezier(0.5, 1, 0.89, 1);
+}
+
+/* light-grey (ECECEB) wash on cover tiles: 100% at the bottom,
+   fading to 0% at 3/4 of the tile height */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(to top,
+    rgba(236, 236, 235, 1) 0%,
+    rgba(236, 236, 235, 1) 5%,
+    rgba(236, 236, 235, 0) 100%);
+}
+
+/* tiles without a cover: fill the whole tile with the grey */
+.card:not(:has(.cover)) { background: #ECECEB; }
+
+/* session tiles: on hover, run a randomised cover slideshow with a slow
+   continuous zoom instead of the yellow fill. */
+.session-covers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(1);
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.5, 1, 0.89, 1);
+}
+/* opacity fades via :hover; the zoom is driven in JS (Web Animations API)
+   so it can ease cleanly back from its current scale on hover-out */
+.session-card:hover .session-covers { opacity: 1; }
+.session-covers .frame {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  /* steady linear crossfade; only the incoming frame fades in, base stays opaque */
+  transition: opacity 140ms linear;
+}
+.session-covers .frame:first-child  { z-index: 0; } /* base, always opaque */
+.session-covers .frame:last-child   { z-index: 1; } /* overlay, fades in */
+
+/* session tiles show covers on hover, not the yellow fill */
+.session-card:hover::before { opacity: 0; }
+
+/* keep card text above the cover, gradient and hover fill */
+.card .code,
+.card .name,
+.card .meta,
+.card .foot {
+  position: relative;
+  z-index: 3;
+}
+
 .card .code {
+  position: absolute;           /* pin to the tile corner */
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  padding: 0 11px;
+  border-radius: 999px;         /* fully rounded pill */
+  background: var(--yellow);
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--saffron);
-  letter-spacing: 0.04em;
+  color: #000;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .card .name {
-  font-size: 18px;
+  /* 1.5× the previous 18px */
+  font-size: 27px;
   font-weight: 600;
+  line-height: 1.05;
   letter-spacing: -0.01em;
-  margin: 14px 0 6px;
+  margin: 0 0 6px;
 }
 
 .card .meta {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+  color: #000;
+  text-transform: uppercase;
+}
+
+/* tool-card footer: name + byline pinned to the bottom */
+.card .foot { margin-top: auto; }
+
+.card .byline { line-height: 1.2; }
+
+.card .byline .by {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #000;
+  text-transform: uppercase;
+}
+
+.card .byline .who {
+  font-family: var(--sans);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 /* ---- tool view ---- */
 .toolview { display: flex; flex-direction: column; height: 100vh; }
 
 .toolbar {
+  position: relative;
+  z-index: 2;
   height: var(--nav-h);
   flex: 0 0 var(--nav-h);
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
+  background: var(--yellow);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
 }
 
 .toolbar .back {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #000;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  position: relative;
+  z-index: 1;
+  text-transform: uppercase;
+  transition: color 200ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 .toolbar .back:hover { color: var(--saffron); }
 
+/* tool + name: non-mono, centred in the panel */
 .toolbar .label {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--ink-soft);
-  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 60%;
+  text-align: center;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+/* small mono "by", sitting on the baseline of the name/author */
+.toolbar .label .by {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #000;
+  vertical-align: baseline;
+}
+
 .toolview iframe { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+
+/* ---- AI gate (tool needs an API we don't run here) ---- */
+/* the tool still loads as a faint, non-interactive backdrop */
+.ai-stage {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
+}
+.ai-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+  pointer-events: none;   /* non-interactive */
+}
+.ai-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(251, 250, 247, 0.9);  /* 90% paper */
+  pointer-events: none;
+}
+.ai-gate {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 5vw, 56px);
+  overflow: auto;
+}
+.ai-card {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+}
+.ai-eyebrow {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--yellow);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #000;
+  margin: 0 0 18px;
+}
+.ai-title {
+  font-family: var(--sans);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+.ai-text {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin: 0 0 18px;
+}
+.ai-prompt {
+  width: 100%;
+  height: 180px;
+  resize: vertical;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre;
+  overflow: auto;
+}
+.ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.ai-copy,
+.ai-open {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 200ms cubic-bezier(0.33, 1, 0.68, 1),
+              background-color 200ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+.ai-copy {
+  border: none;
+  background: var(--yellow);
+  color: #000;
+}
+.ai-copy:hover { filter: brightness(0.94); }
+.ai-open {
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+.ai-open:hover { background: var(--ink); color: var(--paper); }
 
 /* ---- empty + motion ---- */
 .empty {
+  position: relative;
+  z-index: 1;
   font-family: var(--mono);
-  font-size: 13px;
-  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #000;
   border: 1px dashed var(--line);
   border-radius: 10px;
   padding: 32px;
   text-align: center;
+  text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card { transition: none; }
-  .card:hover { transform: none; }
+  .card::before { transition: none; }
+  .card .cover { transition: none; }
+  .card:hover .cover { transform: none; }
 }

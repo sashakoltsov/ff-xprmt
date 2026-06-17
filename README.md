@@ -20,7 +20,18 @@ python3 -m http.server 8000
    e.g. `tools/s04/halftone-machine/index.html`
 2. Add `meta.json` next to it:
    `{ "name": "Halftone Machine", "author": "Leif" }`
-3. Regenerate the manifest:
+   Optional flags in `meta.json`:
+   - `"ai": true` — the tool needs an AI API that isn't wired up here. Instead
+     of a dead iframe, the tool view loads it as a faint, non-interactive
+     backdrop behind a copy-the-prompt gate (the prompt embeds the tool's HTML
+     for pasting into Gemini canvas).
+   - `"trusted": true` — runs the tool same-origin (adds `allow-same-origin`)
+     so camera/mic and other same-origin APIs work. This collapses the sandbox
+     isolation for that tool, so only set it on tools you control.
+3. (Optional) Drop a `cover.png` (or `.jpg`/`.jpeg`/`.webp`/`.gif`/`.avif`)
+   into the tool folder — `build.mjs` picks it up as the card cover. It fills
+   the card behind an FDF578 75% wash so the type still reads.
+4. Regenerate the manifest:
    `node build.mjs`
 
 That's it. The slug (folder name) should be lowercase-hyphenated; the display
