@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halftone Dither Control Panel</title>
+  <style>
+    :root {
+      --bg-page: #0c0c0e;
+      --bg-panel: #121216;
+      --bg-input: #1c1c24;
+      --border-color: #262630;
+      --border-focus: #3f3f50;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-page);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    aside {
+      background: var(--bg-panel);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin: 0 0 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      color: #fff;
+    }
+
+    section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+
+    h2 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin: 0 0 14px;
+      color: var(--text-muted);
+    }
+
+    input[type="file"] {
+      width: 100%;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .full-button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      background: var(--border-color);
+      border: 1px solid var(--border-focus);
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .full-button:hover {
+      background: var(--border-focus);
+    }
+
+    .export-button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 24px;
+      background: #fff;
+      color: #000;
+      border: 0;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-input);
+      color: white;
+      border: 1px solid var(--border-focus);
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .color-picker {
+      width: 100%;
+      height: 40px;
+      background: transparent;
+      border: 1px solid var(--border-focus);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .slider-label {
+      display: block;
+      font-size: 13px;
+      color: #d1d5db;
+      margin-bottom: 14px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .slider-header span:last-child {
+      color: #888;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .svg-row {
+      display: grid;
+      grid-template-columns: 20px 1fr 60px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .svg-row input[type="file"] {
+      max-width: 140px;
+      margin-bottom: 0;
+    }
+
+    .svg-row input[type="color"] {
+      width: 100%;
+      height: 28px;
+      cursor: pointer;
+    }
+
+    main {
+      min-height: 92vh;
+      background: #070709;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      padding: 20px;
+    }
+
+    canvas {
+      max-width: 100%;
+      max-height: 85vh;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+      border-radius: 4px;
+    }
+
+    .empty-msg {
+      color: #4b5563;
+      font-weight: 600;
+      letter-spacing: 1px;
+      font-size: 14px;
+    }
+
+    .error-msg {
+      background: #451a1a;
+      border: 1px solid #7f1d1d;
+      color: #fca5a5;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="layout">
+    <aside>
+      <h1>CONTROL PANEL</h1>
+      <div id="errorDisplay" class="error-msg"></div>
+
+      <section>
+        <h2>1. MEDIA SOURCE</h2>
+        <input type="file" id="mediaUpload" accept="image/*,video/*">
+        <button class="full-button" id="btnWebcam">START WEBCAM</button>
+        <button class="full-button" id="btnToggleVideo" style="display: none;">PLAY VIDEO</button>
+      </section>
+
+      <section>
+        <h2>2. ASPECT RATIO / CROPPING</h2>
+        <select id="aspectSelect">
+          <option value="original">Original Aspect Ratio</option>
+          <option value="square">1:1 Square</option>
+          <option value="portrait">4:5 Portrait</option>
+          <option value="story">9:16 Story</option>
+          <option value="landscape">16:9 Landscape</option>
+        </select>
+      </section>
+
+      <section>
+        <h2>3. GRID RESOLUTION (SCALE)</h2>
+        <label class="slider-label">
+          <div class="slider-header"><span>Grid</span><span id="labelGrid">70 columns</span></div>
+          <input type="range" id="inputGrid" min="10" max="180" step="1" value="70">
+        </label>
+      </section>
+
+      <section>
+        <h2>4. BACKGROUND COLOR</h2>
+        <input type="color" id="bgPicker" class="color-picker" value="#000000">
+      </section>
+
+      <section>
+        <h2>5. INVERSION</h2>
+        <button class="full-button" id="btnInvert">INVERT OFF</button>
+      </section>
+
+      <section>
+        <h2>6. PIXEL ROTATION</h2>
+        <label class="slider-label">
+          <div class="slider-header"><span>Rotation</span><span id="labelRotation">0 degrees</span></div>
+          <input type="range" id="inputRotation" min="0" max="270" step="90" value="0">
+        </label>
+        <button class="full-button" id="btnAutoRotate">START AUTO ROTATION</button>
+        <div id="intervalContainer" style="display: none; margin-top: 10px;">
+          <label class="slider-label">
+            <div class="slider-header"><span>Interval</span><span id="labelInterval">350ms</span></div>
+            <input type="range" id="inputInterval" min="80" max="2000" step="10" value="350">
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>7. SCALE SHAPES / MIDTONES</h2>
+        <label class="slider-label">
+          <div class="slider-header"><span>Shadow</span><span id="labelMinScale">min 0.20</span></div>
+          <input type="range" id="inputMinScale" min="0.05" max="1.5" step="0.01" value="0.20">
+        </label>
+        <label class="slider-label">
+          <div class="slider-header"><span>Midtone</span><span id="labelMidScale">0.75</span></div>
+          <input type="range" id="inputMidScale" min="0.05" max="1.8" step="0.01" value="0.75">
+        </label>
+        <label class="slider-label">
+          <div class="slider-header"><span>Highlight</span><span id="labelMaxScale">max 1.20</span></div>
+          <input type="range" id="inputMaxScale" min="0.05" max="2.4" step="0.01" value="1.20">
+        </label>
+      </section>
+
+      <section>
+        <h2>8. 7 SVG STATES</h2>
+        <div id="svgRowsContainer"></div>
+      </section>
+
+      <button class="export-button" id="btnExport">EXPORT PNG</button>
+    </aside>
+
+    <main id="previewWindow">
+      <div id="emptyMessage" class="empty-msg">UPLOAD IMAGE / VIDEO OR START WEBCAM</div>
+      <canvas id="outputCanvas" style="display: none;"></canvas>
+    </main>
+  </div>
+
+  <div style="display: none;">
+    <img id="hiddenImg">
+    <video id="hiddenVideo" muted loop playsinline></video>
+  </div>
+
+  <script>
+    // State Values Ecosystem
+    const DEFAULT_SVGS = [
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="16" y="16" width="68" height="68"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,8 94,88 6,88"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 8 L61 38 L94 38 L67 58 L78 90 L50 70 L22 90 L33 58 L6 38 L39 38 Z"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M8 50 L50 8 L92 50 L50 92 Z"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 4 C75 4 96 25 96 50 C96 75 75 96 50 96 C25 96 4 75 4 50 C4 25 25 4 50 4 Z M50 28 C38 28 28 38 28 50 C28 62 38 72 50 72 C62 72 72 62 72 50 C72 38 62 28 50 28 Z"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M12 20 H88 V38 H12 Z M12 62 H88 V80 H12 Z"/></svg>`
+    ];
+
+    const DEFAULT_COLORS = ["#1a1a1a", "#333333", "#555555", "#777777", "#999999", "#c7c7c7", "#ffffff"];
+
+    let state = {
+      mediaType: "", // "image", "video", or "webcam"
+      aspect: "original",
+      grid: 70,
+      bg: "#000000",
+      invert: false,
+      rotation: 0,
+      autoRotate: false,
+      interval: 350,
+      minScale: 0.2,
+      midScale: 0.75,
+      maxScale: 1.2,
+      svgs: [...DEFAULT_SVGS],
+      colors: [...DEFAULT_COLORS],
+      images: [] // Holds parsed rendering elements
+    };
+
+    let localStream = null;
+    let autoRotateIntervalId = null;
+    let animationFrameId = null;
+
+    // DOM Nodes Mapping
+    const outputCanvas = document.getElementById("outputCanvas");
+    const hiddenImg = document.getElementById("hiddenImg");
+    const hiddenVideo = document.getElementById("hiddenVideo");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const errorDisplay = document.getElementById("errorDisplay");
+    const btnToggleVideo = document.getElementById("btnToggleVideo");
+
+    // Math Processing Framework Utility Elements
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function snap90(v) { return (((Math.round(Number(v || 0) / 90) * 90) % 360) + 360) % 360; }
+    
+    function normaliseSVG(svg) {
+      let s = String(svg || "").trim();
+      if (!s.startsWith("<svg")) return DEFAULT_SVGS[0];
+      if (!s.includes("xmlns=")) s = s.replace("<svg", `<svg xmlns="http://www.w3.org/2000/svg"`);
+      return s;
+    }
+
+    function svgDataURL(svg, color) {
+      const clean = normaliseSVG(svg)
+        .replace(/<svg/i, `<svg fill="${color}"`)
+        .replace(/fill="(?!none)[^"]*"/gi, `fill="${color}"`)
+        .replace(/\s(width|height)="[^"]*"/gi, "");
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(clean)}`;
+    }
+
+    function getCrop(aspect, sw, sh) {
+      let ratio = sw / sh;
+      if (aspect === "square") ratio = 1;
+      if (aspect === "portrait") ratio = 4 / 5;
+      if (aspect === "story") ratio = 9 / 16;
+      if (aspect === "landscape") ratio = 16 / 9;
+
+      const source = sw / sh;
+      let w = sw, h = sh;
+      if (source > ratio) w = sh * ratio;
+      if (source < ratio) h = sw / ratio;
+      return { x: (sw - w) / 2, y: (sh - h) / 2, w, h };
+    }
+
+    // Engine Pre-Parsing Node Controller
+    function rebuildSVGIcons() {
+      const promises = state.svgs.map((svg, i) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = svgDataURL(svg, state.colors[i]);
+        });
+      });
+      Promise.all(promises).then((loadedImages) => {
+        state.images = loadedImages;
+      });
+    }
+
+    // Active Loop Rendering Call Frame
+    function draw() {
+      try {
+        const media = (state.mediaType === "image") ? hiddenImg : hiddenVideo;
+        if (!state.mediaType || !media || state.images.length !== 7) return;
+
+        const sw = media.videoWidth || media.naturalWidth || 0;
+        const sh = media.videoHeight || media.naturalHeight || 0;
+        if (!sw || !sh) return; // Keep loop cycling until dimensions fully allocate
+
+        emptyMessage.style.display = "none";
+        outputCanvas.style.display = "block";
+
+        const crop = getCrop(state.aspect, sw, sh);
+        const longEdge = 1100;
+        outputCanvas.width = Math.round(longEdge * (crop.w / Math.max(crop.w, crop.h)));
+        outputCanvas.height = Math.round(longEdge * (crop.h / Math.max(crop.w, crop.h)));
+
+        const small = document.createElement("canvas");
+        const sctx = small.getContext("2d", { willReadFrequently: true });
+        small.width = state.grid;
+        small.height = Math.max(1, Math.round(state.grid * (crop.h / crop.w)));
+        sctx.drawImage(media, crop.x, crop.y, crop.w, crop.h, 0, 0, small.width, small.height);
+
+        const data = sctx.getImageData(0, 0, small.width, small.height).data;
+        const ctx = outputCanvas.getContext("2d");
+        ctx.fillStyle = state.bg;
+        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+        const cellW = outputCanvas.width / small.width;
+        const cellH = outputCanvas.height / small.height;
+        const cell = Math.min(cellW, cellH);
+        const angle = (snap90(state.rotation) * Math.PI) / 180;
+
+        for (let y = 0; y < small.height; y++) {
+          for (let x = 0; x < small.width; x++) {
+            const i = (y * small.width + x) * 4;
+            let v = (data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722) / 255;
+            if (state.invert) v = 1 - v;
+
+            const stateIdx = clamp(Math.floor(v * 7), 0, 6);
+            const img = state.images[stateIdx];
+            if (!img) continue;
+
+            const scale = v < 0.5
+              ? state.minScale + (state.midScale - state.minScale) * (v / 0.5)
+              : state.midScale + (state.maxScale - state.midScale) * ((v - 0.5) / 0.5);
+
+            const size = Math.max(0.1, cell * scale);
+            ctx.save();
+            ctx.translate(x * cellW + cellW / 2, y * cellH + cellH / 2);
+            ctx.rotate(angle);
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+          }
+        }
+        errorDisplay.style.display = "none";
+      } catch (err) {
+        errorDisplay.textContent = err.message || "Render error";
+        errorDisplay.style.display = "block";
+      }
+    }
+
+    function runLoop() {
+      draw();
+      animationFrameId = requestAnimationFrame(runLoop);
+    }
+
+    function stopWebcam() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+    }
+
+    // Interactive UI Event Controllers
+    document.getElementById("mediaUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      stopWebcam();
+      btnToggleVideo.style.display = "none";
+
+      const url = URL.createObjectURL(file);
+      if (file.type.startsWith("video")) {
+        state.mediaType = "video";
+        hiddenVideo.src = url;
+        hiddenVideo.play().then(() => {
+          btnToggleVideo.textContent = "PAUSE VIDEO";
+          btnToggleVideo.style.display = "block";
+        });
+      } else {
+        state.mediaType = "image";
+        hiddenImg.src = url;
+      }
+    });
+
+    document.getElementById("btnWebcam").addEventListener("click", async () => {
+      try {
+        stopWebcam();
+        btnToggleVideo.style.display = "none";
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        state.mediaType = "webcam";
+        hiddenVideo.srcObject = localStream;
+        hiddenVideo.play();
+      } catch (err) {
+        errorDisplay.textContent = "Could not start webcam. Check camera permissions.";
+        errorDisplay.style.display = "block";
+      }
+    });
+
+    btnToggleVideo.addEventListener("click", () => {
+      if (hiddenVideo.paused) {
+        hiddenVideo.play();
+        btnToggleVideo.textContent = "PAUSE VIDEO";
+      } else {
+        hiddenVideo.pause();
+        btnToggleVideo.textContent = "PLAY VIDEO";
+      }
+    });
+
+    // Binding Slider/Input Elements
+    document.getElementById("aspectSelect").addEventListener("change", (e) => { state.aspect = e.target.value; });
+    
+    const inputGrid = document.getElementById("inputGrid");
+    inputGrid.addEventListener("input", (e) => {
+      state.grid = Number(e.target.value);
+      document.getElementById("labelGrid").textContent = `${state.grid} columns`;
+    });
+
+    document.getElementById("bgPicker").addEventListener("input", (e) => { state.bg = e.target.value; });
+
+    const btnInvert = document.getElementById("btnInvert");
+    btnInvert.addEventListener("click", () => {
+      state.invert = !state.invert;
+      btnInvert.textContent = state.invert ? "INVERT ON" : "INVERT OFF";
+    });
+
+    const inputRotation = document.getElementById("inputRotation");
+    inputRotation.addEventListener("input", (e) => {
+      state.rotation = snap90(e.target.value);
+      document.getElementById("labelRotation").textContent = `${state.rotation} degrees`;
+    });
+
+    const btnAutoRotate = document.getElementById("btnAutoRotate");
+    const intervalContainer = document.getElementById("intervalContainer");
+    const inputInterval = document.getElementById("inputInterval");
+
+    function configureAutoRotationClock() {
+      clearInterval(autoRotateIntervalId);
+      if (!state.autoRotate) return;
+      autoRotateIntervalId = setInterval(() => {
+        state.rotation = snap90(state.rotation + 90);
+        inputRotation.value = state.rotation;
+        document.getElementById("labelRotation").textContent = `${state.rotation} degrees`;
+      }, state.interval);
+    }
+
+    btnAutoRotate.addEventListener("click", () => {
+      state.autoRotate = !state.autoRotate;
+      if (state.autoRotate) {
+        btnAutoRotate.textContent = "STOP AUTO ROTATION";
+        intervalContainer.style.display = "block";
+      } else {
+        btnAutoRotate.textContent = "START AUTO ROTATION";
+        intervalContainer.style.display = "none";
+      }
+      configureAutoRotationClock();
+    });
+
+    inputInterval.addEventListener("input", (e) => {
+      state.interval = Number(e.target.value);
+      document.getElementById("labelInterval").textContent = `${state.interval}ms`;
+      configureAutoRotationClock();
+    });
+
+    // Shape Modifier Nodes
+    const scales = [
+      { id: "inputMinScale", lbl: "labelMinScale", key: "minScale", prefix: "min " },
+      { id: "inputMidScale", lbl: "labelMidScale", key: "midScale", prefix: "" },
+      { id: "inputMaxScale", lbl: "labelMaxScale", key: "maxScale", prefix: "max " }
+    ];
+    scales.forEach(s => {
+      document.getElementById(s.id).addEventListener("input", (e) => {
+        state[s.key] = Number(e.target.value);
+        document.getElementById(s.lbl).textContent = `${s.prefix}${state[s.key].toFixed(2)}`;
+      });
+    });
+
+    // Building Custom SVG Upload Interface Rows Dynamically
+    const container = document.getElementById("svgRowsContainer");
+    state.svgs.forEach((_, i) => {
+      const row = document.createElement("div");
+      row.className = "svg-row";
+
+      const span = document.createElement("span");
+      span.textContent = i + 1;
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = ".svg,image/svg+xml";
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          state.svgs[i] = normaliseSVG(reader.result);
+          rebuildSVGIcons();
+        };
+        reader.readAsText(file);
+      });
+
+      const colorInput = document.createElement("input");
+      colorInput.type = "color";
+      colorInput.value = state.colors[i];
+      colorInput.addEventListener("input", (e) => {
+        state.colors[i] = e.target.value;
+        rebuildSVGIcons();
+      });
+
+      row.appendChild(span);
+      row.appendChild(fileInput);
+      row.appendChild(colorInput);
+      container.appendChild(row);
+    });
+
+    // PNG Export Action Controller
+    document.getElementById("btnExport").addEventListener("click", () => {
+      if (!outputCanvas.width) return;
+      outputCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "halftone-dither-art.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    });
+
+    // Initialization Call Engines
+    rebuildSVGIcons();
+    runLoop();
+  </script>
+</body>
+</html>

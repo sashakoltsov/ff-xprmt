@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Designer of the Week</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Outfit is the closest free match to Aeonik: geometric, clean, modern grotesque -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #000;
+            --fg: #fff;
+            --muted: #555;
+            --dimmed: rgba(255,255,255,0.18);
+            --accent: #fff;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── HEADER ── */
+        header {
+            padding: 48px 60px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .site-title {
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .pick-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            color: var(--fg);
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 10px 24px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .pick-btn:hover { border-color: var(--fg); background: rgba(255,255,255,0.05); }
+        .pick-btn:active { transform: scale(0.97); }
+
+        /* ── FILTERS ── */
+        .filters {
+            display: flex;
+            gap: 10px;
+            padding: 0 60px 40px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 7px 18px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { color: var(--fg); border-color: rgba(255,255,255,0.5); }
+        .filter-btn.active { color: var(--fg); border-color: var(--fg); }
+
+        /* ── NAME GRID ── */
+        main {
+            flex: 1;
+            padding: 0 60px 80px;
+        }
+
+        .name-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+        }
+
+        .name-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .name-item {
+            display: block;
+            background: none;
+            border: none;
+            text-align: left;
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(22px, 2.4vw, 36px);
+            font-weight: 300;
+            color: var(--fg);
+            padding: 4px 0;
+            cursor: pointer;
+            line-height: 1.35;
+            letter-spacing: -0.01em;
+            transition: color 0.15s;
+            user-select: none;
+        }
+        .name-item:hover { color: rgba(255,255,255,0.55); }
+        .name-item.excluded {
+            color: var(--dimmed);
+            text-decoration: line-through;
+            text-decoration-color: rgba(255,255,255,0.15);
+        }
+        .name-item.excluded:hover { color: rgba(255,255,255,0.4); }
+
+        /* ── WINNER MODAL ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-inner {
+            text-align: center;
+            animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes pop {
+            from { opacity: 0; transform: scale(0.85); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-eyebrow {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .modal-name {
+            font-size: clamp(52px, 10vw, 120px);
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .modal-location {
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 40px;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            color: var(--fg);
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 10px 28px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .modal-close:hover { border-color: var(--fg); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            header { padding: 32px 24px 24px; }
+            .filters { padding: 0 24px 28px; }
+            main { padding: 0 24px 60px; }
+            .name-grid { grid-template-columns: repeat(2, 1fr); gap: 0; }
+            .name-item { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="site-title">Designer of the Week</span>
+        <button class="pick-btn" id="pickBtn">Pick random</button>
+    </header>
+
+    <div class="filters">
+        <button class="filter-btn active" data-filter="All">All</button>
+        <button class="filter-btn" data-filter="Madrid">Madrid</button>
+        <button class="filter-btn" data-filter="London">London</button>
+    </div>
+
+    <main>
+        <div class="name-grid" id="nameGrid"></div>
+    </main>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-inner">
+            <div class="modal-eyebrow">Designer of the Week</div>
+            <div class="modal-name" id="modalName"></div>
+            <div class="modal-location" id="modalLocation"></div>
+            <button class="modal-close" id="modalClose">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const ALL_PEOPLE = [
+            { id: 1,  name: 'África',    location: 'Madrid' },
+            { id: 2,  name: 'Alejandro', location: 'Madrid' },
+            { id: 3,  name: 'Alessandro',location: 'Madrid' },
+            { id: 4,  name: 'Alejandra', location: 'Madrid' },
+            { id: 5,  name: 'Alexandra', location: 'Madrid' },
+            { id: 6,  name: 'Ana',       location: 'Madrid' },
+            { id: 7,  name: 'Claudia',   location: 'Madrid' },
+            { id: 8,  name: 'David',     location: 'Madrid' },
+            { id: 9,  name: 'Gabor',     location: 'Madrid' },
+            { id: 10, name: 'Nacho',     location: 'Madrid' },
+            { id: 11, name: 'Juan F.',   location: 'Madrid' },
+            { id: 12, name: 'Juan E.',   location: 'Madrid' },
+            { id: 13, name: 'Julen',     location: 'Madrid' },
+            { id: 14, name: 'Jara',      location: 'Madrid' },
+            { id: 15, name: 'Lucía',     location: 'Madrid' },
+            { id: 16, name: 'Luis',      location: 'Madrid' },
+            { id: 17, name: 'Matt',      location: 'Madrid' },
+            { id: 18, name: 'Patricio',  location: 'Madrid' },
+            { id: 19, name: 'Roberto',   location: 'Madrid' },
+            { id: 20, name: 'Sara',      location: 'Madrid' },
+            { id: 21, name: 'Rui',       location: 'Madrid' },
+            { id: 22, name: 'Andre',     location: 'London' },
+            { id: 23, name: 'Craig',     location: 'London' },
+            { id: 24, name: 'Drew',      location: 'London' },
+            { id: 25, name: 'Eddie',     location: 'London' },
+            { id: 26, name: 'Ed',        location: 'London' },
+            { id: 27, name: 'Elliot',    location: 'London' },
+            { id: 28, name: 'Joyce',     location: 'London' },
+            { id: 29, name: 'Jibby',     location: 'London' },
+            { id: 30, name: 'Laurence',  location: 'London' },
+            { id: 31, name: 'Leif',      location: 'London' },
+            { id: 32, name: 'Lisa',      location: 'London' },
+            { id: 33, name: 'Ludo',      location: 'London' },
+            { id: 34, name: 'Nick',      location: 'London' },
+            { id: 35, name: 'Paulina',   location: 'London' },
+            { id: 36, name: 'Sasha',     location: 'London' },
+            { id: 37, name: 'Tom',       location: 'London' },
+            { id: 38, name: 'Trayana',   location: 'London' },
+            { id: 39, name: 'Yasuyuki',  location: 'London' },
+            { id: 40, name: 'Hayley',    location: 'London' },
+        ];
+
+        let excluded = new Set();   // IDs toggled out of the draw
+        let currentFilter = 'All';
+
+        // ── RENDER ──────────────────────────────────────────────
+        function render() {
+            const grid = document.getElementById('nameGrid');
+            grid.innerHTML = '';
+
+            const visible = currentFilter === 'All'
+                ? ALL_PEOPLE
+                : ALL_PEOPLE.filter(p => p.location === currentFilter);
+
+            // Split into 4 columns as evenly as possible
+            const cols = 4;
+            const colArrays = Array.from({ length: cols }, () => []);
+            visible.forEach((p, i) => colArrays[i % cols].push(p));
+
+            colArrays.forEach(col => {
+                const colEl = document.createElement('div');
+                colEl.className = 'name-col';
+                col.forEach(person => {
+                    const btn = document.createElement('button');
+                    btn.className = 'name-item' + (excluded.has(person.id) ? ' excluded' : '');
+                    btn.textContent = person.name;
+                    btn.title = excluded.has(person.id) ? 'Click to include' : 'Click to exclude';
+                    btn.addEventListener('click', () => toggle(person.id));
+                    colEl.appendChild(btn);
+                });
+                grid.appendChild(colEl);
+            });
+        }
+
+        function toggle(id) {
+            excluded.has(id) ? excluded.delete(id) : excluded.add(id);
+            render();
+        }
+
+        // ── FILTERS ─────────────────────────────────────────────
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentFilter = btn.dataset.filter;
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                render();
+            });
+        });
+
+        // ── PICK WINNER ─────────────────────────────────────────
+        document.getElementById('pickBtn').addEventListener('click', () => {
+            const visiblePool = currentFilter === 'All'
+                ? ALL_PEOPLE
+                : ALL_PEOPLE.filter(p => p.location === currentFilter);
+
+            const pool = visiblePool.filter(p => !excluded.has(p.id));
+            if (pool.length === 0) return;
+
+            const winner = pool[Math.floor(Math.random() * pool.length)];
+            document.getElementById('modalName').textContent = winner.name;
+            document.getElementById('modalLocation').textContent = winner.location;
+            document.getElementById('modal').classList.add('open');
+        });
+
+        // ── CLOSE MODAL ──────────────────────────────────────────
+        function closeModal() {
+            document.getElementById('modal').classList.remove('open');
+        }
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('modal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        // ── INIT ─────────────────────────────────────────────────
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixelTerra 3D - Typographic Topographic Maps</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter & Micro 5 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Micro+5&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-pixel {
+      font-family: 'Micro 5', sans-serif;
+    }
+    /* Fixed height canvas container to prevent layout collapse */
+    #threeCanvasContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 450px;
+      overflow: hidden;
+    }
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden">
+
+  <!-- Header / Navigation Bar -->
+  <header class="bg-slate-900/90 border-b border-slate-800 px-6 py-4 flex items-center justify-between z-10 shrink-0 shadow-lg">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 p-2 rounded-lg flex items-center justify-center shadow-md shadow-indigo-500/20">
+        <span class="font-pixel text-3xl font-bold tracking-wider leading-none select-none text-white">PT3D</span>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          PixelTerra 3D <span class="text-xs bg-indigo-500/20 text-indigo-400 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30">V1.8</span>
+        </h1>
+        <p class="text-xs text-slate-400">High-performance pixel-art letter extrusion topographic generator</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2">
+        <i class="fa-regular fa-circle-question text-base"></i>
+        <span class="hidden md:inline">Help / Guide</span>
+      </button>
+      <a href="https://fonts.google.com/specimen/Micro+5" target="_blank" class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1.5 hover:text-indigo-400 transition-colors">
+        <i class="fa-solid fa-font"></i>
+        <span>Micro 5 Google Font</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+    
+    <!-- Left Sidebar Controls -->
+    <aside class="w-full lg:w-[420px] bg-slate-900/95 border-r border-slate-800 flex flex-col h-1/2 lg:h-full overflow-y-auto shrink-0 z-10 shadow-2xl">
+      <div class="p-6 space-y-6">
+        
+        <!-- Section 1: Location Finder -->
+        <div class="space-y-3">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Google Maps URL or Place Name</label>
+          <div class="space-y-2">
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <i class="fa-solid fa-map-location-dot"></i>
+              </span>
+              <input type="text" id="locationInput" 
+                class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-slate-100 placeholder-slate-500 transition-all"
+                placeholder="Paste Google Maps URL or type 'Teide'...">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="processInput()" id="btnGenerate" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Generate 3D</span>
+              </button>
+              <button onclick="loadRandomLocation()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 active:scale-95">
+                <i class="fa-solid fa-shuffle"></i>
+                <span>Randomize</span>
+              </button>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400/80 leading-relaxed">
+            You can paste a full Google Maps URL or type an iconic place name to analyze its real topography via Gemini AI.
+          </p>
+        </div>
+
+        <!-- Divisor -->
+        <div class="border-t border-slate-800/80 my-4"></div>
+
+        <!-- Gemini AI Geographic Card -->
+        <div id="geographyCard" class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 space-y-3 hidden">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-earth-americas"></i>
+              <span id="cardLocationTitle">Detected Location</span>
+            </h3>
+            <span class="text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase font-bold">AI Info</span>
+          </div>
+          <p id="cardLocationDesc" class="text-xs text-slate-300 leading-relaxed">
+            Loading geographic description...
+          </p>
+        </div>
+
+        <!-- Section 2: Height & spacing adjustments -->
+        <div class="space-y-4">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Extrusion & Contrast Parameters</span>
+          </h2>
+
+          <!-- Contrast Slider -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium">Elevation Contrast (Letter Height)</span>
+              <span id="contrastVal" class="text-indigo-400 font-mono">1.2x</span>
+            </div>
+            <input type="range" id="contrastSlider" min="0.2" max="3" step="0.1" value="1.2" 
+              class="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>Subtle / Flat</span>
+              <span>Mountainous / Sharp</span>
+            </div>
+          </div>
+
+          <!-- Letter Spacing Slider -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium">Letter Spacing (Prevents Merging)</span>
+              <span id="letterSpacingVal" class="text-indigo-400 font-mono">8%</span>
+            </div>
+            <input type="range" id="letterSpacingSlider" min="0.01" max="0.3" step="0.01" value="0.08" 
+              class="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>Tight</span>
+              <span>Wide</span>
+            </div>
+          </div>
+
+          <!-- Base Thickness Slider -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium">Base Terrain Thickness</span>
+              <span id="baseVal" class="text-indigo-400 font-mono">0.10</span>
+            </div>
+            <input type="range" id="baseSlider" min="0.05" max="0.8" step="0.05" value="0.1" 
+              class="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+          </div>
+        </div>
+
+        <!-- Divisor -->
+        <div class="border-t border-slate-800/80 my-4"></div>
+
+        <!-- Section 3: Visual Style and Text -->
+        <div class="space-y-4">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-palette"></i>
+            <span>Visual Style</span>
+          </h2>
+
+          <!-- Theme Selectors -->
+          <div class="space-y-2">
+            <label class="block text-xs text-slate-300">Color Scheme</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setTheme('satellite')" id="theme-satellite" class="theme-btn active-theme py-2 px-3 rounded-lg text-xs font-medium border border-indigo-500/30 bg-indigo-950/20 text-indigo-300 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block shadow-sm"></span>
+                <span>Satellite View</span>
+              </button>
+              <button onclick="setTheme('matrix')" id="theme-matrix" class="theme-btn py-2 px-3 rounded-lg text-xs font-medium border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm"></span>
+                <span>Retro Terminal</span>
+              </button>
+              <button onclick="setTheme('magma')" id="theme-magma" class="theme-btn py-2 px-3 rounded-lg text-xs font-medium border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>
+                <span>Magma Flow</span>
+              </button>
+              <button onclick="setTheme('cyberpunk')" id="theme-cyberpunk" class="theme-btn py-2 px-3 rounded-lg text-xs font-medium border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 inline-block"></span>
+                <span>Cyber Neon</span>
+              </button>
+              <button onclick="setTheme('ocean')" id="theme-ocean" class="theme-btn py-2 px-3 rounded-lg text-xs font-medium border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span>
+                <span>Ocean Trench</span>
+              </button>
+              <button onclick="setTheme('monochrome')" id="theme-monochrome" class="theme-btn py-2 px-3 rounded-lg text-xs font-medium border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700 text-left flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+                <span>Grayscale Contour</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Fill Text Area -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs text-slate-300">Map Fill Text</label>
+              <button onclick="resetTextToLorem()" class="text-[10px] text-indigo-400 hover:underline">Restore Lorem Ipsum</button>
+            </div>
+            <textarea id="customTextInput" rows="3" 
+              class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs text-slate-200 placeholder-slate-600 font-mono resize-none"
+              placeholder="Enter the words that will form the typographic cubes..."
+              oninput="onCustomTextChange()"></textarea>
+            <p class="text-[10px] text-slate-500">
+              Each character of the text will be analyzed and extruded following the real shape of its active pixels in the typeface.
+            </p>
+          </div>
+        </div>
+
+        <!-- Divisor -->
+        <div class="border-t border-slate-800/80 my-4"></div>
+
+        <!-- Section 4: Render and Camera Options -->
+        <div class="space-y-4">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-camera"></i>
+            <span>Camera & Visualization</span>
+          </h2>
+
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Auto-rotate Button -->
+            <button onclick="toggleAutoRotate()" id="btnAutoRotate" class="py-2.5 px-3 rounded-lg text-xs font-medium bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrows-spin animate-spin-slow"></i>
+              <span>Auto Rotate</span>
+            </button>
+            
+            <!-- Download Capture Button -->
+            <button onclick="exportCanvas()" class="py-2.5 px-3 rounded-lg text-xs font-medium bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-download"></i>
+              <span>Export PNG</span>
+            </button>
+          </div>
+
+          <!-- Quick camera angles -->
+          <div class="space-y-2">
+            <label class="block text-xs text-slate-400">Quick Camera Presets</label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button onclick="resetCamera('iso')" class="bg-slate-950 hover:bg-slate-850 py-1.5 px-2 rounded text-[11px] text-slate-400 border border-slate-800/50 hover:text-white transition-colors">Isometric</button>
+              <button onclick="resetCamera('top')" class="bg-slate-950 hover:bg-slate-850 py-1.5 px-2 rounded text-[11px] text-slate-400 border border-slate-800/50 hover:text-white transition-colors">Top Down (2D)</button>
+              <button onclick="resetCamera('profile')" class="bg-slate-950 hover:bg-slate-850 py-1.5 px-2 rounded text-[11px] text-slate-400 border border-slate-800/50 hover:text-white transition-colors">Profile</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Right Visualization Viewport -->
+    <div class="flex-1 relative flex flex-col bg-slate-950 min-h-[400px] lg:min-h-0">
+      
+      <!-- Processing Overlay -->
+      <div id="loadingOverlay" class="absolute inset-0 bg-slate-950/90 z-20 flex flex-col items-center justify-center space-y-4 backdrop-blur-sm hidden">
+        <div class="flex flex-col items-center space-y-3">
+          <div class="relative w-16 h-16">
+            <div class="absolute inset-0 rounded-full border-4 border-indigo-500/10 border-t-indigo-500 animate-spin"></div>
+            <div class="absolute inset-2 rounded-full border-4 border-emerald-500/10 border-b-emerald-500 animate-spin animate-reverse"></div>
+          </div>
+          <p id="loadingText" class="text-sm font-semibold text-slate-200 tracking-wide font-pixel text-xl tracking-widest text-center max-w-sm">
+            ANALYZING TOPOGRAPHIC COORDINATES...
+          </p>
+          <p class="text-xs text-slate-400 text-center px-4 max-w-xs">
+            Gemini's artificial intelligence is analyzing the location to generate the three-dimensional terrain.
+          </p>
+        </div>
+      </div>
+
+      <!-- State & Status Bars -->
+      <div class="absolute top-4 left-4 right-4 z-10 pointer-events-none flex flex-wrap gap-2 justify-between items-start">
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-xl px-4 py-3 flex items-center space-x-3 shadow-lg pointer-events-auto max-w-md">
+          <div class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </div>
+          <div class="text-xs">
+            <span class="text-slate-400">Currently rendered location:</span>
+            <div class="font-bold text-white flex items-center gap-1">
+              <span id="currentLocationName">Volcanic Island (Default)</span>
+              <span class="text-[10px] text-indigo-400" id="currentLocationCoords"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3 flex flex-col space-y-1 shadow-lg pointer-events-auto items-end">
+          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Map resolution</div>
+          <div class="text-xs font-bold text-indigo-300 font-mono">48 x 48 Extruded Letters</div>
+        </div>
+      </div>
+
+      <!-- Three.js Canvas Container -->
+      <div id="threeCanvasContainer"></div>
+
+      <!-- Floating Toast Notifications -->
+      <div id="toastNotification" class="absolute bottom-6 right-6 z-30 bg-slate-900 border border-indigo-500/30 text-slate-200 text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 translate-y-20 opacity-0 pointer-events-none transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-indigo-400 text-sm"></i>
+        <span id="toastMessage">Changes successfully applied.</span>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Help & Guide Modal -->
+  <div id="helpModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-indigo-500"></i>
+          <span>PixelTerra 3D Guide - Extruded Edition</span>
+        </h2>
+        <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white text-lg p-1 hover:bg-slate-800 rounded-lg transition-colors">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      
+      <div class="p-6 overflow-y-auto space-y-6 max-h-[70vh]">
+        <!-- How it works -->
+        <div class="space-y-2">
+          <h3 class="font-semibold text-white text-sm flex items-center gap-2">
+            <span class="flex items-center justify-center w-5 h-5 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">1</span>
+            <span>Borderless Pixel Letters</span>
+          </h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Unlike traditional blocks, this engine generates <strong>only the physical 3D silhouette</strong> of each character. Each letter is analyzed and decomposed into active pixels to build individual extruded pillars using the real <strong class="text-indigo-300">Micro 5 Google Font</strong>.
+          </p>
+        </div>
+
+        <!-- Prevent overlapping -->
+        <div class="space-y-2">
+          <h3 class="font-semibold text-white text-sm flex items-center gap-2">
+            <span class="flex items-center justify-center w-5 h-5 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">2</span>
+            <span>Prevent Overlap with Spacing</span>
+          </h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Since there are no bounding boxes, if letters are too large or too close, they can look like a single continuous block. To prevent this, use the <strong>Letter Spacing</strong> slider to add a protective empty boundary around each character.
+          </p>
+        </div>
+
+        <!-- Google Maps URLs -->
+        <div class="space-y-2">
+          <h3 class="font-semibold text-white text-sm flex items-center gap-2">
+            <span class="flex items-center justify-center w-5 h-5 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">3</span>
+            <span>Using Google Maps URLs or Search</span>
+          </h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Type a well-known place name (e.g., <i>"Teide"</i>, <i>"Everest"</i>, <i>"Ibiza"</i>) or paste a Google Maps link directly from your browser. The AI will interpret the real topography and shape the height of the letters.
+          </p>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+        <button onclick="toggleHelpModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors">
+          Got it, let's design!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global Configuration
+    const apiKey = ""; // Injected natively on execution environment
+    
+    // Default filling text (Lorem Ipsum)
+    const loremIpsumText = "LOREM IPSUM DOLOR SIT AMET CONSECTETUR ADIPISCING ELIT SED DO EIUSMOD TEMPOR INCIDIDUNT UT LABORE ET DOLORE MAGNA ALIQUA UT ENIM AD MINIM VENIAM QUIS NOSTRUD EXERCITATION ULLAMCO LABORIS NISI UT ALIQUIP EX EA COMMODO CONSEQUAT";
+    
+    // Application State
+    const state = {
+      gridSize: 48, // High resolution grid layout
+      heightmap: [], // Stores elevation values
+      currentTheme: 'satellite', // Default theme setup (Satellite)
+      contrast: 1.2, // Contrast multiplier
+      letterSpacing: 0.08, // Outer protection padding (0.01 to 0.3)
+      baseThickness: 0.1, // Minimum height offset
+      text: loremIpsumText.toUpperCase().replace(/[^A-Z0-9\s]/g, ""), 
+      autoRotate: false,
+      locationName: "Volcanic Island (Default)",
+      locationDesc: "A beautiful tropical jungle island surrounded by a pristine turquoise coral reef, dominated by a majestic central volcanic crater with snow-capped peaks.",
+      isGenerating: false
+    };
+
+    // Static fallback voxel map in case of network issues with Google Fonts loading
+    const pixelFallbackMap = {
+      'A': [[0,1,1,1,0],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+      'B': [[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
+      'C': [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,1]],
+      'D': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
+      'E': [[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+      'F': [[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+      'G': [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,1,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1]],
+      'H': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+      'I': [[0,1,1,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+      'J': [[0,0,1,1,1],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[1,0,1,1,0],[0,1,1,0,0]],
+      'K': [[1,0,0,0,1],[1,0,0,1,0],[1,0,1,0,0],[1,1,0,0,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+      'L': [[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+      'M': [[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+      'N': [[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1],[1,0,0,0,1]],
+      'O': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      'P': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+      'Q': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,0,1,0],[0,1,1,0,1]],
+      'R': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+      'S': [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,1,1,1,0]],
+      'T': [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+      'U': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      'V': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],
+      'W': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,1,0,1,1],[1,0,0,0,1]],
+      'X': [[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1],[1,0,0,0,1]],
+      'Y': [[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+      'Z': [[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+      '0': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      '1': [[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+      '2': [[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+      '3': [[1,1,1,1,1],[0,0,0,1,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      '4': [[0,0,0,1,0],[0,0,1,1,0],[0,1,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],
+      '5': [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      '6': [[0,1,1,1,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      '7': [[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0]],
+      '8': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      '9': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+      ' ': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+      '-': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,1,1,1,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+      '.': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,0,0,0]]
+    };
+
+    // Color Theme Properties
+    const themes = {
+      satellite: {
+        text: '#10b981', 
+        bg: '#1e3a8a', 
+        ambient: '#2e3a4e', 
+        light: '#ffffff', 
+        sceneBg: 0x090d16 
+      },
+      matrix: {
+        text: '#10b981', 
+        bg: '#042f1a', 
+        ambient: '#142a1d',
+        light: '#10b981',
+        sceneBg: 0x020617 
+      },
+      magma: {
+        text: '#f97316', 
+        bg: '#451a03', 
+        ambient: '#2d140e',
+        light: '#f97316',
+        sceneBg: 0x0a0500 
+      },
+      cyberpunk: {
+        text: '#f43f5e', 
+        bg: '#4c0519', 
+        ambient: '#221020',
+        light: '#a21caf', 
+        sceneBg: 0x090514 
+      },
+      ocean: {
+        text: '#0ea5e9', 
+        bg: '#082f49', 
+        ambient: '#0b1d33',
+        light: '#38bdf8',
+        sceneBg: 0x020813 
+      },
+      monochrome: {
+        text: '#f1f5f9', 
+        bg: '#1e293b', 
+        ambient: '#334155', 
+        light: '#ffffff',
+        sceneBg: 0x020617 
+      }
+    };
+
+    // Emergency Offline presets in English
+    const localPresets = [
+      {
+        name: "Grand Canyon",
+        desc: "An immense canyon characterized by a massive central rift with terraced steps, steep clay slopes, and a deep gorge carved by a central river.",
+        generator: (x, z, size) => {
+          const dx = x - size / 2;
+          const dz = z - size / 2;
+          const distToRiver = Math.abs(dx + Math.sin(dz * 0.4) * 2);
+          if (distToRiver < 4.0) {
+            return 0; // Riverbed
+          } else if (distToRiver < 9.0) {
+            return 3; // Sediments & beaches
+          } else if (distToRiver < 16.0) {
+            return 8; // Intermediate clay steps
+          }
+          return 13 + Math.sin(x*0.5)*1.5; // High canyon plateau
+        }
+      },
+      {
+        name: "Mount Everest",
+        desc: "A colossal mountain massif with an imposing pyramidal peak, flanked by sharp ridges, steep glaciers, and deep peripheral valleys.",
+        generator: (x, z, size) => {
+          const dx = x - size / 2;
+          const dz = z - size / 2;
+          const distToCenter = Math.sqrt(dx*dx + dz*dz);
+          const baseHeight = Math.max(0, 16 - distToCenter * 0.7); 
+          const noise = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 1.5;
+          return Math.max(0, Math.round(baseHeight + noise));
+        }
+      },
+      {
+        name: "Ibiza Island",
+        desc: "A collection of smooth coves and low-elevation hills, featuring shallow coastal waters and gently rolling forest slopes.",
+        generator: (x, z, size) => {
+          const noise1 = Math.sin(x * 0.15) * Math.cos(z * 0.15) * 6;
+          const noise2 = Math.cos(x * 0.05) * Math.sin(z * 0.07) * 4;
+          return Math.max(0, Math.round(5 + noise1 + noise2));
+        }
+      }
+    ];
+
+    // Three.js Globals
+    let scene, camera, renderer, orbitControls;
+    let blockGroup; 
+
+    function setupUIEvents() {
+      const contrastSlider = document.getElementById('contrastSlider');
+      contrastSlider.addEventListener('input', (e) => {
+        state.contrast = parseFloat(e.target.value);
+        document.getElementById('contrastVal').innerText = state.contrast.toFixed(1) + 'x';
+        rebuildMap(); 
+      });
+
+      const spacingSlider = document.getElementById('letterSpacingSlider');
+      spacingSlider.addEventListener('input', (e) => {
+        state.letterSpacing = parseFloat(e.target.value);
+        document.getElementById('letterSpacingVal').innerText = Math.round(state.letterSpacing * 100) + '%';
+        rebuildMap();
+      });
+
+      const baseSlider = document.getElementById('baseSlider');
+      baseSlider.addEventListener('input', (e) => {
+        state.baseThickness = parseFloat(e.target.value);
+        document.getElementById('baseVal').innerText = state.baseThickness.toFixed(2);
+        rebuildMap();
+      });
+
+      document.getElementById('locationInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          processInput();
+        }
+      });
+    }
+
+    // Renders letter dynamically to canvas with Micro 5, checking active coordinates
+    function getMicro5Matrix(char) {
+      const upperChar = char.toUpperCase();
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = 16;
+      canvas.height = 16;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        return Array(7).fill(null).map(() => Array(5).fill(0));
+      }
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#ffffff';
+      
+      ctx.font = '16px "Micro 5"';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(upperChar, 8, 8);
+
+      const imgData = ctx.getImageData(0, 0, 16, 16);
+      
+      let minX = 16, maxX = 0, minY = 16, maxY = 0;
+      let hasActivePixels = false;
+      
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const pixelVal = imgData.data[(y * 16 + x) * 4]; 
+          if (pixelVal > 90) { 
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            hasActivePixels = true;
+          }
+        }
+      }
+
+      if (!hasActivePixels || upperChar === ' ') {
+        return Array(7).fill(null).map(() => Array(5).fill(0));
+      }
+
+      const targetW = 5;
+      const targetH = 7;
+      const grid = Array(targetH).fill(null).map(() => Array(targetW).fill(0));
+      
+      const srcW = (maxX - minX) + 1;
+      const srcH = (maxY - minY) + 1;
+
+      for (let ty = 0; ty < targetH; ty++) {
+        for (let tx = 0; tx < targetW; tx++) {
+          const sx = minX + Math.floor((tx / targetW) * srcW);
+          const sy = minY + Math.floor((ty / targetH) * srcH);
+          
+          const val = imgData.data[(sy * 16 + sx) * 4];
+          if (val > 90) {
+            grid[ty][tx] = 1;
+          }
+        }
+      }
+
+      return grid;
+    }
+
+    function getVoxelMatrixForChar(char) {
+      const cleanChar = (char && char.trim() !== '') ? char.substring(0, 1).toUpperCase() : ' ';
+      
+      try {
+        const dynamicMatrix = getMicro5Matrix(cleanChar);
+        let activeCount = 0;
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 5; c++) {
+            if (dynamicMatrix[r][c] === 1) activeCount++;
+          }
+        }
+        if (activeCount > 0 || cleanChar === ' ') {
+          return dynamicMatrix;
+        }
+      } catch (e) {
+        // Fallback context restrictions
+      }
+
+      return pixelFallbackMap[cleanChar] || pixelFallbackMap[' '];
+    }
+
+    function getVoxelColor(elevation, themeConfig) {
+      const factor = Math.min(elevation / 15, 1);
+      const color = new THREE.Color();
+      
+      const startColor = new THREE.Color(themeConfig.bg); 
+      const endColor = new THREE.Color(themeConfig.text);  
+
+      if (state.currentTheme === 'satellite') {
+        if (elevation === 0) {
+          color.setHex(0x0d2c54); // Deep Ocean
+        } else if (elevation === 1) {
+          color.setHex(0x00a896); // Turquoise coral reefs
+        } else if (elevation === 2) {
+          color.setHex(0xfef08a); // Golden Sand Beach
+        } else if (elevation <= 6) {
+          const ratio = (elevation - 3) / 3;
+          color.lerpColors(new THREE.Color('#40916c'), new THREE.Color('#2d6a4f'), ratio); // Green valley fields
+        } else if (elevation <= 11) {
+          const ratio = (elevation - 7) / 4;
+          color.lerpColors(new THREE.Color('#1b4332'), new THREE.Color('#7f5539'), ratio); // Forest mountains
+        } else if (elevation <= 13) {
+          const ratio = (elevation - 12) / 1;
+          color.lerpColors(new THREE.Color('#9c6644'), new THREE.Color('#64748b'), ratio); // Rocky ridges
+        } else {
+          const ratio = (elevation - 14) / 1;
+          color.lerpColors(new THREE.Color('#e2e8f0'), new THREE.Color('#ffffff'), ratio); // Snowy peaks
+        }
+      } else if (state.currentTheme === 'magma') {
+        const r = 0.5 + factor * 0.5;
+        const g = 0.1 + factor * 0.8;
+        const b = 0.0;
+        color.setRGB(r, g, b);
+      } else if (state.currentTheme === 'cyberpunk') {
+        color.lerpColors(new THREE.Color('#4c1d95'), new THREE.Color('#f43f5e'), factor);
+      } else if (state.currentTheme === 'ocean') {
+        color.lerpColors(new THREE.Color('#0369a1'), new THREE.Color('#e0f2fe'), factor);
+      } else if (state.currentTheme === 'monochrome') {
+        color.lerpColors(startColor, endColor, factor);
+      } else {
+        color.lerpColors(startColor, endColor, factor);
+      }
+
+      return color;
+    }
+
+    function mergeBoxGeometries(geometries) {
+      if (geometries.length === 0) return null;
+      
+      let totalVertices = 0;
+      let totalIndices = 0;
+      for (let g of geometries) {
+        totalVertices += g.attributes.position.count;
+        totalIndices += g.index.count;
+      }
+
+      const positions = new Float32Array(totalVertices * 3);
+      const normals = new Float32Array(totalVertices * 3);
+      const colors = new Float32Array(totalVertices * 3);
+      const indices = [];
+
+      let vertexOffset = 0;
+
+      for (let g of geometries) {
+        const posAttr = g.attributes.position.array;
+        const normAttr = g.attributes.normal.array;
+        const colAttr = g.attributes.color.array;
+        const indAttr = g.index.array;
+
+        positions.set(posAttr, vertexOffset * 3);
+        normals.set(normAttr, vertexOffset * 3);
+        colors.set(colAttr, vertexOffset * 3);
+
+        for (let i = 0; i < indAttr.length; i++) {
+          indices.push(indAttr[i] + vertexOffset);
+        }
+
+        vertexOffset += g.attributes.position.count;
+      }
+
+      const mergedGeom = new THREE.BufferGeometry();
+      mergedGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      mergedGeom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      mergedGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      
+      if (totalVertices > 65535) {
+        mergedGeom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+      } else {
+        mergedGeom.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
+      }
+
+      return mergedGeom;
+    }
+
+    function rebuildMap() {
+      while (blockGroup.children.length > 0) {
+        const obj = blockGroup.children[0];
+        blockGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+      }
+
+      const size = state.gridSize;
+      const textString = state.text.length > 0 ? state.text : loremIpsumText;
+      let textIndex = 0;
+
+      const cellSize = 0.7; 
+      const activeArea = cellSize * (1.0 - state.letterSpacing); 
+      const voxelWidth = activeArea / 5;
+      const voxelDepth = activeArea / 7;
+      
+      const mapOffset = (size * cellSize) / 2 - (cellSize / 2);
+      const themeConfig = themes[state.currentTheme];
+
+      const geometriesToMerge = [];
+
+      for (let z = 0; z < size; z++) {
+        for (let x = 0; x < size; x++) {
+          const char = textString[textIndex % textString.length];
+          textIndex++;
+
+          const rawHeight = state.heightmap[z] ? (state.heightmap[z][x] || 0) : 0;
+          const matrix = getVoxelMatrixForChar(char);
+          
+          const computedHeight = (Math.max(0.1, rawHeight * state.contrast) + state.baseThickness) * 0.5;
+
+          const cellCenterX = x * cellSize - mapOffset;
+          const cellCenterZ = z * cellSize - mapOffset;
+
+          for (let r = 0; r < 7; r++) {
+            for (let c = 0; c < 5; c++) {
+              if (matrix[r][c] === 1) {
+                const subX = cellCenterX - (activeArea / 2) + (c * voxelWidth) + (voxelWidth / 2);
+                const subZ = cellCenterZ - (activeArea / 2) + (r * voxelDepth) + (voxelDepth / 2);
+                const subY = computedHeight / 2;
+
+                const boxGeom = new THREE.BoxGeometry(voxelWidth * 0.9, computedHeight, voxelDepth * 0.9);
+                boxGeom.translate(subX, subY, subZ);
+
+                const color = getVoxelColor(rawHeight, themeConfig);
+                const colors = [];
+                for (let i = 0; i < boxGeom.attributes.position.count; i++) {
+                  colors.push(color.r, color.g, color.b);
+                }
+                boxGeom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                geometriesToMerge.push(boxGeom);
+              }
+            }
+          }
+        }
+      }
+
+      if (geometriesToMerge.length === 0) return;
+
+      const mergedGeometry = mergeBoxGeometries(geometriesToMerge);
+      geometriesToMerge.forEach(g => g.dispose());
+
+      if (mergedGeometry) {
+        const material = new THREE.MeshStandardMaterial({
+          vertexColors: true, 
+          roughness: 0.4,
+          metalness: 0.1
+        });
+
+        const singleMesh = new THREE.Mesh(mergedGeometry, material);
+        singleMesh.castShadow = true;
+        singleMesh.receiveShadow = true;
+
+        blockGroup.add(singleMesh);
+      }
+    }
+
+    function setTheme(themeKey) {
+      if (!themes[themeKey]) return;
+      state.currentTheme = themeKey;
+
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active-theme', 'border-indigo-500/30', 'bg-indigo-950/20', 'text-indigo-300');
+        btn.classList.add('border-slate-800', 'bg-slate-950/40', 'text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`theme-${themeKey}`);
+      if (activeBtn) {
+        activeBtn.classList.add('active-theme', 'border-indigo-500/30', 'bg-indigo-950/20', 'text-indigo-300');
+        activeBtn.classList.remove('border-slate-800', 'bg-slate-950/40', 'text-slate-400');
+      }
+
+      const themeConfig = themes[themeKey];
+      scene.background.setHex(themeConfig.sceneBg);
+      
+      if (scene.fog) {
+        scene.fog.color.setHex(themeConfig.sceneBg);
+      }
+
+      const ambientLight = scene.getObjectByName("ambientLight");
+      if (ambientLight) {
+        ambientLight.color.set(themeConfig.ambient);
+      }
+
+      const dirLight = scene.getObjectByName("dirLight");
+      if (dirLight) {
+        dirLight.color.set(themeConfig.light);
+      }
+
+      rebuildMap();
+      showToast(`Color scheme changed to "${themeKey.toUpperCase()}"`);
+    }
+
+    function onCustomTextChange() {
+      const inputVal = document.getElementById('customTextInput').value;
+      state.text = inputVal.toUpperCase().replace(/[^A-Z0-9\s]/g, "");
+      rebuildMap();
+    }
+
+    function resetTextToLorem() {
+      state.text = loremIpsumText;
+      document.getElementById('customTextInput').value = loremIpsumText;
+      rebuildMap();
+      showToast("Default lorem ipsum restored.");
+    }
+
+    function toggleAutoRotate() {
+      state.autoRotate = !state.autoRotate;
+      const btn = document.getElementById('btnAutoRotate');
+      if (state.autoRotate) {
+        btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
+        btn.classList.remove('bg-slate-850', 'text-slate-300', 'border-slate-800');
+      } else {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
+        btn.classList.add('bg-slate-850', 'text-slate-300', 'border-slate-800');
+      }
+    }
+
+    function resetCamera(preset) {
+      if (!camera) return;
+      if (preset === 'iso') {
+        camera.position.set(22, 26, 22);
+      } else if (preset === 'top') {
+        camera.position.set(0, 34, 0.05);
+      } else if (preset === 'profile') {
+        camera.position.set(30, 3, 0);
+      }
+      if (orbitControls) {
+        orbitControls.target.set(0, 3, 0); 
+        orbitControls.update();
+      }
+    }
+
+    function generateProceduralLandscape(locationName) {
+      const size = state.gridSize;
+      const grid = [];
+      const preset = localPresets.find(p => p.name.toLowerCase().includes(locationName.toLowerCase()));
+
+      for (let z = 0; z < size; z++) {
+        const row = [];
+        for (let x = 0; x < size; x++) {
+          let height = 0;
+          if (preset) {
+            height = preset.generator(x, z, size);
+          } else {
+            // Default Volcanic Island
+            const dx = x - size / 2;
+            const dz = z - size / 2;
+            const dist = Math.sqrt(dx*dx + dz*dz);
+            const crater = dist < 4.0 ? (4.0 - dist) * 2.5 : 0;
+            const peak = Math.max(0, 15 - dist * 0.65) - crater;
+            const noise = Math.sin(x*0.25) * Math.cos(z*0.25) * 1.5;
+            height = Math.max(0, Math.round(peak + noise));
+          }
+          row.push(height);
+        }
+        grid.push(row);
+      }
+
+      state.heightmap = grid;
+
+      if (preset) {
+        state.locationName = preset.name;
+        state.locationDesc = preset.desc;
+      } else {
+        state.locationName = "Volcanic Island (Default)";
+        state.locationDesc = "A beautiful tropical jungle island surrounded by a pristine turquoise coral reef, dominated by a majestic central volcanic crater with snow-capped peaks.";
+      }
+
+      updateLocationCard();
+      rebuildMap();
+    }
+
+    async function processInput() {
+      const input = document.getElementById('locationInput').value.trim();
+      if (!input) {
+        showToast("Please enter a URL or a place name.", "warning");
+        return;
+      }
+
+      toggleLoading(true, "ANALYZING MAP COORDINATES IN 48x48...");
+
+      let parsedSearch = input;
+      if (input.includes("google.com/maps") || input.includes("maps.app.goo.gl")) {
+        try {
+          const matchPlace = input.match(/\/place\/([^\/]+)/);
+          if (matchPlace && matchPlace[1]) {
+            parsedSearch = decodeURIComponent(matchPlace[1].replace(/\+/g, " "));
+          } else {
+            const matchCoords = input.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (matchCoords) {
+              parsedSearch = `Coordinates Latitude: ${matchCoords[1]}, Longitude: ${matchCoords[2]}`;
+            } else {
+              parsedSearch = "Geographic Location from URL";
+            }
+          }
+        } catch (e) {
+          parsedSearch = "Google Maps Location";
+        }
+      }
+
+      try {
+        const data = await fetchTopographyFromGemini(parsedSearch);
+        
+        if (data && data.grid && Array.isArray(data.grid)) {
+          state.locationName = data.locationName || parsedSearch;
+          state.locationDesc = data.description || "Topography generated successfully.";
+          state.heightmap = data.grid;
+          
+          updateLocationCard();
+          rebuildMap();
+          showToast(`Topographic map of "${state.locationName}" successfully generated.`);
+        } else {
+          throw new Error("Invalid format returned by AI.");
+        }
+      } catch (err) {
+        console.warn("Failed to contact Gemini API. Activating safe procedural generator.", err);
+        generateProceduralLandscape(parsedSearch);
+        showToast(`Activating simulated geology for: "${parsedSearch}"`, "info");
+      } finally {
+        toggleLoading(false);
+      }
+    }
+
+    function loadRandomLocation() {
+      const presetsList = ["Everest", "Grand Canyon", "Ibiza", "Mount Vesuvius", "Mariana Trench"];
+      const rand = presetsList[Math.floor(Math.random() * presetsList.length)];
+      document.getElementById('locationInput').value = rand;
+      processInput();
+    }
+
+    async function fetchTopographyFromGemini(query) {
+      const systemInstruction = "You are a geographer, cartographer, and 3D relief designer. Your job is to generate extremely realistic topographic elevation matrices based on real place names or topographic descriptions.";
+      const userPrompt = `Analyze the geographic location or relief of: "${query}".
+Generate a detailed elevation map modeled on a strict grid of 48x48 values.
+Each cell must be an integer between 0 (sea level, deep valleys, trenches) and 15 (peaks, highest summits, upper plateaus). Make sure to accurately reproduce land features corresponding to that locality (e.g., if it's the Grand Canyon, make a central rift with plateaus; if it's Everest, an extreme conical peak; if it's an island, low coastline and elevated center).
+Also generate a concise title in English and a compact geographic description of 2-3 sentences in English.
+You must return the response in pure JSON format according to the following validation schema.`;
+
+      const payload = {
+        contents: [{ parts: [{ text: userPrompt }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              locationName: { type: "STRING" },
+              description: { type: "STRING" },
+              grid: {
+                type: "ARRAY",
+                description: "Bidimensional array containing exactly 48 rows of 48 elements, representing voxel elevation values from 0 to 15.",
+                items: {
+                  type: "ARRAY",
+                  items: { type: "INTEGER" }
+                }
+              }
+            },
+            required: ["locationName", "description", "grid"]
+          }
+        }
+      };
+
+      let delay = 1000;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+          }
+          
+          const result = await response.json();
+          const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+          return JSON.parse(jsonText);
+        } catch (error) {
+          if (attempt === 4) throw error;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+    }
+
+    function updateLocationCard() {
+      document.getElementById('currentLocationName').innerText = state.locationName;
+      document.getElementById('cardLocationTitle').innerText = state.locationName;
+      document.getElementById('cardLocationDesc').innerText = state.locationDesc;
+      document.getElementById('geographyCard').classList.remove('hidden');
+    }
+
+    function toggleLoading(show, message = "GENERATING VOXEL TYPOGRAPHY...") {
+      const overlay = document.getElementById('loadingOverlay');
+      const text = document.getElementById('loadingText');
+      if (show) {
+        text.innerText = message;
+        overlay.classList.remove('hidden');
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function exportCanvas() {
+      if (!renderer || !scene || !camera) return;
+      renderer.render(scene, camera);
+      const dataURL = renderer.domElement.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.download = `pixelterra-3d-${state.locationName.toLowerCase().replace(/[^a-z0-9]/g, "-")}.png`;
+      link.href = dataURL;
+      link.click();
+      showToast("PNG capture exported successfully.");
+    }
+
+    function toggleHelpModal() {
+      const modal = document.getElementById('helpModal');
+      const hasClass = modal.classList.contains('opacity-0');
+      if (hasClass) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+      } else {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+      }
+    }
+
+    function showToast(message, type = "success") {
+      const toast = document.getElementById('toastNotification');
+      const icon = document.getElementById('toastIcon');
+      const text = document.getElementById('toastMessage');
+
+      text.innerText = message;
+      
+      if (type === "warning") {
+        icon.className = "fa-solid fa-triangle-exclamation text-amber-400 text-sm";
+      } else if (type === "info") {
+        icon.className = "fa-solid fa-circle-info text-sky-400 text-sm";
+      } else {
+        icon.className = "fa-solid fa-circle-check text-indigo-400 text-sm";
+      }
+
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    function onWindowResize() {
+      if (!renderer || !camera) return;
+      const { width, height } = getContainerDimensions();
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // Core animation render loop
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (state.autoRotate && blockGroup) {
+        blockGroup.rotation.y += 0.005;
+      } else if (blockGroup) {
+        blockGroup.rotation.y *= 0.95;
+        if (Math.abs(blockGroup.rotation.y) < 0.0001) blockGroup.rotation.y = 0;
+      }
+
+      if (orbitControls) {
+        orbitControls.update();
+      }
+
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generador de Gradientes Animados 3D – WebGL</title>
+    <meta name="description" content="Generador interactivo y gratuito de degradados animados en 3D con WebGL. Crea texturas fluidas y granuladas y exporta imágenes en alta resolución hasta 4K." />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Three.js principal -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Orbit Controls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #07080c;
+            overflow: hidden;
+            margin: 0;
+            user-select: none;
+        }
+        .mono-font { font-family: 'Space Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15,15,20,0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #1f2029;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #ffffff;
+        }
+        .folder-content {
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 1000px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .folder-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        /* FIX: about modal overlay */
+        #about-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(7,8,12,0.85);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #about-modal.open {
+            display: flex;
+        }
+    </style>
+  </head>
+  <body class="relative w-screen h-screen">
+
+    <canvas id="webgl-canvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+    <!-- Footer -->
+    <footer class="absolute bottom-6 left-6 z-10 text-white/70 text-xs flex flex-col gap-2 pointer-events-auto mix-blend-difference select-text">
+        <div class="flex items-center gap-1">
+            <span>Desarrollado con Three.js</span>
+            <span class="ml-1 opacity-60">2024–2026</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="about-btn" class="underline hover:text-white transition flex items-center gap-1 pointer-events-auto text-left">
+                <i data-lucide="info" class="w-3.5 h-3.5 inline"></i>
+                <span>Acerca de la herramienta</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- SIDEBAR -->
+    <div id="gui-panel" class="absolute top-6 right-6 z-10 w-96 max-h-[calc(100vh-3rem)] bg-[#15161e]/90 backdrop-blur-xl border border-white/10 rounded-xl text-slate-300 text-sm overflow-y-auto shadow-2xl transition-all duration-300">
+
+        <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <span class="mono-font font-bold text-xs tracking-wider text-slate-400 uppercase">Configuración de Gradiente</span>
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span class="text-[10px] uppercase tracking-widest text-indigo-400 font-bold mono-font">LIVE</span>
+            </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+
+            <!-- PRESETS -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Ajustes Preestablecidos</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-3 pt-2">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs text-slate-400 uppercase mono-font">Seleccionar Preset</label>
+                        <select id="preset-select" class="w-full bg-[#20212a] border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer">
+                            <option value="default">Base Predeterminada</option>
+                            <option value="sunrise">Amanecer de Neón</option>
+                            <option value="lagoon">Laguna de Coral</option>
+                            <option value="ember">Ascuas Ardientes</option>
+                            <option value="soft-grid">Malla Suave</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+                    <button id="reset-preset-btn" class="w-full bg-[#1f2029] hover:bg-white/10 text-white border border-white/5 py-1.5 rounded text-xs transition">
+                        Restablecer Valores Base
+                    </button>
+                </div>
+            </div>
+
+            <!-- MESH -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Estructura de Malla</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-3 pt-2">
+                    <div class="flex items-center justify-between bg-[#1f2029]/60 p-2.5 rounded border border-white/5">
+                        <span class="text-xs">Modo Wireframe</span>
+                        <button id="wireframe-toggle" class="relative w-11 h-6 bg-slate-700 rounded-full transition-colors duration-300">
+                            <span id="wireframe-dot" class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300"></span>
+                        </button>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Subdivisiones de Malla</span>
+                            <span id="mesh-segments-val" class="mono-font text-slate-200">200</span>
+                        </div>
+                        <input type="range" id="mesh-segments" min="50" max="300" step="10" value="200" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLORS -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Paleta de Colores</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-2 pt-2">
+                    <div id="colors-container" class="space-y-2"></div>
+                    <button id="randomize-btn" class="w-full mt-2 bg-white text-slate-900 hover:bg-slate-200 py-2 px-4 rounded font-medium text-xs tracking-wider uppercase transition flex items-center justify-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        Aleatorizar Colores
+                    </button>
+                </div>
+            </div>
+
+            <!-- NOISE -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Ruido y Ondas</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-4 pt-2">
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Amplitud / Altura</span>
+                            <span id="val-amount" class="mono-font text-slate-200">0.20</span>
+                        </div>
+                        <input type="range" id="noise-amount" min="0.0" max="1.5" step="0.01" value="0.20" class="w-full">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Velocidad de Flujo</span>
+                            <span id="val-speed" class="mono-font text-slate-200">0.020</span>
+                        </div>
+                        <input type="range" id="noise-speed" min="0.0" max="0.1" step="0.001" value="0.020" class="w-full">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Frecuencia Horizontal (X)</span>
+                            <span id="val-freq-x" class="mono-font text-slate-200">3.0</span>
+                        </div>
+                        <input type="range" id="noise-freq-x" min="0.5" max="10.0" step="0.1" value="3.0" class="w-full">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Frecuencia Vertical (Y)</span>
+                            <span id="val-freq-y" class="mono-font text-slate-200">6.0</span>
+                        </div>
+                        <input type="range" id="noise-freq-y" min="0.5" max="10.0" step="0.1" value="6.0" class="w-full">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Densidad de Grano</span>
+                            <span id="val-grain" class="mono-font text-slate-200">0.15</span>
+                        </div>
+                        <input type="range" id="noise-grain" min="0.0" max="0.5" step="0.01" value="0.15" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAMERA -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Perspectiva de Cámara</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-3 pt-2">
+                    <div class="flex items-center justify-between bg-[#1f2029]/60 p-2.5 rounded border border-white/5">
+                        <span class="text-xs">Interactuar (Rotar / Órbita)</span>
+                        <button id="orbit-toggle" class="relative w-11 h-6 bg-indigo-600 rounded-full transition-colors duration-300">
+                            <span id="orbit-dot" class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full translate-x-5 transition-transform duration-300"></span>
+                        </button>
+                    </div>
+                    <button id="reset-camera-btn" class="w-full bg-[#1f2029] hover:bg-white/10 text-white border border-white/5 py-1.5 rounded text-xs transition">
+                        Restablecer Ángulo de Cámara
+                    </button>
+                </div>
+            </div>
+
+            <!-- IMAGE EXPORT -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Exportar Imagen</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-3 pt-2">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs text-slate-400 uppercase mono-font">resolución</label>
+                        <select id="export-res-select" class="bg-[#1f2029] border border-white/5 text-xs text-white p-2 rounded focus:outline-none">
+                            <option value="1080p">Full HD (1920x1080)</option>
+                            <option value="4k">4K Ultra HD (3840x2160)</option>
+                        </select>
+                    </div>
+                    <button id="export-img-btn" class="w-full bg-slate-200 hover:bg-white text-slate-950 font-bold py-2 rounded text-xs tracking-wider uppercase transition flex items-center justify-center gap-1">
+                        Exportar Imagen PNG
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIDEO EXPORT -->
+            <div class="border border-white/5 rounded-lg bg-[#1a1b23]/40 p-3 space-y-3">
+                <button class="folder-header flex items-center justify-between w-full text-xs text-slate-400 tracking-wider uppercase mono-font font-semibold focus:outline-none">
+                    <span>Exportar Video (Bucle)</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transform transition-transform duration-200"></i>
+                </button>
+                <div class="folder-content space-y-3 pt-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-400 uppercase mono-font">resolución</label>
+                            <select id="video-res-select" class="bg-[#1f2029] border border-white/5 text-xs text-white p-1.5 rounded">
+                                <option value="720p">720p</option>
+                                <option value="1080p">1080p</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] text-slate-400 uppercase mono-font">duración (s)</label>
+                            <input type="number" id="video-duration" min="2" max="15" value="5" class="bg-[#1f2029] border border-white/5 text-xs text-white p-1.5 rounded focus:outline-none">
+                        </div>
+                    </div>
+                    <button id="record-video-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded text-xs tracking-wider uppercase transition flex items-center justify-center gap-1">
+                        <i data-lucide="video" class="w-4 h-4"></i>
+                        <span>Iniciar Grabación</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="px-5 pb-5 pt-2">
+            <button id="copy-link-btn" class="w-full bg-[#1f2029] hover:bg-[#2a2b38] text-white font-medium py-2.5 rounded-lg text-xs tracking-wider uppercase border border-white/10 transition flex items-center justify-center gap-2">
+                <i data-lucide="link" class="w-4 h-4"></i>
+                <span>Copiar Enlace de Configuración</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="absolute bottom-6 right-6 z-30 transform translate-y-20 opacity-0 bg-emerald-500 text-slate-900 font-bold px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 transition-all duration-300 ease-out pointer-events-none">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span>¡Enlace copiado al portapapeles!</span>
+    </div>
+
+    <!-- ABOUT MODAL — FIX: use class-based toggle, not the conflicting hidden+flex combo -->
+    <div id="about-modal">
+        <div class="w-full max-w-xl bg-[#1b1c24] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+            <div class="bg-[#21222b] px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                <span class="mono-font text-xs tracking-widest text-slate-400 uppercase font-bold">Acerca de la herramienta</span>
+                <button id="close-modal-x" class="text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-8 space-y-6">
+                <div class="space-y-3">
+                    <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-snug">
+                        Crea gradientes animados.<br>Exporta imágenes y video. Compártelos.
+                    </h2>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        Un generador interactivo y gratuito de degradados animados en 3D directamente en el navegador. Modifica colores, distorsión, frecuencias de ondas de ruido y dinámicas de movimiento en tiempo real.
+                    </p>
+                </div>
+                <ul class="space-y-2.5 text-xs text-slate-300">
+                    <li class="flex items-start gap-3 bg-[#242530]/50 p-3 rounded-xl border border-white/5">
+                        <span class="text-indigo-400 mt-0.5 font-bold">—</span>
+                        <span>5 colores de gradiente totalmente personalizables con previsualización WebGL fluida.</span>
+                    </li>
+                    <li class="flex items-start gap-3 bg-[#242530]/50 p-3 rounded-xl border border-white/5">
+                        <span class="text-indigo-400 mt-0.5 font-bold">—</span>
+                        <span>Grano y ruido estético analógico ajustable con velocidad de flujo configurable.</span>
+                    </li>
+                    <li class="flex items-start gap-3 bg-[#242530]/50 p-3 rounded-xl border border-white/5">
+                        <span class="text-indigo-400 mt-0.5 font-bold">—</span>
+                        <span>Exportación en Ultra HD y grabador de loops de video en tiempo real.</span>
+                    </li>
+                </ul>
+                <button id="close-modal-btn" class="w-full bg-slate-200 hover:bg-white text-slate-950 font-bold py-3.5 rounded-xl text-xs tracking-wider uppercase transition duration-200">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- EVENT BUS ---
+        class Ps {
+            constructor() { this.callbacks = { base: {} }; }
+            on(e, t) {
+                if (!e || !t) return false;
+                this.resolveNames(e).forEach(r => {
+                    const s = this.resolveName(r);
+                    if (!(this.callbacks[s.namespace] instanceof Object)) this.callbacks[s.namespace] = {};
+                    if (!(this.callbacks[s.namespace][s.value] instanceof Array)) this.callbacks[s.namespace][s.value] = [];
+                    this.callbacks[s.namespace][s.value].push(t);
+                });
+                return this;
+            }
+            off(e) {
+                if (!e) return false;
+                this.resolveNames(e).forEach(i => {
+                    const r = this.resolveName(i);
+                    if (r.namespace !== "base" && r.value === "") delete this.callbacks[r.namespace];
+                    else if (r.namespace === "base") {
+                        for (const s in this.callbacks)
+                            if (this.callbacks[s] instanceof Object && this.callbacks[s][r.value] instanceof Array)
+                                delete this.callbacks[s][r.value];
+                    } else if (this.callbacks[r.namespace] instanceof Object && this.callbacks[r.namespace][r.value] instanceof Array)
+                        delete this.callbacks[r.namespace][r.value];
+                });
+                return this;
+            }
+            trigger(e, t) {
+                if (!e) return false;
+                const r = t instanceof Array ? t : [];
+                const names = this.resolveNames(e);
+                const s = this.resolveName(names[0]);
+                if (s.namespace === "base") {
+                    for (const o in this.callbacks)
+                        if (this.callbacks[o] instanceof Object && this.callbacks[o][s.value] instanceof Array)
+                            this.callbacks[o][s.value].forEach(a => a.apply(this, r));
+                } else if (this.callbacks[s.namespace] instanceof Object && this.callbacks[s.namespace][s.value] instanceof Array)
+                    this.callbacks[s.namespace][s.value].forEach(o => o.apply(this, r));
+                return this;
+            }
+            resolveNames(e) { return e.replace(/[^a-zA-Z0-9 ,/.]/g, "").replace(/[,/]+/g, " ").split(" "); }
+            resolveName(e) {
+                const t = {}, i = e.split(".");
+                t.original = e; t.value = i[0]; t.namespace = "base";
+                if (i.length > 1 && i[1] !== "") t.namespace = i[1];
+                return t;
+            }
+        }
+
+        // --- TICKER ---
+        class gd extends Ps {
+            constructor() {
+                super();
+                this.start = Date.now(); this.current = this.start;
+                this.elapsed = 0; this.delta = 16; this.playing = true; this.rafId = null;
+                this.onVisibilityChange = () => {
+                    if (document.hidden) this.playing = false;
+                    else { this.playing = true; this.current = Date.now(); }
+                };
+                document.addEventListener("visibilitychange", this.onVisibilityChange);
+                this.rafId = requestAnimationFrame(() => this.tick());
+            }
+            tick() {
+                if (this.playing) {
+                    const e = Date.now();
+                    this.delta = e - this.current; this.current = e;
+                    this.elapsed = this.current - this.start;
+                    this.trigger("tick");
+                }
+                this.rafId = requestAnimationFrame(() => this.tick());
+            }
+            pause() { this.playing = false; }
+            resume() { this.playing = true; this.current = Date.now(); }
+            destroy() { cancelAnimationFrame(this.rafId); document.removeEventListener("visibilitychange", this.onVisibilityChange); }
+        }
+
+        // --- RESIZE ---
+        class vd extends Ps {
+            constructor() {
+                super();
+                this.onResize = () => this.trigger("resize");
+                window.addEventListener("resize", this.onResize);
+            }
+            destroy() { window.removeEventListener("resize", this.onResize); }
+        }
+
+        // --- COLOR PALETTES ---
+        const Ia = [
+            ["#8ecae6","#219ebc","#023047","#ffb703","#fb8500"],
+            ["#69d2e7","#a7dbd8","#e0e4cc","#f38630","#fa6900"],
+            ["#fe4365","#fc9d9a","#f9cdad","#c8c8a9","#83af9b"],
+            ["#ecd078","#d95b43","#c02942","#542437","#53777a"],
+            ["#556270","#4ecdc4","#c7f464","#ff6b6b","#c44d58"],
+            ["#774f38","#e08e79","#f1d4af","#ece5ce","#c5e0dc"],
+            ["#e8ddcb","#cdb380","#036564","#033649","#031634"],
+            ["#490a3d","#bd1550","#e97f02","#f8ca00","#8a9b0f"],
+            ["#594f4f","#547980","#45ada8","#9de0ad","#e5fcc2"],
+            ["#00a0b0","#6a4a3c","#cc333f","#eb6841","#edc951"],
+            ["#3fb8af","#7fc7af","#dad8a7","#ff9e9d","#ff3d7f"],
+            ["#f8b195","#f67280","#c06c84","#6c5b7b","#355c7d"]
+        ];
+
+        // --- DEFAULT STATE ---
+        const DEFAULT_STATE = {
+            preset: { selected: "default" },
+            gradient: {
+                wireframe: false,
+                colors: ["#8ecae6","#219ebc","#023047","#ffb703","#fb8500"],
+                noiseAmount: 0.20,
+                noiseSpeed: 0.02,   // FIX: was referenced as gradParams.speed (wrong key)
+                noiseFrequency: { x: 3.0, y: 6.0 },
+                noiseGrain: 0.15,
+                meshSegments: { width: 200, height: 200 }
+            },
+            export: { imageResolution: "1080p", videoResolution: "720p", videoDuration: 5 }
+        };
+
+        function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+        function deepMerge(target, source) {
+            if (typeof source !== 'object' || source === null) return target;
+            Object.entries(source).forEach(([k, v]) => {
+                if (Array.isArray(v)) { target[k] = [...v]; }
+                else if (typeof v === 'object' && v !== null) {
+                    if (typeof target[k] !== 'object') target[k] = {};
+                    deepMerge(target[k], v);
+                } else { target[k] = v; }
+            });
+            return target;
+        }
+
+        // --- STORE ---
+        class Ed extends Ps {
+            constructor() {
+                super();
+                this.state = deepClone(DEFAULT_STATE);
+            }
+            getState() { return this.state; }
+            getSnapshot() { return deepClone(this.state); }
+            getSelectedPreset() { return this.state.preset.selected; }
+            applySnapshot(s) { deepMerge(this.state, deepClone(s)); this.emitChange("all"); }
+            applyGradientPreset(p) { deepMerge(this.state.gradient, deepClone(p)); this.emitChange("gradient"); }
+            reset() { this.state = deepClone(DEFAULT_STATE); this.emitChange("all"); }
+            emitChange(section) { this.trigger("change", [{ section, state: this.state }]); }
+            setSelectedPreset(v) { this.state.preset.selected = v; this.emitChange("preset"); }
+            setGradientValue(k, v) { this.state.gradient[k] = v; this.emitChange("gradient"); }
+            setGradientNoiseFrequency(axis, v) { this.state.gradient.noiseFrequency[axis] = v; this.emitChange("gradient"); }
+            setGradientColor(idx, hex) { this.state.gradient.colors[idx] = hex; this.emitChange("gradient"); }
+            randomizeGradientColors() {
+                const palette = Ia[Math.floor(Math.random() * Ia.length)];
+                palette.forEach((c, i) => this.state.gradient.colors[i] = c);
+                this.emitChange("gradient");
+            }
+        }
+
+        const store = new Ed();
+
+
+        // ====================== SHADERS ======================
+
+        const vertexShader = `
+            precision mediump float;
+            uniform float uTime;
+            uniform vec2 uFrequency;
+            uniform float uAmount;
+            varying vec2 vUv;
+            varying float vNoise;
+
+            float getWave(vec2 p, float time) {
+                float total = 0.0;
+                total += sin(p.x * 0.4 + time * 1.2) * cos(p.y * 0.4 + time * 0.9);
+                vec2 p2 = vec2(p.x * 0.707 + p.y * 0.707, -p.x * 0.707 + p.y * 0.707);
+                total += sin(p2.x * 0.85 - time * 1.4) * cos(p2.y * 0.75 + time * 1.0) * 0.5;
+                vec2 p3 = vec2(p.y * 0.966 - p.x * 0.258, p.x * 0.966 + p.y * 0.258);
+                total += sin(p3.x * 1.8 + time * 2.0) * cos(p3.y * 1.4 - time * 1.1) * 0.25;
+                return total;
+            }
+
+            void main() {
+                vUv = uv;
+                vec2 p = position.xy * uFrequency;
+                float noise = getWave(p, uTime);
+                vNoise = noise;
+                vec3 displacedPosition = position;
+                displacedPosition.z += noise * uAmount;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            precision mediump float;
+            uniform vec3 uColor1;
+            uniform vec3 uColor2;
+            uniform vec3 uColor3;
+            uniform vec3 uColor4;
+            uniform vec3 uColor5;
+            uniform float uGrain;
+            uniform float uTime;
+            varying vec2 vUv;
+            varying float vNoise;
+
+            float rand(vec2 co) {
+                return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+            }
+
+            void main() {
+                float n = vNoise * 0.4 + 0.5;
+                n = clamp(n, 0.0, 1.0);
+                vec3 color = mix(uColor1, uColor2, smoothstep(0.0, 0.25, n));
+                color = mix(color, uColor3, smoothstep(0.25, 0.5, n));
+                color = mix(color, uColor4, smoothstep(0.5, 0.75, n));
+                color = mix(color, uColor5, smoothstep(0.75, 1.0, n));
+                float grain = (rand(vUv + fract(uTime * 0.002)) - 0.5) * uGrain;
+                color += vec3(grain);
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+
+        // ====================== WEBGL INIT ======================
+
+        let scene, camera, renderer, geometry, material, mesh, orbitControls;
+        const canvas = document.getElementById('webgl-canvas');
+
+        function initWebGL() {
+            const gp = store.getState().gradient;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#07080c');
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 0, 4.2);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            geometry = new THREE.PlaneGeometry(6, 4, gp.meshSegments.width, gp.meshSegments.height);
+
+            const uniforms = {
+                uTime:     { value: 0.0 },
+                uFrequency:{ value: new THREE.Vector2(gp.noiseFrequency.x, gp.noiseFrequency.y) },
+                uAmount:   { value: gp.noiseAmount },
+                uGrain:    { value: gp.noiseGrain },
+                uColor1:   { value: new THREE.Color(gp.colors[0]) },
+                uColor2:   { value: new THREE.Color(gp.colors[1]) },
+                uColor3:   { value: new THREE.Color(gp.colors[2]) },
+                uColor4:   { value: new THREE.Color(gp.colors[3]) },
+                uColor5:   { value: new THREE.Color(gp.colors[4]) }
+            };
+
+            material = new THREE.ShaderMaterial({
+                vertexShader, fragmentShader, uniforms,
+                wireframe: gp.wireframe,
+                side: THREE.DoubleSide
+            });
+
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -0.3;
+            scene.add(mesh);
+
+            orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+            orbitControls.enableZoom = true;
+            orbitControls.maxDistance = 8.0;
+            orbitControls.minDistance = 2.0;
+            orbitControls.enabled = true;
+        }
+
+        // ====================== ANIMATION LOOP ======================
+
+        const ticker = new gd();
+        let totalElapsed = 0;
+
+        ticker.on("tick", () => {
+            const gp = store.getState().gradient;
+            // FIX: was gradParams.speed — correct key is noiseSpeed
+            totalElapsed += gp.noiseSpeed;
+
+            if (material) {
+                material.uniforms.uTime.value = totalElapsed;
+            }
+            if (orbitControls && orbitControls.enabled) orbitControls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        });
+
+        const resizer = new vd();
+        resizer.on("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+
+        // ====================== UI RENDERING ======================
+
+        function renderColorsControls() {
+            const gp = store.getState().gradient;
+            const container = document.getElementById("colors-container");
+            container.innerHTML = "";
+            gp.colors.forEach((col, i) => {
+                const div = document.createElement("div");
+                div.className = "flex items-center justify-between bg-[#1f2029]/40 p-2 rounded border border-white/5";
+                div.innerHTML = `
+                    <span class="text-xs text-slate-400">Color ${i + 1}</span>
+                    <div class="flex items-center gap-2">
+                        <span id="hex-${i+1}" class="mono-font text-xs uppercase text-slate-300">${col}</span>
+                        <input type="color" id="col-${i+1}" value="${col}" class="w-8 h-8 rounded border-0 cursor-pointer bg-transparent">
+                    </div>
+                `;
+                container.appendChild(div);
+                document.getElementById(`col-${i+1}`).addEventListener("input", (e) => {
+                    store.setSelectedPreset("custom");
+                    store.setGradientColor(i, e.target.value);
+                });
+            });
+            // FIX: re-run lucide icons after injecting new DOM
+            lucide.createIcons();
+        }
+
+        function updateUI() {
+            const gp = store.getState().gradient;
+
+            document.getElementById("noise-amount").value = gp.noiseAmount;
+            document.getElementById("val-amount").textContent = gp.noiseAmount.toFixed(2);
+
+            // FIX: was referencing noiseSpeed but displaying gp.noiseSpeed (correct now)
+            document.getElementById("noise-speed").value = gp.noiseSpeed;
+            document.getElementById("val-speed").textContent = gp.noiseSpeed.toFixed(3);
+
+            document.getElementById("noise-freq-x").value = gp.noiseFrequency.x;
+            document.getElementById("val-freq-x").textContent = gp.noiseFrequency.x.toFixed(1);
+
+            document.getElementById("noise-freq-y").value = gp.noiseFrequency.y;
+            document.getElementById("val-freq-y").textContent = gp.noiseFrequency.y.toFixed(1);
+
+            document.getElementById("noise-grain").value = gp.noiseGrain;
+            document.getElementById("val-grain").textContent = gp.noiseGrain.toFixed(2);
+
+            document.getElementById("mesh-segments").value = gp.meshSegments.width;
+            document.getElementById("mesh-segments-val").textContent = gp.meshSegments.width;
+
+            // Wireframe toggle UI
+            const wfBtn = document.getElementById('wireframe-toggle');
+            const wfDot = document.getElementById('wireframe-dot');
+            wfBtn.classList.toggle('bg-indigo-600', gp.wireframe);
+            wfBtn.classList.toggle('bg-slate-700', !gp.wireframe);
+            wfDot.classList.toggle('translate-x-5', gp.wireframe);
+
+            document.getElementById("preset-select").value = store.getSelectedPreset();
+
+            if (material) {
+                material.wireframe = gp.wireframe;
+                material.uniforms.uAmount.value = gp.noiseAmount;
+                material.uniforms.uFrequency.value.set(gp.noiseFrequency.x, gp.noiseFrequency.y);
+                material.uniforms.uGrain.value = gp.noiseGrain;
+                gp.colors.forEach((col, idx) => {
+                    material.uniforms[`uColor${idx + 1}`].value.set(col);
+                    const hexSpan = document.getElementById(`hex-${idx + 1}`);
+                    const colInput = document.getElementById(`col-${idx + 1}`);
+                    if (hexSpan) hexSpan.textContent = col;
+                    if (colInput) colInput.value = col;
+                });
+            }
+
+            updateURLHash();
+        }
+
+        // FIX: renderColorsControls only on full resets/preset changes to avoid losing focus
+        store.on("change", ({ section }) => {
+            if (section === "all" || section === "preset") {
+                renderColorsControls();
+            }
+            updateUI();
+        });
+
+
+        // ====================== EVENT HANDLERS ======================
+
+        document.getElementById("noise-amount").addEventListener("input", e =>
+            store.setGradientValue("noiseAmount", parseFloat(e.target.value)));
+
+        // FIX: key is noiseSpeed, not speed
+        document.getElementById("noise-speed").addEventListener("input", e =>
+            store.setGradientValue("noiseSpeed", parseFloat(e.target.value)));
+
+        document.getElementById("noise-freq-x").addEventListener("input", e =>
+            store.setGradientNoiseFrequency("x", parseFloat(e.target.value)));
+
+        document.getElementById("noise-freq-y").addEventListener("input", e =>
+            store.setGradientNoiseFrequency("y", parseFloat(e.target.value)));
+
+        document.getElementById("noise-grain").addEventListener("input", e =>
+            store.setGradientValue("noiseGrain", parseFloat(e.target.value)));
+
+        document.getElementById("wireframe-toggle").addEventListener("click", () =>
+            store.setGradientValue("wireframe", !store.getState().gradient.wireframe));
+
+        document.getElementById("mesh-segments").addEventListener("change", e => {
+            const segments = parseInt(e.target.value);
+            store.state.gradient.meshSegments.width = segments;
+            store.state.gradient.meshSegments.height = segments;
+            document.getElementById("mesh-segments-val").textContent = segments;
+            if (geometry) geometry.dispose();
+            geometry = new THREE.PlaneGeometry(6, 4, segments, segments);
+            mesh.geometry = geometry;
+        });
+
+        document.getElementById("randomize-btn").addEventListener("click", () => {
+            store.setSelectedPreset("custom");
+            store.randomizeGradientColors();
+            renderColorsControls(); // FIX: re-render swatches after randomize
+            updateUI();
+        });
+
+        const orbitToggle = document.getElementById("orbit-toggle");
+        const orbitDot = document.getElementById("orbit-dot");
+        orbitToggle.addEventListener("click", () => {
+            orbitControls.enabled = !orbitControls.enabled;
+            orbitToggle.classList.toggle('bg-indigo-600', orbitControls.enabled);
+            orbitToggle.classList.toggle('bg-slate-700', !orbitControls.enabled);
+            orbitDot.classList.toggle('translate-x-5', orbitControls.enabled);
+        });
+
+        document.getElementById("reset-camera-btn").addEventListener("click", () => {
+            camera.position.set(0, 0, 4.2);
+            camera.rotation.set(0, 0, 0);
+            mesh.rotation.set(-0.3, 0, 0);
+            orbitControls.target.set(0, 0, 0);
+            orbitControls.update();
+        });
+
+
+        // ====================== PRESETS ======================
+
+        const presetsDefinition = {
+            default: {
+                wireframe: false,
+                colors: ["#8ecae6","#219ebc","#023047","#ffb703","#fb8500"],
+                noiseAmount: 0.20, noiseSpeed: 0.02,
+                noiseFrequency: { x: 3.0, y: 6.0 }, noiseGrain: 0.15
+            },
+            sunrise: {
+                wireframe: false,
+                colors: ["#f72585","#7209b7","#3f37c9","#4361ee","#4cc9f0"],
+                noiseAmount: 0.35, noiseSpeed: 0.012,
+                noiseFrequency: { x: 2.2, y: 3.8 }, noiseGrain: 0.18
+            },
+            lagoon: {
+                wireframe: false,
+                colors: ["#00a8c6","#40c0cb","#f9f2e7","#aee239","#8fbe00"],
+                noiseAmount: 0.40, noiseSpeed: 0.025,
+                noiseFrequency: { x: 4.5, y: 2.0 }, noiseGrain: 0.10
+            },
+            ember: {
+                wireframe: false,
+                colors: ["#d90429","#ef233c","#edf2f4","#8d99ae","#2b2d42"],
+                noiseAmount: 0.28, noiseSpeed: 0.015,
+                noiseFrequency: { x: 5.0, y: 5.0 }, noiseGrain: 0.25
+            },
+            "soft-grid": {
+                wireframe: true,
+                colors: ["#bbbb88","#ccc68d","#eedd99","#eec290","#eeaa88"],
+                noiseAmount: 0.18, noiseSpeed: 0.008,
+                noiseFrequency: { x: 1.5, y: 2.5 }, noiseGrain: 0.08
+            }
+        };
+
+        document.getElementById("preset-select").addEventListener("change", e => {
+            const target = e.target.value;
+            store.setSelectedPreset(target);
+            if (presetsDefinition[target]) {
+                store.applyGradientPreset(presetsDefinition[target]);
+                renderColorsControls();
+                updateUI();
+            }
+        });
+
+        document.getElementById("reset-preset-btn").addEventListener("click", () => {
+            store.setSelectedPreset("default");
+            store.applyGradientPreset(presetsDefinition.default);
+            renderColorsControls();
+            updateUI();
+        });
+
+
+        // ====================== IMAGE EXPORT ======================
+
+        document.getElementById("export-img-btn").addEventListener("click", () => {
+            const selectedRes = document.getElementById("export-res-select").value;
+            let width = 1920, height = 1080;
+            if (selectedRes === "4k") { width = 3840; height = 2160; }
+
+            const prevAspect = camera.aspect;
+            const size = new THREE.Vector2();
+            renderer.getSize(size);
+
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+            renderer.render(scene, camera);
+
+            const link = document.createElement('a');
+            link.download = `mesh-gradient-${width}x${height}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            camera.aspect = prevAspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(size.x, size.y);
+        });
+
+
+        // ====================== VIDEO EXPORT ======================
+
+        let isRecording = false, mediaRecorder, recordedChunks = [];
+
+        document.getElementById("record-video-btn").addEventListener("click", async () => {
+            const btn = document.getElementById("record-video-btn");
+            const btnSpan = btn.querySelector("span");
+            if (isRecording) { mediaRecorder.stop(); return; }
+
+            recordedChunks = [];
+            const selectedRes = document.getElementById("video-res-select").value;
+            const duration = parseFloat(document.getElementById("video-duration").value);
+            let width = 1280, height = 720;
+            if (selectedRes === "1080p") { width = 1920; height = 1080; }
+
+            const prevAspect = camera.aspect;
+            const size = new THREE.Vector2();
+            renderer.getSize(size);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+
+            const stream = canvas.captureStream(30);
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream, { videoBitsPerSecond: 5000000 });
+            }
+
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `gradient-loop-${width}x${height}.webm`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+                camera.aspect = prevAspect;
+                camera.updateProjectionMatrix();
+                renderer.setSize(size.x, size.y);
+
+                isRecording = false;
+                btn.classList.add("bg-indigo-600"); btn.classList.remove("bg-red-600");
+                btnSpan.textContent = "Iniciar Grabación";
+            };
+
+            isRecording = true;
+            mediaRecorder.start();
+            btn.classList.remove("bg-indigo-600"); btn.classList.add("bg-red-600");
+
+            let timeLeft = duration;
+            const interval = setInterval(() => {
+                if (!isRecording) { clearInterval(interval); return; }
+                timeLeft -= 0.5;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
+                } else {
+                    btnSpan.textContent = `Grabando (${timeLeft.toFixed(1)}s)`;
+                }
+            }, 500);
+        });
+
+
+        // ====================== SHARE LINK ======================
+
+        function updateURLHash() {
+            try {
+                const gp = store.getState().gradient;
+                const data = {
+                    w: gp.wireframe ? 1 : 0,
+                    c: gp.colors.map(c => c.replace('#', '')),
+                    a: parseFloat(gp.noiseAmount.toFixed(2)),
+                    s: parseFloat(gp.noiseSpeed.toFixed(3)),
+                    fx: parseFloat(gp.noiseFrequency.x.toFixed(1)),
+                    fy: parseFloat(gp.noiseFrequency.y.toFixed(1)),
+                    g: parseFloat(gp.noiseGrain.toFixed(2)),
+                    m: gp.meshSegments.width,
+                    p: store.getSelectedPreset()
+                };
+                history.replaceState(null, null, `#config=${btoa(JSON.stringify(data))}`);
+            } catch (e) {}
+        }
+
+        function loadURLHash() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#config=')) {
+                try {
+                    const data = JSON.parse(atob(hash.replace('#config=', '')));
+                    if (data) {
+                        const gradient = {
+                            wireframe: data.w === 1,
+                            colors: data.c.map(h => '#' + h),
+                            noiseAmount: data.a,
+                            noiseSpeed: data.s,   // FIX: was stored as `s`, must load as noiseSpeed
+                            noiseFrequency: { x: data.fx, y: data.fy },
+                            noiseGrain: data.g,
+                            meshSegments: { width: data.m, height: data.m }
+                        };
+                        store.applyGradientPreset(gradient);
+                        store.setSelectedPreset(data.p || "custom");
+                    }
+                } catch (e) {}
+            }
+        }
+
+        document.getElementById("copy-link-btn").addEventListener("click", () => {
+            updateURLHash();
+            const temp = document.createElement('input');
+            temp.value = window.location.href;
+            document.body.appendChild(temp); temp.select(); document.execCommand('copy'); document.body.removeChild(temp);
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        });
+
+
+        // ====================== COLLAPSIBLE FOLDERS ======================
+
+        document.querySelectorAll(".folder-header").forEach(header => {
+            header.addEventListener("click", () => {
+                const content = header.nextElementSibling;
+                const icon = header.querySelector("[data-lucide='chevron-down']");
+                content.classList.toggle("collapsed");
+                icon.style.transform = content.classList.contains("collapsed") ? "rotate(-90deg)" : "rotate(0deg)";
+            });
+        });
+
+
+        // ====================== INIT ======================
+
+        window.onload = function () {
+            initWebGL();
+            loadURLHash();
+            renderColorsControls();
+            updateUI();
+
+            // FIX: initialize Lucide icons after DOM is ready
+            lucide.createIcons();
+
+            // About modal — FIX: use .open class, not .hidden (avoids hidden+flex conflict)
+            const modal = document.getElementById("about-modal");
+            document.getElementById("about-btn").addEventListener("click", () => modal.classList.add("open"));
+            document.getElementById("close-modal-x").addEventListener("click", () => modal.classList.remove("open"));
+            document.getElementById("close-modal-btn").addEventListener("click", () => modal.classList.remove("open"));
+            modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("open"); });
+        };
+    </script>
+  </body>
+</html>

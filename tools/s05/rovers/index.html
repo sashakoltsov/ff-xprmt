@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rovers</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Dots&display=swap');
+
+        :root {
+            --primary: #0077FF;
+            --secondary: #FFFFFF;
+            --panel-bg: #050508;
+            --panel-border: #0077FF;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--secondary);
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+
+        /* Control Panel - Futuristic */
+        #control-panel {
+            width: 320px;
+            background-color: var(--panel-bg);
+            border-right: 2px solid var(--panel-border);
+            box-shadow: inset -5px 0 20px rgba(0, 119, 255, 0.2), 5px 0 15px rgba(0,0,0,0.5);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            color: var(--primary);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        #control-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        #control-panel::-webkit-scrollbar-track {
+            background: rgba(0, 119, 255, 0.1); 
+        }
+        #control-panel::-webkit-scrollbar-thumb {
+            background: var(--primary); 
+        }
+
+        #control-panel h1 {
+            margin: 0;
+            font-family: 'Zen Dots', sans-serif;
+            font-size: 24px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--primary);
+            text-transform: uppercase;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--secondary);
+        }
+
+        textarea, select {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            outline: none;
+            resize: vertical;
+            transition: box-shadow 0.3s ease;
+        }
+
+        textarea:focus, select:focus {
+            box-shadow: 0 0 10px rgba(0, 119, 255, 0.3);
+        }
+
+        select option {
+            background: var(--panel-bg);
+            color: var(--primary);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 6px 0;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--secondary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--secondary);
+            margin-top: -6px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        input[type=color] {
+            -webkit-appearance: none;
+            border: 1px solid var(--primary);
+            width: 100%;
+            height: 35px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type=color]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        input[type=color]::-webkit-color-swatch {
+            border: none;
+        }
+
+        button.action-btn {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        button.action-btn:hover {
+            box-shadow: 0 0 15px rgba(0, 119, 255, 0.5);
+        }
+
+        button.action-btn.active {
+            background: var(--primary);
+            color: var(--secondary);
+            box-shadow: 0 0 20px rgba(0, 119, 255, 0.8);
+        }
+
+        /* Preview Canvas */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e0e5ec;
+            overflow: hidden;
+        }
+
+        /* Glass Background */
+        #canvas {
+            width: 80%;
+            height: 80%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #text-wrapper {
+            display: flex;
+            gap: 5px; 
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            z-index: 2;
+            width: 90%;
+            text-align: center;
+            pointer-events: none; /* Let clicks pass through to canvas container */
+        }
+
+        .letter {
+            color: var(--primary);
+            display: inline-block;
+            transform-origin: center center;
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        text-shadow 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        color 0.1s ease,
+                        -webkit-text-stroke 0.1s ease;
+            will-change: transform, text-shadow, color;
+        }
+        
+        #halftone-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .line-break {
+            flex-basis: 100%;
+            height: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="control-panel">
+        <h1>rovers</h1>
+
+        <div class="control-group">
+            <label for="custom-text">Text Input</label>
+            <textarea id="custom-text" rows="2">ROVERS</textarea>
+        </div>
+
+        <div class="control-group">
+            <label for="font-choice">Typeface</label>
+            <select id="font-choice">
+                <option value="'Zen Dots', sans-serif">Zen Dots</option>
+                <option value="'Press Start 2P', cursive">Press Start 2P</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="size">Letter Size</label>
+            <input type="range" id="size" min="20" max="200" value="100">
+        </div>
+
+        <div class="control-group">
+            <label for="leading">Leading</label>
+            <input type="range" id="leading" min="0" max="150" value="10">
+        </div>
+
+        <div class="control-group">
+            <label for="weight">Weight (Volume)</label>
+            <input type="range" id="weight" min="0" max="15" value="0">
+        </div>
+
+        <div class="control-group">
+            <label for="motion">Level of Motion</label>
+            <input type="range" id="motion" min="0" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-group">
+            <label for="spread">Rash Spread</label>
+            <input type="range" id="spread" min="0" max="100" value="30">
+        </div>
+
+        <div class="control-group">
+            <label for="bg-color">Background Colour</label>
+            <input type="color" id="bg-color" value="#e0e5ec">
+        </div>
+
+        <div class="control-group">
+            <label for="anim-path">Animation Path</label>
+            <select id="anim-path">
+                <option value="figure8">Figure 8</option>
+                <option value="orbit">Orbit</option>
+                <option value="wave">Wave</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="randomness">Anim Randomness</label>
+            <input type="range" id="randomness" min="0" max="100" value="0">
+        </div>
+
+        <button id="auto-btn" class="action-btn">Auto Animate: OFF</button>
+        <button id="xray-btn" class="action-btn">X-Ray View: OFF</button>
+        <button id="export-btn" class="action-btn" style="margin-top: auto;">Export</button>
+    </div>
+
+    <div id="canvas-container">
+        <div id="canvas">
+            <canvas id="halftone-canvas"></canvas>
+            <div id="text-wrapper">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        let letters = [];
+        let letterData = []; 
+        let projectiles = [];
+        
+        const textWrapper = document.getElementById('text-wrapper');
+        const customTextInput = document.getElementById('custom-text');
+        const fontChoice = document.getElementById('font-choice');
+        const leadingSlider = document.getElementById('leading');
+        const sizeSlider = document.getElementById('size');
+        const weightSlider = document.getElementById('weight');
+        const motionSlider = document.getElementById('motion');
+        const spreadSlider = document.getElementById('spread');
+        const bgColorPicker = document.getElementById('bg-color');
+        const animPathChoice = document.getElementById('anim-path');
+        const randomnessSlider = document.getElementById('randomness');
+        
+        const canvasContainer = document.getElementById('canvas-container');
+        const glassCanvas = document.getElementById('canvas');
+        const exportBtn = document.getElementById('export-btn');
+        const autoBtn = document.getElementById('auto-btn');
+        const xrayBtn = document.getElementById('xray-btn');
+        
+        // Halftone Canvas Setup
+        const htCanvas = document.getElementById('halftone-canvas');
+        const ctx = htCanvas.getContext('2d');
+        
+        function invertColor(hex) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            const r = (255 - parseInt(hex.substring(0, 2), 16)).toString(16).padStart(2, '0');
+            const g = (255 - parseInt(hex.substring(2, 4), 16)).toString(16).padStart(2, '0');
+            const b = (255 - parseInt(hex.substring(4, 6), 16)).toString(16).padStart(2, '0');
+            return `#${r}${g}${b}`;
+        }
+
+        let params = {
+            font: fontChoice.value,
+            size: parseInt(sizeSlider.value),
+            leading: parseInt(leadingSlider.value),
+            weight: parseInt(weightSlider.value),
+            motion: parseFloat(motionSlider.value),
+            spread: parseInt(spreadSlider.value),
+            invertedBg: invertColor(bgColorPicker.value),
+            animPath: animPathChoice.value,
+            randomness: parseInt(randomnessSlider.value)
+        };
+
+        // States
+        let mouseX = 0, mouseY = 0;
+        let isMouseHovering = false;
+        let isAutoAnimating = false;
+        let autoAngle = 0;
+        let isXrayEnabled = false;
+
+        // Auto Randomness tracking variables
+        let randTargetX = 0, randTargetY = 0;
+        let currentRandX = 0, currentRandY = 0;
+
+        function resizeCanvas() {
+            htCanvas.width = glassCanvas.clientWidth;
+            htCanvas.height = glassCanvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function renderText() {
+            const text = customTextInput.value;
+            textWrapper.innerHTML = '';
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '\n') {
+                    const br = document.createElement('div');
+                    br.className = 'line-break';
+                    textWrapper.appendChild(br);
+                } else if (char === ' ') {
+                    const space = document.createElement('span');
+                    space.innerHTML = '&nbsp;';
+                    space.className = 'letter';
+                    textWrapper.appendChild(space);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.className = 'letter';
+                    textWrapper.appendChild(span);
+                }
+            }
+            
+            letters = document.querySelectorAll('.letter');
+            
+            letterData = Array.from(letters).map(el => ({
+                el: el,
+                cx: 0, 
+                cy: 0,
+                targetIntensity: 0,
+                currentIntensity: 0
+            }));
+            
+            updateBaseStyles();
+        }
+
+        function updateBaseStyles() {
+            textWrapper.style.rowGap = `${params.leading}px`;
+            
+            letters.forEach(letter => {
+                letter.style.fontFamily = params.font;
+                letter.style.fontSize = `${params.size}px`;
+                if (letter.style.color !== 'transparent') {
+                    letter.style.webkitTextStroke = `${params.weight}px var(--primary)`;
+                    letter.style.color = 'var(--primary)';
+                }
+            });
+        }
+
+        function drawHalftoneRash(glassRect) {
+            let activeLetters = [];
+            let minBoxX = Infinity, maxBoxX = -Infinity;
+            let minBoxY = Infinity, maxBoxY = -Infinity;
+            const maxSpreadRadius = (params.spread / 100) * 1500; 
+
+            letterData.forEach(ld => {
+                ld.currentIntensity += (ld.targetIntensity - ld.currentIntensity) * 0.15;
+                
+                if (ld.currentIntensity > 0.01 && params.spread > 0) {
+                    const rect = ld.el.getBoundingClientRect();
+                    ld.cx = (rect.left + rect.width / 2) - glassRect.left;
+                    ld.cy = (rect.top + rect.height / 2) - glassRect.top;
+                    
+                    activeLetters.push(ld);
+
+                    const effectRadius = (maxSpreadRadius + 40) * ld.currentIntensity;
+                    minBoxX = Math.min(minBoxX, ld.cx - effectRadius);
+                    maxBoxX = Math.max(maxBoxX, ld.cx + effectRadius);
+                    minBoxY = Math.min(minBoxY, ld.cy - effectRadius);
+                    maxBoxY = Math.max(maxBoxY, ld.cy + effectRadius);
+                }
+            });
+
+            if (activeLetters.length > 0 && params.spread > 0) {
+                const gridSize = 14; 
+                const cols = Math.ceil(htCanvas.width / gridSize);
+                const rows = Math.ceil(htCanvas.height / gridSize);
+
+                const startCol = Math.max(0, Math.floor(minBoxX / gridSize));
+                const endCol = Math.min(cols, Math.ceil(maxBoxX / gridSize));
+                const startRow = Math.max(0, Math.floor(minBoxY / gridSize));
+                const endRow = Math.min(rows, Math.ceil(maxBoxY / gridSize));
+
+                ctx.fillStyle = params.invertedBg;
+
+                for (let c = startCol; c <= endCol; c++) {
+                    for (let r = startRow; r <= endRow; r++) {
+                        const x = c * gridSize;
+                        const y = r * gridSize;
+                        let dotIntensity = 0;
+
+                        for (let i = 0; i < activeLetters.length; i++) {
+                            const ld = activeLetters[i];
+                            const dist = Math.hypot(x - ld.cx, y - ld.cy);
+                            const letterRadius = (maxSpreadRadius + 40) * ld.currentIntensity;
+                            
+                            if (dist < letterRadius) {
+                                const proximity = Math.pow(1 - (dist / letterRadius), 1.5);
+                                dotIntensity += proximity * ld.currentIntensity;
+                            }
+                        }
+
+                        if (dotIntensity > 0.01) {
+                            dotIntensity = Math.min(dotIntensity, 1);
+                            const dotRadius = (gridSize / 2) * 0.9 * Math.pow(dotIntensity, 0.8);
+                            
+                            if (dotRadius > 0.5) {
+                                ctx.beginPath();
+                                ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function applyInteractions(points) {
+            letterData.forEach(ld => {
+                const rect = ld.el.getBoundingClientRect();
+                const letterCX = rect.left + rect.width / 2;
+                const letterCY = rect.top + rect.height / 2;
+
+                let maxIntensity = 0;
+                let bestDx = 0;
+                let bestDy = 0;
+                let isMouseHoveringLetter = false;
+
+                points.forEach(pt => {
+                    const dx = pt.x - letterCX;
+                    const dy = pt.y - letterCY;
+                    const distance = Math.hypot(dx, dy);
+
+                    if (pt.isMouse && pt.x >= rect.left && pt.x <= rect.right && pt.y >= rect.top && pt.y <= rect.bottom) {
+                        isMouseHoveringLetter = true;
+                    }
+
+                    const maxDist = 300;
+                    if (distance < maxDist) {
+                        const intensity = 1 - (distance / maxDist);
+                        if (intensity > maxIntensity) {
+                            maxIntensity = intensity;
+                            bestDx = dx;
+                            bestDy = dy;
+                        }
+                    }
+                });
+
+                if (isXrayEnabled && isMouseHoveringLetter) {
+                    ld.el.style.color = 'transparent';
+                    ld.el.style.webkitTextStroke = `${Math.max(2, params.weight)}px var(--primary)`;
+                } else {
+                    ld.el.style.color = 'var(--primary)';
+                    ld.el.style.webkitTextStroke = `${params.weight}px var(--primary)`;
+                }
+
+                if (params.motion > 0 && maxIntensity > 0) {
+                    ld.targetIntensity = maxIntensity; 
+
+                    const scale = 1 + (maxIntensity * 0.8 * params.motion);
+                    const tx = -(bestDx / 300) * 30 * params.motion;
+                    const ty = -(bestDy / 300) * 30 * params.motion;
+
+                    const shadowDepthX = (bestDx / 300) * 15 * params.motion;
+                    const shadowDepthY = (bestDy / 300) * 15 * params.motion;
+                    
+                    ld.el.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+                    
+                    if (scale > 1) {
+                        ld.el.style.textShadow = `
+                            ${shadowDepthX * 0.5}px ${shadowDepthY * 0.5}px 0px var(--secondary),
+                            ${shadowDepthX}px ${shadowDepthY}px ${5 * scale}px rgba(0, 119, 255, 0.4)
+                        `;
+                    } else {
+                        ld.el.style.textShadow = 'none';
+                    }
+                } else {
+                    ld.targetIntensity = 0;
+                    ld.el.style.transform = `translate(0px, 0px) scale(1)`;
+                    ld.el.style.textShadow = 'none';
+                }
+            });
+        }
+
+        // --- Main Unified Animation Loop ---
+        function mainLoop() {
+            ctx.clearRect(0, 0, htCanvas.width, htCanvas.height);
+            
+            let activePoints = [];
+            const glassRect = glassCanvas.getBoundingClientRect();
+            const centerX = glassRect.left + glassRect.width / 2;
+            const centerY = glassRect.top + glassRect.height / 2;
+
+            // 1. Mouse Tracking
+            if (isMouseHovering && !isAutoAnimating) {
+                activePoints.push({ x: mouseX, y: mouseY, isMouse: true });
+            }
+
+            // 2. Auto Animating Logic
+            if (isAutoAnimating) {
+                const radiusX = glassRect.width * 0.4;
+                const radiusY = glassRect.height * 0.3;
+                let pathX, pathY;
+
+                if (params.animPath === 'figure8') {
+                    pathX = centerX + Math.sin(autoAngle) * radiusX;
+                    pathY = centerY + Math.sin(autoAngle * 2) * radiusY;
+                } else if (params.animPath === 'orbit') {
+                    pathX = centerX + Math.cos(autoAngle) * radiusX;
+                    pathY = centerY + Math.sin(autoAngle) * radiusY;
+                } else if (params.animPath === 'wave') {
+                    pathX = centerX + Math.sin(autoAngle * 0.5) * radiusX;
+                    pathY = centerY + Math.sin(autoAngle * 4) * (radiusY * 0.6);
+                }
+
+                let noiseFactor = params.randomness / 100;
+                if (randTargetX === 0) randTargetX = centerX;
+                if (randTargetY === 0) randTargetY = centerY;
+                if (currentRandX === 0) currentRandX = centerX;
+                if (currentRandY === 0) currentRandY = centerY;
+
+                if (Math.random() < 0.02 + (noiseFactor * 0.08)) {
+                    randTargetX = centerX + (Math.random() - 0.5) * glassRect.width * 0.9;
+                    randTargetY = centerY + (Math.random() - 0.5) * glassRect.height * 0.9;
+                }
+
+                currentRandX += (randTargetX - currentRandX) * (0.05 + noiseFactor * 0.1);
+                currentRandY += (randTargetY - currentRandY) * (0.05 + noiseFactor * 0.1);
+
+                let simX = pathX * (1 - noiseFactor) + currentRandX * noiseFactor;
+                let simY = pathY * (1 - noiseFactor) + currentRandY * noiseFactor;
+
+                simX += (Math.random() - 0.5) * 60 * noiseFactor;
+                simY += (Math.random() - 0.5) * 60 * noiseFactor;
+
+                activePoints.push({ x: simX, y: simY, isMouse: true });
+                autoAngle += 0.02;
+            }
+
+            // 3. Projectiles Logic
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Draw projectile
+                const localX = p.x - glassRect.left;
+                const localY = p.y - glassRect.top;
+                
+                ctx.beginPath();
+                ctx.arc(localX, localY, 12, 0, Math.PI * 2);
+                ctx.fillStyle = params.invertedBg;
+                ctx.fill();
+
+                activePoints.push({ x: p.x, y: p.y, isMouse: false }); // Treat as non-mouse for X-ray
+
+                // Remove when way off screen to allow flowing through text
+                if (p.x < -200 || p.x > window.innerWidth + 200 || p.y < -200 || p.y > window.innerHeight + 200) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // Apply calculated interaction points to letters
+            applyInteractions(activePoints);
+
+            // Draw the reactive halftone rash grid
+            drawHalftoneRash(glassRect);
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        // Init the loop
+        requestAnimationFrame(mainLoop);
+
+        // --- Event Listeners ---
+
+        customTextInput.addEventListener('input', renderText);
+        
+        fontChoice.addEventListener('change', (e) => {
+            params.font = e.target.value;
+            updateBaseStyles();
+        });
+
+        leadingSlider.addEventListener('input', (e) => {
+            params.leading = parseInt(e.target.value);
+            updateBaseStyles();
+        });
+
+        sizeSlider.addEventListener('input', (e) => {
+            params.size = parseInt(e.target.value);
+            updateBaseStyles();
+        });
+
+        weightSlider.addEventListener('input', (e) => {
+            params.weight = parseInt(e.target.value);
+            updateBaseStyles();
+        });
+
+        motionSlider.addEventListener('input', (e) => {
+            params.motion = parseFloat(e.target.value);
+        });
+
+        spreadSlider.addEventListener('input', (e) => {
+            params.spread = parseInt(e.target.value);
+        });
+
+        bgColorPicker.addEventListener('input', (e) => {
+            canvasContainer.style.background = e.target.value;
+            params.invertedBg = invertColor(e.target.value);
+        });
+
+        animPathChoice.addEventListener('change', (e) => {
+            params.animPath = e.target.value;
+            autoAngle = 0; 
+        });
+
+        randomnessSlider.addEventListener('input', (e) => {
+            params.randomness = parseInt(e.target.value);
+        });
+
+        // Mouse tracking for hover reactions
+        canvasContainer.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        canvasContainer.addEventListener('mouseenter', () => isMouseHovering = true);
+        canvasContainer.addEventListener('mouseleave', () => isMouseHovering = false);
+
+        // Click to fire projectile
+        canvasContainer.addEventListener('click', () => {
+            const containerRect = canvasContainer.getBoundingClientRect();
+            const glassRect = glassCanvas.getBoundingClientRect();
+            
+            const targetX = glassRect.left + glassRect.width / 2;
+            const targetY = glassRect.top + glassRect.height / 2;
+            
+            let startX, startY;
+            // Pick a random edge: 0=top, 1=right, 2=bottom, 3=left
+            const edge = Math.floor(Math.random() * 4);
+            if (edge === 0) {
+                startX = containerRect.left + Math.random() * containerRect.width;
+                startY = containerRect.top - 50;
+            } else if (edge === 1) {
+                startX = containerRect.right + 50;
+                startY = containerRect.top + Math.random() * containerRect.height;
+            } else if (edge === 2) {
+                startX = containerRect.left + Math.random() * containerRect.width;
+                startY = containerRect.bottom + 50;
+            } else {
+                startX = containerRect.left - 50;
+                startY = containerRect.top + Math.random() * containerRect.height;
+            }
+            
+            const angle = Math.atan2(targetY - startY, targetX - startX);
+            const speed = 15; 
+            
+            projectiles.push({
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed
+            });
+        });
+
+        autoBtn.addEventListener('click', () => {
+            isAutoAnimating = !isAutoAnimating;
+            if (isAutoAnimating) {
+                autoBtn.classList.add('active');
+                autoBtn.textContent = 'Auto Animate: ON';
+                const glassRect = glassCanvas.getBoundingClientRect();
+                currentRandX = randTargetX = glassRect.left + glassRect.width / 2;
+                currentRandY = randTargetY = glassRect.top + glassRect.height / 2;
+                autoAngle = 0;
+            } else {
+                autoBtn.classList.remove('active');
+                autoBtn.textContent = 'Auto Animate: OFF';
+            }
+        });
+
+        xrayBtn.addEventListener('click', () => {
+            isXrayEnabled = !isXrayEnabled;
+            if (isXrayEnabled) {
+                xrayBtn.classList.add('active');
+                xrayBtn.textContent = 'X-Ray View: ON';
+            } else {
+                xrayBtn.classList.remove('active');
+                xrayBtn.textContent = 'X-Ray View: OFF';
+            }
+        });
+
+        exportBtn.addEventListener('click', () => {
+            alert("Export initiated! (Canvas capture logic would trigger here)");
+        });
+
+        // Init
+        renderText();
+    </script>
+</body>
+</html>

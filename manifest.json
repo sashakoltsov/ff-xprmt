@@ -1,15 +1,39 @@
 {
-  "generated": "2026-06-12T16:43:27.819Z",
+  "generated": "2026-06-17T12:51:40.083Z",
   "sessions": [
     {
       "id": "s04",
       "title": "S04 — Image Filter Tools",
       "tools": [
         {
-          "slug": "sample-halftone",
-          "name": "Halftone Machine",
-          "author": "Sasha",
-          "path": "tools/s04/sample-halftone/index.html"
+          "slug": "gradient",
+          "name": "Gradient",
+          "author": "Juan F.",
+          "path": "tools/s04/gradient/index.html"
+        },
+        {
+          "slug": "halftone-kaleidoscope",
+          "name": "Halftone Kaleidoscope",
+          "author": "Juan E.",
+          "path": "tools/s04/halftone-kaleidoscope/index.html"
+        },
+        {
+          "slug": "randomizer",
+          "name": "Randomizer",
+          "author": "Juan E.",
+          "path": "tools/s04/randomizer/index.html"
+        },
+        {
+          "slug": "rasterizer",
+          "name": "Rasterizer",
+          "author": "Juan E.",
+          "path": "tools/s04/rasterizer/index.html"
+        },
+        {
+          "slug": "risograph",
+          "name": "Risograph",
+          "author": "Juan E.",
+          "path": "tools/s04/risograph/index.html"
         }
       ]
     },
@@ -24,12 +48,35 @@
           "path": "tools/s05/brush-tool-eddie/index.html"
         },
         {
+          "slug": "pixelterra",
+          "name": "Pixelterra",
+          "author": "Juan E.",
+          "path": "tools/s05/pixelterra/index.html"
+        },
+        {
+          "slug": "rovers",
+          "name": "Rovers",
+          "author": "Sam",
+          "path": "tools/s05/rovers/index.html"
+        },
+        {
+          "slug": "variable-type-sasha",
+          "name": "Variable Type",
+          "author": "Sasha",
+          "path": "tools/s05/variable-type-sasha/index.html"
+        },
+        {
           "slug": "wiggling-type-claudia",
           "name": "WiggleType",
           "author": "Claudia",
           "path": "tools/s05/wiggling-type-claudia/index.html"
         }
       ]
+    },
+    {
+      "id": "work",
+      "title": "Project Tools",
+      "tools": []
     }
   ]
 }

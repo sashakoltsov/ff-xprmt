@@ -1,0 +1,3371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risitas</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@300;400;500;600;700;900&family=Courier+Prime:wght@400;700&display=swap');
+
+:root {
+  --bg: #1a1714;
+  --panel: #221f1b;
+  --panel2: #2a2621;
+  --border: #3d3830;
+  --border2: #4a4238;
+  --text: #e8dfc8;
+  --text-dim: #8a7d68;
+  --text-dimmer: #574f42;
+  --accent: #e84b3a;
+  --accent2: #f0c040;
+  --ink: #ff5a5a;
+
+  --riso-pink: #FF48B0;
+  --riso-red: #F15060;
+  --riso-blue: #3255A4;
+  --riso-medblue: #4D80C8;
+  --riso-yellow: #FFE800;
+  --riso-teal: #00A99D;
+  --riso-green: #56A149;
+  --riso-purple: #7B5EA7;
+  --riso-black: #212121;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Space Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ─── PANEL ──────────────────────────────────────── */
+#panel {
+  width: 300px;
+  min-width: 300px;
+  height: 100vh;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#panel-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#panel-header .logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#panel-header .logo span {
+  color: var(--accent);
+}
+
+#panel-header .subtitle {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+#panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0 20px;
+}
+
+#panel-scroll::-webkit-scrollbar { width: 4px; }
+#panel-scroll::-webkit-scrollbar-track { background: transparent; }
+#panel-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ─── SECTIONS ───────────────────────────────────── */
+.section {
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 6px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.section-header .s-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.section-header .s-arrow {
+  font-size: 8px;
+  color: var(--text-dimmer);
+  transition: transform 0.2s;
+}
+
+.section-header.collapsed .s-arrow { transform: rotate(-90deg); }
+.section-body { }
+.section-body.hidden { display: none; }
+
+/* ─── UPLOAD ─────────────────────────────────────── */
+#upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: 4px;
+  padding: 18px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+#upload-zone:hover, #upload-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(232,75,58,0.05);
+}
+
+#upload-zone .uz-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+  display: block;
+  opacity: 0.6;
+}
+
+#upload-zone .uz-text {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: block;
+}
+
+#upload-zone .uz-hint {
+  font-size: 8px;
+  color: var(--text-dimmer);
+  margin-top: 3px;
+  display: block;
+}
+
+#file-input { display: none; }
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+  margin-bottom: 4px;
+}
+
+.toggle-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.toggle {
+  width: 30px;
+  height: 16px;
+  background: var(--border2);
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle.on { background: var(--accent); }
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle.on::after { transform: translateX(14px); }
+
+/* ─── COLORS ─────────────────────────────────────── */
+.color-count-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.color-count-row .cc-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.count-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.count-btn {
+  width: 22px;
+  height: 22px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.count-btn:hover { border-color: var(--accent); color: var(--accent); }
+.count-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+#color-channels {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  position: relative;
+}
+
+.channel-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1.5px solid rgba(0,0,0,0.3);
+}
+
+.channel-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  flex: 1;
+  cursor: pointer;
+}
+
+.channel-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #1e1b17;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 6px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.channel-dropdown.open { display: flex; }
+
+.color-option {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.color-option:hover { transform: scale(1.15); border-color: white; }
+.color-option.selected { border-color: white; }
+
+.color-option[title="Custom"] {
+  background: conic-gradient(red,orange,yellow,green,blue,violet,red);
+}
+
+.channel-opacity {
+  width: 50px;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.channel-opacity::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+}
+
+/* ─── SELECT ─────────────────────────────────────── */
+.param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.param-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.riso-select {
+  flex: 1;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  padding: 5px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23574f42'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+
+.riso-select:focus { border-color: var(--accent); }
+
+/* ─── SLIDER ─────────────────────────────────────── */
+.slider-row {
+  margin-bottom: 8px;
+}
+
+.slider-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.slider-meta .sl-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.slider-meta .sl-value {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: var(--accent2);
+  min-width: 30px;
+  text-align: right;
+}
+
+.riso-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.riso-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--border2);
+  transition: background 0.15s;
+}
+
+.riso-slider:hover::-webkit-slider-thumb { background: var(--accent2); }
+
+/* ─── MISREG XY PAD ──────────────────────────────── */
+#misreg-pad-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+#misreg-pad {
+  width: 72px;
+  height: 72px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  position: relative;
+  cursor: crosshair;
+  flex-shrink: 0;
+}
+
+#misreg-pad::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border2);
+  transform: translateY(-50%);
+}
+
+#misreg-pad::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border2);
+  transform: translateX(-50%);
+}
+
+#misreg-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.misreg-vals {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.misreg-val {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.misreg-val span:first-child {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.misreg-val span:last-child {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: var(--accent2);
+}
+
+/* ─── CHIP BUTTONS ───────────────────────────────── */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.chip {
+  padding: 4px 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.chip:hover { border-color: var(--accent2); color: var(--accent2); }
+.chip.active { background: rgba(240,192,64,0.12); border-color: var(--accent2); color: var(--accent2); }
+
+/* ─── PAPER CHIPS ────────────────────────────────── */
+.paper-chip {
+  padding: 5px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.paper-chip:hover { border-color: var(--text-dim); }
+
+.paper-chip.active { border-color: var(--text); }
+
+/* ─── ACTION ROW ─────────────────────────────────── */
+#panel-actions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.btn-process {
+  flex: 1;
+  padding: 10px;
+  background: var(--accent);
+  border: none;
+  border-radius: 3px;
+  color: white;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-process:hover { background: #ff6b5a; }
+.btn-process:active { transform: scale(0.98); }
+
+.btn-export {
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-export:hover { border-color: var(--text); color: var(--text); }
+
+/* ─── CANVAS AREA ────────────────────────────────── */
+#canvas-area {
+  flex: 1;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+#canvas-toolbar {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  background: var(--panel);
+}
+
+#canvas-toolbar .ct-info {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 500;
+}
+
+#canvas-toolbar .ct-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+.zoom-btns {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.zoom-btn {
+  width: 24px;
+  height: 24px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.zoom-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+#canvas-container {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 40px;
+}
+
+#canvas-container::-webkit-scrollbar { width: 6px; height: 6px; }
+#canvas-container::-webkit-scrollbar-track { background: transparent; }
+#canvas-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* dot grid background */
+#canvas-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+#canvas-wrapper {
+  position: relative;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  transition: transform 0.2s;
+}
+
+canvas {
+  display: block;
+}
+
+/* ─── EMPTY STATE ────────────────────────────────── */
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 12px;
+}
+
+#empty-state .es-icon {
+  font-size: 48px;
+  opacity: 0.12;
+}
+
+#empty-state .es-text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+}
+
+/* ─── PROCESSING OVERLAY ─────────────────────────── */
+#processing-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,23,20,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+#processing-overlay.show { display: flex; }
+
+.proc-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.proc-text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ─── STATUS BAR ─────────────────────────────────── */
+#status-bar {
+  padding: 5px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 20px;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.sb-item {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+.sb-item span { color: var(--text-dim); }
+
+/* ─── CUSTOM HEX INPUT ───────────────────────────── */
+.hex-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.hex-swatch-preview {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.hex-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: var(--text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hex-set-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--accent2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  padding: 0 2px;
+}
+
+/* ─── DENSITY TOGGLE ─────────────────────────────── */
+.density-mode {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.dm-btn {
+  flex: 1;
+  padding: 5px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.dm-btn.active { background: rgba(240,192,64,0.1); border-color: var(--accent2); color: var(--accent2); }
+
+/* ─── DIVIDER ────────────────────────────────────── */
+.rule { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* ─── RESET BUTTON ───────────────────────────────── */
+.btn-reset {
+  width: 36px;
+  padding: 10px 0;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-reset:hover { border-color: var(--text-dim); color: var(--text); transform: rotate(-30deg); }
+
+/* ─── EXPORT MODAL ───────────────────────────────── */
+#export-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,8,6,0.75);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+#export-modal.open { display: flex; }
+
+#export-panel {
+  background: #28231e;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  width: 320px;
+  padding: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.exp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.exp-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  color: var(--text);
+}
+
+.exp-close {
+  background: none;
+  border: none;
+  color: var(--text-dimmer);
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.15s;
+  padding: 2px 6px;
+}
+.exp-close:hover { color: var(--text); }
+
+.exp-section-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.exp-format-row {
+  display: flex;
+  gap: 6px;
+}
+
+.exp-fmt {
+  flex: 1;
+  padding: 7px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.exp-fmt:hover { border-color: var(--text-dim); color: var(--text); }
+.exp-fmt.active { background: rgba(232,75,58,0.12); border-color: var(--accent); color: var(--accent); }
+
+.exp-res-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.exp-res {
+  padding: 8px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exp-res:hover { border-color: var(--text-dim); }
+.exp-res.active { background: rgba(232,75,58,0.1); border-color: var(--accent); }
+
+.res-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  display: block;
+}
+
+.res-sub {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--text-dimmer);
+  display: block;
+}
+
+.exp-res.active .res-name { color: var(--accent); }
+
+.btn-do-export {
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 3px;
+  color: white;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-do-export:hover { background: #ff6b5a; }
+.btn-do-export:disabled { background: var(--border2); color: var(--text-dim); cursor: not-allowed; }
+
+.exp-progress-bar {
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.exp-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.15s;
+}
+
+.exp-mp4-note {
+  font-size: 8px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.06em;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ─── PRESETS ────────────────────────────────────── */
+#presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.preset-card {
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.12s;
+  background: var(--panel2);
+  position: relative;
+}
+
+.preset-card:hover { border-color: var(--accent2); transform: translateY(-1px); }
+.preset-card.active { border-color: var(--accent); }
+
+.preset-swatches {
+  display: flex;
+  height: 22px;
+}
+
+.preset-swatch {
+  flex: 1;
+}
+
+.preset-info {
+  padding: 5px 7px 6px;
+}
+
+.preset-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-desc {
+  font-size: 7.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-dimmer);
+  display: block;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-card.user-preset .preset-name::before {
+  content: '★ ';
+  color: var(--accent2);
+}
+
+.preset-delete {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 9px;
+  color: var(--text-dimmer);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px 3px;
+  border-radius: 2px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.preset-card:hover .preset-delete { opacity: 1; }
+.preset-delete:hover { color: var(--accent); }
+
+.btn-save-preset {
+  width: 100%;
+  padding: 7px;
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+
+.btn-save-preset:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ─── SAVE PRESET MODAL ──────────────────────────── */
+#save-preset-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,8,6,0.75);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+#save-preset-modal.open { display: flex; }
+
+#save-preset-panel {
+  background: #28231e;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  width: 280px;
+  padding: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  animation: slideUp 0.2s ease;
+}
+
+.sp-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sp-input {
+  width: 100%;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  outline: none;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+
+.sp-input:focus { border-color: var(--accent2); }
+
+.sp-preview-swatches {
+  display: flex;
+  height: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+
+.sp-preview-swatch { flex: 1; }
+
+.sp-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.sp-btn-cancel {
+  flex: 1;
+  padding: 9px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sp-btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+.sp-btn-save {
+  flex: 2;
+  padding: 9px;
+  background: var(--accent2);
+  border: none;
+  border-radius: 3px;
+  color: #1a1714;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sp-btn-save:hover { background: #f8d060; }
+
+/* ─── VIDEO BADGE ────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 5px;
+  background: rgba(240,192,64,0.15);
+  border: 1px solid var(--accent2);
+  border-radius: 2px;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--accent2);
+  text-transform: uppercase;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══ CONTROL PANEL ══════════════════════════════════ -->
+  <div id="panel">
+    <div id="panel-header">
+      <div class="logo"><span>RISI</span>TAS</div>
+      <div class="subtitle">Risograph Color Emulator</div>
+    </div>
+
+    <div id="panel-scroll">
+
+      <!-- UPLOAD -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Source</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div id="upload-zone" onclick="document.getElementById('file-input').click()"
+               ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+            <span class="uz-icon">⊞</span>
+            <span class="uz-text">Upload Image or Video</span>
+            <span class="uz-hint">PNG · JPG · GIF · MP4 · WEBM · drag & drop</span>
+          </div>
+          <input type="file" id="file-input" accept="image/*,video/*" onchange="handleFileInput(event)">
+          <div class="toggle-row" style="margin-top:8px">
+            <span class="toggle-label">Low Quality Preview (Video)</span>
+            <div class="toggle" id="toggle-lowq" onclick="toggleSwitch(this, 'lowQuality')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRESETS -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Presets</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div id="presets-grid"></div>
+          <button class="btn-save-preset" onclick="openSavePresetModal()">+ Save Current as Preset</button>
+        </div>
+      </div>
+
+      <!-- SPOT COLORS -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Spot Colors</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="color-count-row">
+            <span class="cc-label">Channels</span>
+            <div class="count-btns" id="count-btns">
+              <button class="count-btn" onclick="setColorCount(2)">2</button>
+              <button class="count-btn active" onclick="setColorCount(3)">3</button>
+              <button class="count-btn" onclick="setColorCount(4)">4</button>
+              <button class="count-btn" onclick="setColorCount(5)">5</button>
+            </div>
+          </div>
+          <div id="color-channels"></div>
+          <div class="hex-input-row" style="margin-top:8px">
+            <div class="hex-swatch-preview" id="hex-preview" style="background:#FF48B0"></div>
+            <input class="hex-input" type="text" id="hex-input" value="FF48B0" maxlength="6"
+                   placeholder="HEX/PANTONE" oninput="updateHexPreview(this)">
+            <button class="hex-set-btn" onclick="applyHex()">SET</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FUSION -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Fusion Mode</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="param-row">
+            <span class="param-label">Blend</span>
+            <select class="riso-select" id="blend-mode" onchange="updateParam('blendMode', this.value)">
+              <option value="multiply">Multiply</option>
+              <option value="darken">Darken</option>
+              <option value="screen">Screen</option>
+              <option value="overlay">Overlay</option>
+              <option value="hard-light">Hard Light</option>
+              <option value="color-burn">Color Burn</option>
+              <option value="luminosity">Luminosity</option>
+            </select>
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Global Opacity</span>
+              <span class="sl-value" id="val-opacity">85%</span>
+            </div>
+            <input class="riso-slider" type="range" min="20" max="100" value="85"
+                   oninput="sliderUpdate('opacity', this.value, '%')">
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Tint Opacity</span>
+              <span class="sl-value" id="val-tint">70%</span>
+            </div>
+            <input class="riso-slider" type="range" min="10" max="100" value="70"
+                   oninput="sliderUpdate('tint', this.value, '%')">
+          </div>
+        </div>
+      </div>
+
+      <!-- DENSITY -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Density</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="density-mode">
+            <div class="dm-btn active" id="dm-auto" onclick="setDensityMode('auto')">Auto LPI</div>
+            <div class="dm-btn" id="dm-manual" onclick="setDensityMode('manual')">Manual</div>
+          </div>
+          <div id="density-manual-row" class="slider-row" style="display:none">
+            <div class="slider-meta">
+              <span class="sl-label">LPI</span>
+              <span class="sl-value" id="val-lpi">65</span>
+            </div>
+            <input class="riso-slider" type="range" min="10" max="200" value="65"
+                   oninput="sliderUpdate('lpi', this.value, '')">
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Dot Size</span>
+              <span class="sl-value" id="val-dotsize">50%</span>
+            </div>
+            <input class="riso-slider" type="range" min="5" max="150" value="50"
+                   oninput="sliderUpdate('dotsize', this.value, '%')">
+          </div>
+        </div>
+      </div>
+
+      <!-- PATTERN -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Pattern Texture</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="chip-row" id="pattern-chips">
+            <div class="chip active" onclick="selectChip(this,'pattern','stochastic')">Stochastic</div>
+            <div class="chip" onclick="selectChip(this,'pattern','diffusion')">Diffusion</div>
+            <div class="chip" onclick="selectChip(this,'pattern','line')">Line</div>
+            <div class="chip" onclick="selectChip(this,'pattern','dot')">Dot</div>
+            <div class="chip" onclick="selectChip(this,'pattern','crosshatch')">Cross Hatch</div>
+          </div>
+          <div class="param-row">
+            <span class="param-label">Angle</span>
+            <select class="riso-select" id="halftone-angle" onchange="updateParam('halftoneAngle', this.value)">
+              <option value="0">0°</option>
+              <option value="15">15°</option>
+              <option value="45" selected>45°</option>
+              <option value="75">75°</option>
+              <option value="90">90°</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- MISREGISTRATION -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Misregistration</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div id="misreg-pad-wrap">
+            <div id="misreg-pad" onmousedown="startMisregDrag(event)" ontouchstart="startMisregTouch(event)">
+              <div id="misreg-dot"></div>
+            </div>
+            <div class="misreg-vals">
+              <div class="misreg-val"><span>X Offset</span><span id="misreg-x-val">0px</span></div>
+              <div class="misreg-val"><span>Y Offset</span><span id="misreg-y-val">0px</span></div>
+              <div class="misreg-val" style="margin-top:6px; font-size:8px; color:var(--text-dimmer); letter-spacing:0.08em">Drag to offset</div>
+            </div>
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Ink Bleed</span>
+              <span class="sl-value" id="val-bleed">20%</span>
+            </div>
+            <input class="riso-slider" type="range" min="0" max="100" value="20"
+                   oninput="sliderUpdate('bleed', this.value, '%')">
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Over-inking</span>
+              <span class="sl-value" id="val-overink">15%</span>
+            </div>
+            <input class="riso-slider" type="range" min="0" max="100" value="15"
+                   oninput="sliderUpdate('overink', this.value, '%')">
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Paper Grain</span>
+              <span class="sl-value" id="val-grain">30%</span>
+            </div>
+            <input class="riso-slider" type="range" min="0" max="100" value="30"
+                   oninput="sliderUpdate('grain', this.value, '%')">
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Scanner Artifact</span>
+              <span class="sl-value" id="val-scanner">10%</span>
+            </div>
+            <input class="riso-slider" type="range" min="0" max="100" value="10"
+                   oninput="sliderUpdate('scanner', this.value, '%')">
+          </div>
+        </div>
+      </div>
+
+      <!-- PAPER -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="s-title">Paper Texture</span>
+          <span class="s-arrow">▼</span>
+        </div>
+        <div class="section-body">
+          <div class="chip-row" id="paper-chips">
+            <div class="chip active" onclick="selectChip(this,'paper','white')">Uncoated White</div>
+            <div class="chip" id="chip-custom-paper" onclick="selectCustomPaper()">Custom ▾</div>
+            <div class="chip" onclick="selectChip(this,'paper','kraft')">Kraft / Recycled</div>
+            <div class="chip" onclick="selectChip(this,'paper','rough')">Rough Textured</div>
+          </div>
+          <div class="hex-input-row" id="custom-paper-row" style="margin-bottom:8px">
+            <div class="hex-swatch-preview" id="paper-color-preview" style="background:#F2E8CF"></div>
+            <input class="hex-input" type="text" id="paper-hex-input" value="F2E8CF" maxlength="6"
+                   placeholder="Paper colour HEX" oninput="updatePaperHexPreview(this)">
+            <input type="color" id="paper-color-picker" value="#F2E8CF"
+                   style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0;border-radius:3px"
+                   oninput="onPaperColorPick(this.value)" onchange="onPaperColorPick(this.value)">
+            <button class="hex-set-btn" onclick="applyPaperHex()">SET</button>
+          </div>
+          <div class="slider-row">
+            <div class="slider-meta">
+              <span class="sl-label">Texture Amount</span>
+              <span class="sl-value" id="val-paperAmount">40%</span>
+            </div>
+            <input class="riso-slider" type="range" min="0" max="100" value="40"
+                   oninput="sliderUpdate('paperAmount', this.value, '%')">
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end scroll -->
+
+    <div id="panel-actions">
+      <button class="btn-reset" onclick="resetAll()" title="Reset all settings to defaults">↺</button>
+      <button class="btn-process" onclick="processImage()" title="Re-render the effect">▶ RENDER</button>
+      <button class="btn-export" onclick="openExportModal()">EXPORT ▾</button>
+    </div>
+  </div><!-- end panel -->
+
+  <!-- ══ EXPORT MODAL ══════════════════════════════════ -->
+  <div id="export-modal" onclick="if(event.target===this)closeExportModal()">
+    <div id="export-panel">
+      <div class="exp-header">
+        <span class="exp-title">EXPORT</span>
+        <button class="exp-close" onclick="closeExportModal()">✕</button>
+      </div>
+
+      <div class="exp-section-label">Format</div>
+      <div class="exp-format-row" id="exp-format-btns">
+        <button class="exp-fmt active" data-fmt="png" onclick="selectFmt(this)">PNG</button>
+        <button class="exp-fmt" data-fmt="jpg" onclick="selectFmt(this)">JPG</button>
+        <button class="exp-fmt" data-fmt="mp4" onclick="selectFmt(this)" id="fmt-mp4">VIDEO</button>
+      </div>
+
+      <div class="exp-section-label" style="margin-top:14px">Resolution</div>
+      <div class="exp-res-grid" id="exp-res-btns">
+        <button class="exp-res active" data-res="source" onclick="selectRes(this)">
+          <span class="res-name">Source</span>
+          <span class="res-sub" id="res-source-sub">Original</span>
+        </button>
+        <button class="exp-res" data-res="1080" onclick="selectRes(this)">
+          <span class="res-name">1080p</span>
+          <span class="res-sub">1920 × 1080</span>
+        </button>
+        <button class="exp-res" data-res="2k" onclick="selectRes(this)">
+          <span class="res-name">2K</span>
+          <span class="res-sub">2560 × 1440</span>
+        </button>
+        <button class="exp-res" data-res="4k" onclick="selectRes(this)">
+          <span class="res-name">4K</span>
+          <span class="res-sub">3840 × 2160</span>
+        </button>
+      </div>
+
+      <!-- JPG quality row -->
+      <div id="exp-quality-row" style="display:none; margin-top:14px">
+        <div class="exp-section-label">JPG Quality</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <input class="riso-slider" type="range" min="50" max="100" value="92" id="exp-quality-slider"
+                 oninput="document.getElementById('exp-quality-val').textContent=this.value+'%'" style="flex:1">
+          <span style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--accent2);min-width:34px;text-align:right" id="exp-quality-val">92%</span>
+        </div>
+      </div>
+
+      <!-- MP4 info (no controls needed — exports exact video with effect) -->
+      <div id="exp-mp4-row" style="display:none; margin-top:14px">
+        <div class="exp-mp4-note" id="exp-mp4-note">Exports the full video with riso effect. Format depends on browser support.</div>
+      </div>
+
+      <div id="exp-progress-wrap" style="display:none;margin-top:14px">
+        <div class="exp-section-label" id="exp-progress-label">Encoding…</div>
+        <div class="exp-progress-bar"><div class="exp-progress-fill" id="exp-progress-fill"></div></div>
+      </div>
+
+      <button class="btn-do-export" id="btn-do-export" onclick="doExport()">
+        <span id="exp-btn-label">↓ DOWNLOAD</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ CANVAS AREA ═══════════════════════════════════ -->
+  <div id="canvas-area">
+    <div id="canvas-toolbar">
+      <span class="ct-info" id="ct-filename">NO FILE LOADED</span>
+      <div class="ct-sep"></div>
+      <span class="ct-info" id="ct-dims">— × —</span>
+      <div class="ct-sep"></div>
+      <span class="ct-info" id="ct-channels">— CHANNELS</span>
+      <div class="zoom-btns">
+        <button class="zoom-btn" onclick="zoom(-0.25)" title="Zoom out">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset zoom" style="font-size:9px;letter-spacing:.08em;font-family:'Barlow Condensed',sans-serif;font-weight:700;width:36px">FIT</button>
+        <button class="zoom-btn" onclick="zoom(0.25)" title="Zoom in">+</button>
+      </div>
+    </div>
+
+    <div id="canvas-container">
+      <div id="empty-state">
+        <div class="es-icon">◫</div>
+        <div class="es-text">Upload an image to begin</div>
+      </div>
+      <div id="canvas-wrapper" style="display:none">
+        <canvas id="main-canvas"></canvas>
+      </div>
+    </div>
+
+    <div id="processing-overlay">
+      <div class="proc-spinner"></div>
+      <div class="proc-text">Processing…</div>
+    </div>
+
+    <div id="status-bar">
+      <span class="sb-item">Pattern: <span id="sb-pattern">Stochastic</span></span>
+      <span class="sb-item">Paper: <span id="sb-paper">Uncoated White</span></span>
+      <span class="sb-item">Blend: <span id="sb-blend">Multiply</span></span>
+      <span class="sb-item">LPI: <span id="sb-lpi">Auto</span></span>
+      <span class="sb-item" style="margin-left:auto" id="sb-status">Ready</span>
+    </div>
+  </div>
+
+  <!-- ══ SAVE PRESET MODAL ═════════════════════════════ -->
+  <div id="save-preset-modal" onclick="if(event.target===this)closeSavePresetModal()">
+    <div id="save-preset-panel">
+      <div class="sp-title">
+        SAVE PRESET
+        <button class="exp-close" onclick="closeSavePresetModal()">✕</button>
+      </div>
+      <div class="exp-section-label" style="margin-bottom:6px">Preset Name</div>
+      <input class="sp-input" type="text" id="sp-name-input" placeholder="e.g. Summer Zine, Punk Poster…" maxlength="28">
+      <div class="exp-section-label" style="margin-bottom:6px">Color Preview</div>
+      <div class="sp-preview-swatches" id="sp-preview-swatches"></div>
+      <div class="sp-btns">
+        <button class="sp-btn-cancel" onclick="closeSavePresetModal()">CANCEL</button>
+        <button class="sp-btn-save" onclick="confirmSavePreset()">★ SAVE</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+const RISO_COLORS = [
+  { name: 'Fluor. Pink',  hex: '#FF48B0' },
+  { name: 'Bright Red',   hex: '#F15060' },
+  { name: 'Blue',         hex: '#3255A4' },
+  { name: 'Medium Blue',  hex: '#4D80C8' },
+  { name: 'Yellow',       hex: '#FFE800' },
+  { name: 'Teal',         hex: '#00A99D' },
+  { name: 'Kelly Green',  hex: '#56A149' },
+  { name: 'Purple',       hex: '#7B5EA7' },
+  { name: 'Black',        hex: '#212121' },
+  { name: 'Custom',       hex: null      },
+];
+
+const PAPER_COLORS = {
+  white: '#F5F2EC',
+  cream: '#F2E8CF',
+  kraft: '#C4A87A',
+  rough: '#E8DEC8',
+  custom: '#F2E8CF', // default off-white until user picks
+};
+
+let state = {
+  file: null,
+  fileType: 'image',
+  lowQuality: false,
+  colorCount: 3,
+  colors: ['#FF48B0', '#3255A4', '#FFE800'],
+  opacities: [1.0, 0.9, 0.85],
+  blendMode: 'multiply',
+  opacity: 85,
+  tint: 70,
+  densityMode: 'auto',
+  lpi: 65,
+  dotsize: 50,
+  pattern: 'stochastic',
+  halftoneAngle: 45,
+  misregX: 0,
+  misregY: 0,
+  bleed: 20,
+  overink: 15,
+  grain: 30,
+  scanner: 10,
+  paper: 'white',
+  paperCustomColor: '#F2E8CF',
+  paperAmount: 40,
+  zoom: 1.0,
+  sourceImage: null,
+  videoEl: null,
+};
+
+// ══════════════════════════════════════════════════════
+//  INIT COLOR CHANNELS
+// ══════════════════════════════════════════════════════
+function buildColorChannels() {
+  const container = document.getElementById('color-channels');
+  container.innerHTML = '';
+  for (let i = 0; i < state.colorCount; i++) {
+    const color = state.colors[i] || '#212121';
+    const colorName = RISO_COLORS.find(c => c.hex === color)?.name || 'Custom';
+    const ch = document.createElement('div');
+    ch.className = 'channel';
+    ch.innerHTML = `
+      <div class="channel-swatch" style="background:${color}" onclick="toggleDropdown(${i})"></div>
+      <div class="channel-name" onclick="toggleDropdown(${i})">${colorName}</div>
+      <input class="channel-opacity" type="range" min="10" max="100" value="${Math.round((state.opacities[i]||0.9)*100)}"
+             oninput="updateChannelOpacity(${i}, this.value)" title="Opacity">
+      <div class="channel-dropdown" id="ch-dd-${i}">
+        ${RISO_COLORS.map((c, ci) => `
+          <div class="color-option ${c.hex===color?'selected':''}"
+               style="background:${c.hex||'conic-gradient(red,orange,yellow,green,blue,violet,red)'}"
+               title="${c.name}" onclick="selectChannelColor(${i}, '${c.hex||'custom'}', '${c.name}')"></div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(ch);
+  }
+  updateCountBtns();
+  document.getElementById('ct-channels').textContent = state.colorCount + ' CHANNELS';
+}
+
+function toggleDropdown(i) {
+  const dd = document.getElementById('ch-dd-'+i);
+  const wasOpen = dd.classList.contains('open');
+  document.querySelectorAll('.channel-dropdown').forEach(d => d.classList.remove('open'));
+  if (!wasOpen) dd.classList.add('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.channel')) {
+    document.querySelectorAll('.channel-dropdown').forEach(d => d.classList.remove('open'));
+  }
+});
+
+function selectChannelColor(i, hex, name) {
+  if (hex === 'custom') {
+    // Use hex input value
+    const hv = document.getElementById('hex-input').value;
+    state.colors[i] = '#' + hv.replace('#','');
+  } else {
+    state.colors[i] = hex;
+  }
+  buildColorChannels();
+  if (state.sourceImage) autoProcess();
+}
+
+function updateChannelOpacity(i, val) {
+  state.opacities[i] = val / 100;
+}
+
+function setColorCount(n) {
+  state.colorCount = n;
+  while (state.colors.length < n) state.colors.push('#212121');
+  while (state.opacities.length < n) state.opacities.push(0.9);
+  buildColorChannels();
+  if (state.sourceImage) scheduleProcess();
+}
+
+function updateCountBtns() {
+  document.querySelectorAll('#count-btns .count-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.textContent) === state.colorCount);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  CONTROLS
+// ══════════════════════════════════════════════════════
+function toggleSection(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('hidden');
+}
+
+function toggleSwitch(el, key) {
+  el.classList.toggle('on');
+  state[key] = el.classList.contains('on');
+}
+
+function updateParam(key, val) {
+  state[key] = val;
+  if (key === 'blendMode') {
+    document.getElementById('sb-blend').textContent = document.getElementById('blend-mode').options[document.getElementById('blend-mode').selectedIndex].text;
+  }
+  if (state.sourceImage) autoProcess();
+}
+
+function sliderUpdate(key, val, unit) {
+  state[key] = parseFloat(val);
+  const el = document.getElementById('val-' + key);
+  if (el) el.textContent = val + unit;
+  if (key === 'lpi') document.getElementById('sb-lpi').textContent = val;
+  if (state.sourceImage) scheduleProcess();
+}
+
+let processTimer = null;
+function scheduleProcess() {
+  clearTimeout(processTimer);
+  processTimer = setTimeout(() => { if (state.sourceImage) processImage(); }, 300);
+}
+
+function autoProcess() {
+  if (state.sourceImage) scheduleProcess();
+}
+
+function selectChip(el, group, val) {
+  const container = el.parentElement;
+  container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  state[group] = val;
+  if (group === 'pattern') document.getElementById('sb-pattern').textContent = el.textContent;
+  if (group === 'paper') document.getElementById('sb-paper').textContent = el.textContent;
+  if (state.sourceImage) scheduleProcess();
+}
+
+function setDensityMode(mode) {
+  state.densityMode = mode;
+  document.getElementById('dm-auto').classList.toggle('active', mode === 'auto');
+  document.getElementById('dm-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('density-manual-row').style.display = mode === 'manual' ? '' : 'none';
+  const lpi = mode === 'auto' ? 'Auto' : state.lpi;
+  document.getElementById('sb-lpi').textContent = lpi;
+  if (state.sourceImage) scheduleProcess();
+}
+
+function updateHexPreview(input) {
+  const hex = '#' + input.value.replace('#','').padEnd(6,'0');
+  document.getElementById('hex-preview').style.background = hex;
+}
+
+function applyHex() {
+  const hex = '#' + document.getElementById('hex-input').value.replace('#','');
+  // Apply to first selected channel or use as custom
+  if (state.colorCount > 0) {
+    state.colors[0] = hex;
+    buildColorChannels();
+    if (state.sourceImage) scheduleProcess();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  UPLOAD / FILE
+// ══════════════════════════════════════════════════════
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('upload-zone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+}
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+}
+
+// ── VIDEO / IMAGE MANAGEMENT ───────────────────────────
+// Single source of truth for what's currently loaded
+let _activeToken = 0;      // incremented on every new load — invalidates stale callbacks
+let _rafId       = null;
+let _videoLoopActive = false;
+
+const VIDEO_FPS     = 15;    // safe fps for heavy riso processing
+const VIDEO_MAX_DIM = 600;   // max preview dimension
+
+// ── TEARDOWN ───────────────────────────────────────────
+function stopEverything() {
+  _activeToken++;
+  _videoLoopActive = false;
+  _processing = false;
+
+  if (_rafId !== null) {
+    cancelAnimationFrame(_rafId);
+    _rafId = null;
+  }
+
+  if (state.videoEl) {
+    const v = state.videoEl;
+    try { v.pause(); } catch(e) {}
+    v.removeAttribute('src');
+    try { v.load(); } catch(e) {}
+    if (document.body.contains(v)) document.body.removeChild(v);
+    const bu = v._blobUrl;
+    if (bu) setTimeout(() => { try { URL.revokeObjectURL(bu); } catch(e){} }, 500);
+    state.videoEl = null;
+  }
+
+  state.sourceImage = null;
+}
+
+// ── LOAD FILE ──────────────────────────────────────────
+function loadFile(file) {
+  stopEverything();
+
+  state.file     = file;
+  state.videoEl  = null;
+  state.sourceImage = null;
+
+  document.getElementById('ct-filename').textContent = file.name.toUpperCase();
+  document.getElementById('sb-status').textContent   = 'Loading…';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  // Hard block on formats browsers can never play
+  if (['mov','avi','mkv','flv','wmv'].includes(ext)) {
+    alert(`⚠️  .${ext.toUpperCase()} is not supported by browsers.
+
+Convert to MP4 (H.264) or WebM and re-upload.`);
+    document.getElementById('ct-filename').textContent = 'UNSUPPORTED FORMAT';
+    document.getElementById('sb-status').textContent   = 'Ready';
+    return;
+  }
+
+  const isVideo = file.type.startsWith('video/') || ['mp4','webm','m4v','ogv','ogg'].includes(ext);
+  state.fileType = isVideo ? 'video' : 'image';
+
+  if (isVideo) _loadVideo(file, _activeToken);
+  else         _loadImage(file, _activeToken);
+}
+
+// ── LOAD IMAGE ─────────────────────────────────────────
+function _loadImage(file, token) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      if (_activeToken !== token) return; // superseded by a newer load
+      state.fileType    = 'image';
+      state.sourceImage = img;
+      document.getElementById('ct-dims').textContent   = img.width + ' × ' + img.height;
+      document.getElementById('sb-status').textContent = 'Rendering…';
+      showCanvas(img.width, img.height);
+      processImage();
+      document.getElementById('sb-status').textContent = 'Done';
+    };
+    img.onerror = () => { if (_activeToken === token) alert('Could not read image.'); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── LOAD VIDEO ─────────────────────────────────────────
+function _loadVideo(file, token) {
+  const blobUrl = URL.createObjectURL(file);
+  const video   = document.createElement('video');
+
+  video.muted        = true;
+  video.loop         = true;
+  video.playsInline  = true;
+  video.preload      = 'auto';
+  video._blobUrl     = blobUrl;
+  // Append to DOM — required for play() to work in sandboxed iframes
+  video.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:-9999px;left:-9999px';
+  document.body.appendChild(video);
+
+  document.getElementById('sb-status').textContent = 'Loading video…';
+
+  function onReady() {
+    if (_activeToken !== token) {
+      try { video.pause(); } catch(e) {}
+      if (document.body.contains(video)) document.body.removeChild(video);
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return; // not ready yet, wait for next event
+
+    video.removeEventListener('loadedmetadata',  onReady);
+    video.removeEventListener('canplay',         onReady);
+    video.removeEventListener('canplaythrough',  onReady);
+
+    const scale = Math.min(1, VIDEO_MAX_DIM / Math.max(vw, vh));
+    const pw    = Math.round(vw * scale);
+    const ph    = Math.round(vh * scale);
+
+    state.videoEl     = video;
+    state.sourceImage = video;
+    state.fileType    = 'video';
+
+    document.getElementById('ct-dims').textContent = vw + ' x ' + vh + ' (preview ' + pw + 'x' + ph + ')';
+    showCanvas(pw, ph);
+
+    video.play()
+      .then(() => {
+        if (_activeToken !== token) return;
+        document.getElementById('sb-status').textContent = 'Playing';
+        _startVideoLoop(video, token);
+      })
+      .catch(() => {
+        if (_activeToken !== token) return;
+        // Autoplay blocked — static frame + wait for click
+        processImage();
+        document.getElementById('sb-status').textContent = 'Click canvas to play';
+        document.getElementById('canvas-container').addEventListener('click', function h() {
+          document.getElementById('canvas-container').removeEventListener('click', h);
+          if (_activeToken !== token) return;
+          video.play().then(() => _startVideoLoop(video, token)).catch(() => {});
+        });
+      });
+  }
+
+  video.addEventListener('error', () => {
+    if (_activeToken !== token) return;
+    if (document.body.contains(video)) document.body.removeChild(video);
+    URL.revokeObjectURL(blobUrl);
+    const code   = video.error ? video.error.code : '?';
+    const labels = {1:'Aborted',2:'Network error',3:'Decode error',4:'Format not supported'};
+    document.getElementById('ct-filename').textContent = 'LOAD FAILED';
+    document.getElementById('sb-status').textContent   = 'Error';
+    alert('Video error: ' + (labels[code] || 'code ' + code) + '\nFile: ' + file.name + '\nUse MP4 (H.264) or WebM.');
+  });
+
+  video.addEventListener('loadedmetadata',  onReady);
+  video.addEventListener('canplay',         onReady);
+  video.addEventListener('canplaythrough',  onReady);
+
+  video.src = blobUrl;
+}
+// ── VIDEO RENDER LOOP ──────────────────────────────────
+let _processing = false; // guard: skip frame if previous one still rendering
+
+function _startVideoLoop(video, token) {
+  _videoLoopActive = true;
+
+  const frameMs = 1000 / VIDEO_FPS;
+  let lastTs = 0;
+
+  function loop(ts) {
+    if (_activeToken !== token || !_videoLoopActive || state.videoEl !== video) {
+      _videoLoopActive = false;
+      _rafId = null;
+      return;
+    }
+
+    if (ts - lastTs >= frameMs && !_processing) {
+      lastTs = ts;
+      if (!video.paused && !video.ended && video.readyState >= 2) {
+        _processing = true;
+        try { processImage(); } finally { _processing = false; }
+      }
+    }
+
+    _rafId = requestAnimationFrame(loop);
+  }
+
+  _rafId = requestAnimationFrame(loop);
+}
+
+function showCanvas(w, h) {
+  document.getElementById('empty-state').style.display  = 'none';
+  document.getElementById('canvas-wrapper').style.display = '';
+  const canvas   = document.getElementById('main-canvas');
+  canvas.width   = Math.max(1, w);
+  canvas.height  = Math.max(1, h);
+  resetZoom();
+}
+
+// ══════════════════════════════════════════════════════
+//  CORE RISO PROCESSING
+// ══════════════════════════════════════════════════════
+
+function processImage() {
+  if (!state.sourceImage) return;
+  const canvas = document.getElementById('main-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // ── 1. Paper background ─────────────────────────────
+  const paperCol = state.paper === 'custom'
+    ? state.paperCustomColor
+    : (PAPER_COLORS[state.paper] || '#F5F2EC');
+  ctx.fillStyle = paperCol;
+  ctx.fillRect(0, 0, W, H);
+  if (state.paperAmount > 0) {
+    applyPaperBase(ctx, W, H, state.paper, state.paperAmount / 100);
+  }
+
+  // ── 2. Source pixels ─────────────────────────────────
+  const src = document.createElement('canvas');
+  src.width = W; src.height = H;
+  const sctx = src.getContext('2d');
+  sctx.drawImage(state.sourceImage, 0, 0, W, H);
+  const srcData = sctx.getImageData(0, 0, W, H);
+
+  // ── Cell size calculation ─────────────────────────────
+  // LPI = lines per inch. We treat the short side of the image as ~8 inches.
+  // So: cellPx = (shortSide / 8) / LPI
+  // LPI 10 → very coarse, LPI 200 → very fine
+  // dotsize% scales the rendered dot radius within each cell (not the grid)
+  const shortSide = Math.min(W, H);
+  const lpiVal = state.densityMode === 'auto' ? 55 : Math.max(10, Math.min(200, state.lpi));
+  const ppi = shortSide / 8; // pixels per inch (assuming 8-inch short side)
+  const rawCell = Math.round(ppi / lpiVal);
+  const cellSize = Math.max(2, Math.min(80, rawCell));
+  // dotFrac: fraction of cell radius to fill (dotsize 5%→tiny, 100%→full, 150%→overlap)
+  const dotFrac = Math.max(0.05, state.dotsize / 100);
+
+  // ── 3. Ink channels ──────────────────────────────────
+  for (let c = 0; c < state.colorCount; c++) {
+    const col = hexToRgb(state.colors[c] || '#212121');
+    const chOp = Math.max(0.05, state.opacities[c] !== undefined ? state.opacities[c] : 0.9);
+    const offX = c === 0 ? 0 : Math.round(state.misregX * (c * 0.6));
+    const offY = c === 0 ? 0 : Math.round(state.misregY * (c * 0.6));
+
+    const chCanvas = document.createElement('canvas');
+    chCanvas.width = W; chCanvas.height = H;
+    const cctx = chCanvas.getContext('2d');
+
+    renderChannel(cctx, srcData, col, c, state.colorCount, W, H, cellSize, dotFrac, offX, offY);
+
+    applyInkGrain(cctx, W, H, state.grain / 100, state.overink / 100);
+
+    if (state.bleed > 5) applyBleed(cctx, W, H, state.bleed / 100);
+
+    ctx.save();
+    ctx.globalCompositeOperation = state.blendMode;
+    ctx.globalAlpha = chOp * (state.tint / 100);
+    ctx.drawImage(chCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  // ── 4. Post effects ──────────────────────────────────
+  if (state.scanner > 0) applyScannerArtifacts(ctx, W, H, state.scanner / 100);
+  if (state.paperAmount > 0) applyPaperOverlay(ctx, W, H, state.paper, state.paperAmount / 100);
+
+  document.getElementById('sb-status').textContent = 'Processed';
+}
+
+// ── CHANNEL LUMINANCE ──────────────────────────────────
+// Each channel gets the full image luminance, weighted by how much
+// that pixel's colour "wants" to be printed in this ink.
+// Strategy: for each pixel, compute colour distance to each ink in HSL space.
+// The closest ink gets the strongest density. For black ink (very dark), 
+// it gets the shadow/dark areas that no coloured ink claims strongly.
+function getChannelLuminance(srcData, channelIdx, allInkColors, W, H) {
+  const lum = new Float32Array(W * H);
+  const d = srcData.data;
+  const N = allInkColors.length;
+
+  // Pre-convert all inks to HSL for better perceptual distance
+  function rgbToHsl(r, g, b) {
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    const l = (max + min) / 2;
+    if (max === min) return [0, 0, l];
+    const s = l > 0.5 ? (max-min)/(2-max-min) : (max-min)/(max+min);
+    let h;
+    if (max === r)      h = (g-b)/(max-min) + (g < b ? 6 : 0);
+    else if (max === g) h = (b-r)/(max-min) + 2;
+    else                h = (r-g)/(max-min) + 4;
+    return [h/6, s, l];
+  }
+
+  const inkHSL = allInkColors.map(c => rgbToHsl(c.r/255, c.g/255, c.b/255));
+  const myHSL  = inkHSL[channelIdx];
+
+  // Is this ink very dark (black/near-black)?
+  const myLightness  = myHSL[2];
+  const myIsVeryDark = myLightness < 0.18;
+  const mySaturation = myHSL[1];
+
+  for (let i = 0; i < W * H; i++) {
+    const r = d[i*4]   / 255;
+    const g = d[i*4+1] / 255;
+    const b = d[i*4+2] / 255;
+
+    // Perceptual luminance — dark pixels = more ink
+    const luma = 1 - (r * 0.299 + g * 0.587 + b * 0.114);
+    if (luma < 0.025) { lum[i] = 0; continue; }
+
+    if (N === 1) { lum[i] = luma; continue; }
+
+    const [pH, pS, pL] = rgbToHsl(r, g, b);
+    const pixelIsDark  = pL < 0.3;
+    const pixelIsLight = pL > 0.7;
+
+    let weight;
+
+    if (myIsVeryDark) {
+      // Dark/black ink: claim dark pixels that coloured inks don't want
+      // Compute how well any coloured ink matches this pixel
+      let maxColorAffinity = 0;
+      for (let j = 0; j < N; j++) {
+        if (j === channelIdx) continue;
+        const [jH, jS, jL] = inkHSL[j];
+        if (jL < 0.18) continue; // skip other dark inks
+        // Hue distance (circular)
+        const hDiff = Math.abs(pH - jH);
+        const hDist = Math.min(hDiff, 1 - hDiff);
+        const affinity = (1 - hDist * 2) * pS * jS;
+        if (affinity > maxColorAffinity) maxColorAffinity = affinity;
+      }
+      // Black gets what coloured inks don't claim + all very dark areas
+      weight = Math.max(0, 1 - maxColorAffinity * 1.5) * (pixelIsDark ? 1.2 : 0.7);
+    } else {
+      // Coloured ink: claim pixels whose hue is close to this ink's hue
+      // Hue distance (circular, 0..0.5)
+      const hDiff    = Math.abs(pH - myHSL[0]);
+      const hDist    = Math.min(hDiff, 1 - hDiff); // 0=same, 0.5=opposite
+      // Saturation factor: unsaturated pixels distribute evenly
+      const satFactor = 0.3 + pS * 0.7;
+      // Hue affinity: 1 when hue matches perfectly, 0 when opposite
+      const hAffinity = Math.max(0, 1 - hDist * 3.0);
+      // Compete against other coloured inks
+      let totalAffinity = 0.001;
+      let myAffinity    = hAffinity * satFactor;
+      for (let j = 0; j < N; j++) {
+        if (j === channelIdx) continue;
+        const [jH, jS, jL] = inkHSL[j];
+        if (jL < 0.18) continue; // skip dark inks
+        const jHDiff    = Math.abs(pH - jH);
+        const jHDist    = Math.min(jHDiff, 1 - jHDiff);
+        const jAffinity = Math.max(0, 1 - jHDist * 3.0) * (0.3 + pS * 0.7);
+        totalAffinity  += jAffinity;
+      }
+      totalAffinity += myAffinity;
+      // Normalised share — each colour claims its proportional hue territory
+      weight = (myAffinity / totalAffinity) * Math.sqrt(N);
+      // Dark pixels go to all colour channels proportionally (riso shadows)
+      if (pixelIsDark) weight *= 0.6;
+    }
+
+    lum[i] = Math.min(1, luma * Math.max(0, weight));
+  }
+  return lum;
+}
+
+function renderChannel(ctx, srcData, color, channelIdx, totalChannels, W, H, cellSize, dotFrac, offX, offY) {
+  // Each channel gets a slight angle offset to create the classic riso rosette
+  const baseAngle = (state.halftoneAngle * Math.PI) / 180;
+  const angle = baseAngle + channelIdx * (Math.PI / 12); // 15° offset per channel
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Collect ALL ink colors for competitive separation
+  const allInkColors = [];
+  for (let i = 0; i < totalChannels; i++) {
+    allInkColors.push(hexToRgb(state.colors[i] || '#212121'));
+  }
+
+  const lum = getChannelLuminance(srcData, channelIdx, allInkColors, W, H);
+
+  if (state.pattern === 'stochastic') {
+    renderStochastic(ctx, lum, color, W, H, cellSize, dotFrac, offX, offY);
+  } else if (state.pattern === 'dot') {
+    renderDotHalftone(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY);
+  } else if (state.pattern === 'line') {
+    renderLineHalftone(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY);
+  } else if (state.pattern === 'crosshatch') {
+    renderCrosshatch(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY);
+  } else if (state.pattern === 'diffusion') {
+    renderDiffusion(ctx, lum, color, W, H, offX, offY);
+  }
+}
+
+// ── STOCHASTIC ────────────────────────────────────────
+function renderStochastic(ctx, lum, color, W, H, cellSize, dotFrac, offX, offY) {
+  // step = grid sampling distance; dotFrac scales dot size within that grid
+  const step = Math.max(1, cellSize);
+  const maxR = step * 0.7 * dotFrac;
+
+  ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+
+  for (let y = 0; y < H; y += step) {
+    for (let x = 0; x < W; x += step) {
+      const sx = Math.max(0, Math.min(W-1, x + offX));
+      const sy = Math.max(0, Math.min(H-1, y + offY));
+      const density = lum[sy * W + sx];
+      if (density < 0.02) continue;
+
+      // Scatter 1-4 dots per cell based on density
+      const dotCount = Math.ceil(density * 3.5);
+      for (let d = 0; d < dotCount; d++) {
+        if (Math.random() > density) continue;
+        // Scatter within cell + half-cell margin
+        const jx = x + (Math.random() - 0.5) * step * 1.8;
+        const jy = y + (Math.random() - 0.5) * step * 1.8;
+        const r = maxR * (0.4 + Math.random() * 0.6) * Math.pow(density, 0.6);
+        if (r < 0.3) continue;
+        ctx.beginPath();
+        ctx.arc(jx, jy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// ── DOT HALFTONE ──────────────────────────────────────
+function renderDotHalftone(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY) {
+  ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+  const cs = Math.max(2, cellSize);
+  const maxR = cs * 0.5 * dotFrac; // max dot radius; dotFrac scales it
+
+  const cosA = Math.cos(-angle), sinA = Math.sin(-angle);
+  const diag = Math.sqrt(W*W + H*H) + cs * 2;
+
+  // Iterate in rotated grid space
+  for (let v = -diag; v < diag; v += cs) {
+    for (let u = -diag; u < diag; u += cs) {
+      // Transform back to canvas coords
+      const cx = u * cosA - v * sinA + W/2;
+      const cy = u * sinA + v * cosA + H/2;
+      if (cx < -cs || cx > W+cs || cy < -cs || cy > H+cs) continue;
+
+      const sx = Math.max(0, Math.min(W-1, Math.round(cx + offX)));
+      const sy = Math.max(0, Math.min(H-1, Math.round(cy + offY)));
+      const density = lum[sy * W + sx];
+      if (density < 0.015) continue;
+
+      const r = maxR * Math.sqrt(density) * (0.9 + Math.random() * 0.2);
+      if (r < 0.2) continue;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ── LINE HALFTONE ─────────────────────────────────────
+function renderLineHalftone(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY) {
+  const spacing = Math.max(1, cellSize);
+  // Max line width is spacing * dotFrac (so dotFrac=1 = lines touching, >1 = overlap)
+  const maxLW = spacing * dotFrac;
+  ctx.strokeStyle = `rgb(${color.r},${color.g},${color.b})`;
+  ctx.lineCap = 'butt';
+
+  const cosA = Math.cos(-angle), sinA = Math.sin(-angle);
+  const diag = Math.sqrt(W*W + H*H) + spacing * 2;
+
+  for (let t = -diag; t < diag; t += spacing) {
+    // Sample density at multiple points along each line
+    const pts = [];
+    const segStep = Math.max(2, spacing * 2);
+    for (let s = -diag; s < diag; s += segStep) {
+      const cx = (t * cosA - s * sinA) + W/2;
+      const cy = (t * sinA + s * cosA) + H/2;
+      if (cx < -spacing || cx > W+spacing || cy < -spacing || cy > H+spacing) continue;
+      const sx = Math.max(0, Math.min(W-1, Math.round(cx + offX)));
+      const sy = Math.max(0, Math.min(H-1, Math.round(cy + offY)));
+      pts.push({ cx, cy, density: lum[sy * W + sx] });
+    }
+
+    // Draw line segments with variable width
+    for (let p = 0; p < pts.length - 1; p++) {
+      const density = (pts[p].density + pts[p+1].density) / 2;
+      if (density < 0.02) continue;
+      const lw = maxLW * density;
+      if (lw < 0.2) continue;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(pts[p].cx, pts[p].cy);
+      ctx.lineTo(pts[p+1].cx, pts[p+1].cy);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── CROSSHATCH ────────────────────────────────────────
+function renderCrosshatch(ctx, lum, color, W, H, cellSize, dotFrac, angle, offX, offY) {
+  renderLineHalftone(ctx, lum, color, W, H, cellSize, dotFrac * 0.65, angle, offX, offY);
+  ctx.save();
+  ctx.globalAlpha = 0.7;
+  renderLineHalftone(ctx, lum, color, W, H, cellSize, dotFrac * 0.65, angle + Math.PI/2, offX, offY);
+  ctx.restore();
+}
+
+// ── DIFFUSION DITHER ──────────────────────────────────
+// Fixed: uses proper alpha rather than hard 0/255
+function renderDiffusion(ctx, lum, color, W, H, offX, offY) {
+  const imgData = ctx.createImageData(W, H);
+  const d = imgData.data;
+  const err = new Float32Array(W * H);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const sx = Math.max(0, Math.min(W-1, x + offX));
+      const sy = Math.max(0, Math.min(H-1, y + offY));
+      const i = y * W + x;
+      const old = Math.min(1, Math.max(0, lum[sy*W+sx] + err[i]));
+      const nv = old > 0.45 ? 1 : 0;
+      const e = old - nv;
+      if (x+1 < W)            err[i+1]   += e * 7/16;
+      if (x > 0 && y+1 < H)   err[i+W-1] += e * 3/16;
+      if (y+1 < H)             err[i+W]   += e * 5/16;
+      if (x+1 < W && y+1 < H) err[i+W+1] += e * 1/16;
+      if (nv > 0) {
+        const di = i * 4;
+        d[di] = color.r; d[di+1] = color.g; d[di+2] = color.b;
+        d[di+3] = 220; // slightly transparent so multiply blend works
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// ── INK GRAIN ─────────────────────────────────────────
+function applyInkGrain(ctx, W, H, grainAmount, overinkAmount) {
+  if (grainAmount < 0.02 && overinkAmount < 0.02) return;
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  const gScale = grainAmount * 60;
+  const oScale = overinkAmount * 45;
+  for (let i = 0; i < W * H; i++) {
+    const a = d[i*4+3];
+    if (a < 8) continue;
+    const noise = (Math.random() - 0.5) * 2;
+    const light = noise > 0 ? noise * gScale * 1.3 : noise * gScale * 0.7;
+    const over = Math.random() < overinkAmount * 0.5 ? -oScale * Math.random() : 0;
+    const di = i * 4;
+    d[di]   = clamp(d[di]   + light + over);
+    d[di+1] = clamp(d[di+1] + light + over);
+    d[di+2] = clamp(d[di+2] + light + over);
+    if (Math.random() < grainAmount * 0.2) {
+      d[di+3] = Math.max(0, a - Math.random() * gScale * 2.5);
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// ── PAPER BASE ────────────────────────────────────────
+function applyPaperBase(ctx, W, H, paperType, amount) {
+  if (amount <= 0) return;
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  const scale = amount * 20;
+  for (let i = 0; i < W * H; i++) {
+    const di = i * 4;
+    if (paperType === 'kraft') {
+      const n = Math.random() * scale;
+      d[di]   = clamp(d[di]   - n * 0.2);
+      d[di+1] = clamp(d[di+1] - n * 0.4);
+      d[di+2] = clamp(d[di+2] - n * 0.9);
+    } else if (paperType === 'rough') {
+      const n = (Math.random() - 0.5) * scale * 2.5;
+      d[di]   = clamp(d[di]   + n);
+      d[di+1] = clamp(d[di+1] + n);
+      d[di+2] = clamp(d[di+2] + n);
+    } else {
+      const n = (Math.random() - 0.5) * scale;
+      d[di]   = clamp(d[di]   + n);
+      d[di+1] = clamp(d[di+1] + n);
+      d[di+2] = clamp(d[di+2] + n);
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// ── PAPER OVERLAY ─────────────────────────────────────
+function applyPaperOverlay(ctx, W, H, paperType, amount) {
+  if (amount <= 0) return;
+  const tex = document.createElement('canvas');
+  tex.width = W; tex.height = H;
+  const tctx = tex.getContext('2d');
+  const id = tctx.createImageData(W, H);
+  const d = id.data;
+
+  if (paperType === 'rough') {
+    for (let y = 0; y < H; y++) {
+      const lv = Math.sin(y * 0.9) * amount * 0.12;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        const n = (Math.random() - 0.5) * 2;
+        const v = n * 180 * amount + lv * 128;
+        const a = Math.min(220, Math.abs(v) * 1.6);
+        d[i*4] = v > 0 ? 240 : 20; d[i*4+1] = v > 0 ? 235 : 18; d[i*4+2] = v > 0 ? 220 : 15; d[i*4+3] = a;
+      }
+    }
+  } else if (paperType === 'kraft') {
+    for (let i = 0; i < W*H; i++) {
+      const n = Math.random() * 200 * amount;
+      d[i*4] = 160; d[i*4+1] = 100; d[i*4+2] = 40; d[i*4+3] = n * 0.45;
+    }
+  } else {
+    for (let i = 0; i < W*H; i++) {
+      const n = (Math.random() - 0.5) * 2;
+      const v = n * 150 * amount;
+      d[i*4] = v > 0 ? 255 : 0; d[i*4+1] = v > 0 ? 255 : 0; d[i*4+2] = v > 0 ? 255 : 0;
+      d[i*4+3] = Math.abs(v) * 0.65;
+    }
+  }
+  tctx.putImageData(id, 0, 0);
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.globalAlpha = 0.25 + amount * 0.55;
+  ctx.drawImage(tex, 0, 0);
+  if (amount > 0.3) {
+    const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.2, W/2, H/2, Math.max(W,H)*0.85);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, `rgba(20,10,0,${(amount - 0.3) * 0.28})`);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+
+// Keep alias
+function applyPaperTexture(ctx, W, H, paperType, amount) {
+  applyPaperOverlay(ctx, W, H, paperType, amount);
+}
+function applyGrain() {}
+function applyOverInk() {}
+
+function applyBleed(ctx, W, H, amount) {
+  if (amount < 0.05) return;
+  const blurPx = amount * 2.5;
+  const tmp = document.createElement('canvas');
+  tmp.width = ctx.canvas.width; tmp.height = ctx.canvas.height;
+  const tctx = tmp.getContext('2d');
+  tctx.filter = `blur(${blurPx}px)`;
+  tctx.drawImage(ctx.canvas, 0, 0);
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.drawImage(tmp, 0, 0);
+}
+
+function applyScannerArtifacts(ctx, W, H, amount) {
+  if (amount < 0.05) return;
+  ctx.save();
+  const lineCount = Math.round(amount * 8);
+  for (let i = 0; i < lineCount; i++) {
+    const y = Math.random() * H;
+    const h = 0.5 + Math.random() * 2;
+    ctx.globalAlpha = amount * 0.12 * Math.random();
+    ctx.fillStyle = Math.random() > 0.5 ? 'white' : '#111';
+    ctx.fillRect(0, y, W * (0.3 + Math.random() * 0.7), h);
+  }
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════
+//  MISREGISTRATION PAD
+// ══════════════════════════════════════════════════════
+let misregDragging = false;
+
+function startMisregDrag(e) {
+  misregDragging = true;
+  updateMisreg(e);
+  document.addEventListener('mousemove', onMisregMove);
+  document.addEventListener('mouseup', () => {
+    misregDragging = false;
+    document.removeEventListener('mousemove', onMisregMove);
+  }, { once: true });
+}
+
+function startMisregTouch(e) {
+  e.preventDefault();
+  updateMisregFromTouch(e.touches[0]);
+  document.addEventListener('touchmove', onMisregTouchMove, { passive: false });
+  document.addEventListener('touchend', () => {
+    document.removeEventListener('touchmove', onMisregTouchMove);
+  }, { once: true });
+}
+
+function onMisregMove(e) { if (misregDragging) updateMisreg(e); }
+function onMisregTouchMove(e) { e.preventDefault(); updateMisregFromTouch(e.touches[0]); }
+
+function updateMisreg(e) {
+  const pad = document.getElementById('misreg-pad');
+  const rect = pad.getBoundingClientRect();
+  const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+  const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+  setMisregPos(x, y, rect.width, rect.height);
+}
+
+function updateMisregFromTouch(touch) {
+  const pad = document.getElementById('misreg-pad');
+  const rect = pad.getBoundingClientRect();
+  const x = Math.max(0, Math.min(rect.width, touch.clientX - rect.left));
+  const y = Math.max(0, Math.min(rect.height, touch.clientY - rect.top));
+  setMisregPos(x, y, rect.width, rect.height);
+}
+
+function setMisregPos(x, y, w, h) {
+  const dot = document.getElementById('misreg-dot');
+  dot.style.left = x + 'px';
+  dot.style.top = y + 'px';
+  state.misregX = Math.round((x / w - 0.5) * 20);
+  state.misregY = Math.round((y / h - 0.5) * 20);
+  document.getElementById('misreg-x-val').textContent = (state.misregX >= 0 ? '+' : '') + state.misregX + 'px';
+  document.getElementById('misreg-y-val').textContent = (state.misregY >= 0 ? '+' : '') + state.misregY + 'px';
+  if (state.sourceImage) scheduleProcess();
+}
+
+// ══════════════════════════════════════════════════════
+//  ZOOM
+// ══════════════════════════════════════════════════════
+function zoom(delta) {
+  state.zoom = Math.max(0.1, Math.min(4, state.zoom + delta));
+  applyZoom();
+}
+
+function resetZoom() {
+  const container = document.getElementById('canvas-container');
+  const canvas = document.getElementById('main-canvas');
+  if (!canvas.width) { state.zoom = 1; applyZoom(); return; }
+  const fw = (container.clientWidth - 80) / canvas.width;
+  const fh = (container.clientHeight - 80) / canvas.height;
+  state.zoom = Math.min(1, Math.min(fw, fh));
+  applyZoom();
+}
+
+function applyZoom() {
+  document.getElementById('canvas-wrapper').style.transform = `scale(${state.zoom})`;
+  document.getElementById('canvas-wrapper').style.transformOrigin = 'center center';
+}
+
+// ══════════════════════════════════════════════════════
+//  EXPORT MODAL
+// ══════════════════════════════════════════════════════
+let exportState = { fmt: 'png', res: 'source', quality: 92 };
+
+function _detectVideoMime() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  return candidates.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+}
+
+function openExportModal() {
+  const canvas = document.getElementById('main-canvas');
+  if (!canvas.width) { alert('Nothing to export — load a file first.'); return; }
+  document.getElementById('res-source-sub').textContent = canvas.width + ' × ' + canvas.height;
+
+  const isVideo = state.fileType === 'video';
+  const mp4Btn  = document.getElementById('fmt-mp4');
+  mp4Btn.style.opacity       = isVideo ? '1' : '0.35';
+  mp4Btn.style.pointerEvents = isVideo ? '' : 'none';
+  mp4Btn.title = isVideo ? '' : 'Load a video to enable video export';
+
+  if (isVideo) {
+    const mime  = _detectVideoMime();
+    const isMp4 = mime.startsWith('video/mp4');
+    mp4Btn.textContent = isMp4 ? 'MP4' : 'WEBM';
+    document.getElementById('exp-mp4-note').textContent =
+      'Exports full video with riso effect. ' +
+      'Your browser will produce: ' + (isMp4 ? 'MP4 (H.264)' : 'WebM (VP9/VP8)') + '.';
+  }
+
+  if (!isVideo && exportState.fmt === 'mp4') {
+    exportState.fmt = 'png';
+    document.querySelectorAll('.exp-fmt[data-fmt]').forEach(b => {
+      b.classList.toggle('active', b.dataset.fmt === 'png');
+    });
+    document.getElementById('exp-mp4-row').style.display    = 'none';
+    document.getElementById('exp-quality-row').style.display = 'none';
+  }
+
+  resetExportUI();
+  document.getElementById('export-modal').classList.add('open');
+}
+
+function closeExportModal() {
+  document.getElementById('export-modal').classList.remove('open');
+  resetExportUI();
+}
+
+function resetExportUI() {
+  document.getElementById('exp-progress-wrap').style.display = 'none';
+  document.getElementById('exp-progress-fill').style.width = '0%';
+  document.getElementById('btn-do-export').disabled = false;
+  document.getElementById('exp-btn-label').textContent = '↓ DOWNLOAD';
+}
+
+function selectFmt(btn) {
+  if (btn.dataset.fmt === 'mp4' && state.fileType !== 'video') return;
+  document.querySelectorAll('.exp-fmt[data-fmt]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  exportState.fmt = btn.dataset.fmt;
+  document.getElementById('exp-quality-row').style.display = exportState.fmt === 'jpg' ? '' : 'none';
+  document.getElementById('exp-mp4-row').style.display = exportState.fmt === 'mp4' ? '' : 'none';
+}
+
+function selectRes(btn) {
+  document.querySelectorAll('.exp-res').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  exportState.res = btn.dataset.res;
+}
+
+function getExportDimensions() {
+  const video = state.videoEl;
+  const canvas = document.getElementById('main-canvas');
+  const srcW = video ? video.videoWidth : canvas.width;
+  const srcH = video ? video.videoHeight : canvas.height;
+  const aspect = srcW / srcH;
+  if (exportState.res === 'source') return [srcW, srcH];
+  const longEdge = { '1080': 1920, '2k': 2560, '4k': 3840 }[exportState.res];
+  if (aspect >= 1) return [longEdge, Math.round(longEdge / aspect)];
+  return [Math.round(longEdge * aspect), longEdge];
+}
+
+async function doExport() {
+  const canvas = document.getElementById('main-canvas');
+  if (!canvas.width) return;
+  document.getElementById('btn-do-export').disabled = true;
+  if (exportState.fmt === 'mp4') {
+    await exportVideo();
+  } else {
+    await exportStillImage();
+  }
+}
+
+async function exportStillImage() {
+  const [tw, th] = getExportDimensions();
+  const mainCanvas = document.getElementById('main-canvas');
+  const out = document.createElement('canvas');
+  out.width = tw; out.height = th;
+
+  if (state.fileType === 'image' && state.sourceImage) {
+    // Re-render at target resolution for true hi-res output
+    const origW = mainCanvas.width, origH = mainCanvas.height;
+    mainCanvas.width = tw; mainCanvas.height = th;
+    processImage();
+    out.getContext('2d').drawImage(mainCanvas, 0, 0);
+    mainCanvas.width = origW; mainCanvas.height = origH;
+    processImage();
+  } else {
+    out.getContext('2d').drawImage(mainCanvas, 0, 0, tw, th);
+  }
+
+  const fmt = exportState.fmt;
+  const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+  const quality = parseInt(document.getElementById('exp-quality-slider').value) / 100;
+  const ext = fmt === 'jpg' ? 'jpg' : 'png';
+  const link = document.createElement('a');
+  link.download = `risitas_${tw}x${th}.${ext}`;
+  link.href = out.toDataURL(mime, quality);
+  link.click();
+  document.getElementById('exp-btn-label').textContent = '✓ SAVED';
+  setTimeout(() => { resetExportUI(); closeExportModal(); }, 1200);
+}
+
+async function exportVideo() {
+  const video = state.videoEl;
+  if (!video) { alert('No video loaded.'); resetExportUI(); return; }
+
+  const duration = video.duration;
+  if (!isFinite(duration) || duration <= 0) {
+    alert('Cannot determine video duration.'); resetExportUI(); return;
+  }
+
+  const [tw, th] = getExportDimensions();
+
+  // Show progress UI
+  document.getElementById('exp-progress-wrap').style.display  = '';
+  document.getElementById('exp-progress-label').textContent   = 'Setting up encoder…';
+  document.getElementById('exp-btn-label').textContent        = 'ENCODING…';
+
+  // Pause live preview loop (keep video element alive)
+  _videoLoopActive = false;
+  if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+  // Freeze token so no stale loop restarts
+  const exportToken = ++_activeToken;
+
+  // Pick encoder
+  const mime = _detectVideoMime();
+  const fileExt = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  if (!mime) {
+    alert('No video encoder found. Use Chrome or Edge.'); resetExportUI(); return;
+  }
+
+  // Off-screen canvas at export resolution — MediaRecorder captures this
+  const capCanvas = document.createElement('canvas');
+  capCanvas.width  = tw;
+  capCanvas.height = th;
+  const capCtx = capCanvas.getContext('2d');
+
+  // Main canvas resized for export rendering
+  const mc    = document.getElementById('main-canvas');
+  const origW = mc.width, origH = mc.height;
+  mc.width  = tw;
+  mc.height = th;
+  state.sourceImage = video;
+
+  let recorder, chunks = [];
+  try {
+    recorder = new MediaRecorder(capCanvas.captureStream(30),
+      { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  } catch(e) {
+    mc.width = origW; mc.height = origH;
+    alert('Encoder start failed: ' + e.message); resetExportUI(); return;
+  }
+
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+  recorder.onstop = () => {
+    // Restore preview canvas
+    mc.width  = origW;
+    mc.height = origH;
+
+    // Download file
+    const blob = new Blob(chunks, { type: mime });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.download = `risitas_${tw}x${th}.${fileExt}`;
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+
+    document.getElementById('exp-progress-fill').style.width  = '100%';
+    document.getElementById('exp-progress-label').textContent = `✓ Done — saved as .${fileExt}`;
+    document.getElementById('exp-btn-label').textContent      = '✓ SAVED';
+
+    // Restart live preview
+    if (state.videoEl === video) {
+      state.sourceImage = video;
+      video.loop = true;
+      video.currentTime = 0;
+      video.play()
+        .then(() => { _activeToken = exportToken; _startVideoLoop(video, exportToken); })
+        .catch(() => {});
+    }
+    setTimeout(() => { resetExportUI(); closeExportModal(); }, 2500);
+  };
+
+  // Seek video to start, then record it playing through once in real time
+  video.loop        = false;
+  video.currentTime = 0;
+  await new Promise(r => setTimeout(r, 200));
+
+  recorder.start(500); // collect data every 500ms
+
+  document.getElementById('exp-progress-label').textContent = 'Recording… video plays through once';
+
+  // rAF loop renders riso effect and copies to capture canvas
+  let done = false;
+  await new Promise(resolve => {
+    let raf = null;
+
+    function renderExportFrame() {
+      if (done) return;
+
+      if (video.readyState >= 2) {
+        processImage();
+        capCtx.drawImage(mc, 0, 0);
+      }
+
+      const pct = isFinite(duration) && duration > 0
+        ? Math.min(99, Math.round(video.currentTime / duration * 100))
+        : 0;
+      document.getElementById('exp-progress-fill').style.width  = pct + '%';
+      document.getElementById('exp-progress-label').textContent =
+        'Encoding ' + Math.floor(video.currentTime) + 's / ' + Math.floor(duration) + 's';
+
+      raf = requestAnimationFrame(renderExportFrame);
+    }
+
+    function onEnded() {
+      if (done) return;
+      done = true;
+      video.removeEventListener('ended', onEnded);
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      // Final frame
+      if (video.readyState >= 2) {
+        processImage();
+        capCtx.drawImage(mc, 0, 0);
+      }
+      setTimeout(() => { recorder.stop(); resolve(); }, 400);
+    }
+
+    // Safety: if ended never fires, stop after duration + 8s
+    const safety = setTimeout(() => {
+      if (!done) { done = true; if (raf) cancelAnimationFrame(raf); recorder.stop(); resolve(); }
+    }, (duration + 8) * 1000);
+
+    video.addEventListener('ended', onEnded);
+
+    // Start playing and rendering simultaneously
+    video.play()
+      .then(() => { raf = requestAnimationFrame(renderExportFrame); })
+      .catch(err => {
+        clearTimeout(safety);
+        done = true;
+        recorder.stop();
+        resolve();
+        alert('Could not play video for export: ' + err.message);
+      });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  RESET
+// ══════════════════════════════════════════════════════
+function resetAll() {
+  if (!confirm('Reset all settings to defaults?')) return;
+
+  state.colorCount = 3;
+  state.colors = ['#FF48B0', '#3255A4', '#FFE800'];
+  state.opacities = [1.0, 0.9, 0.85];
+  state.blendMode = 'multiply';
+  state.opacity = 85;
+  state.tint = 70;
+  state.densityMode = 'auto';
+  state.lpi = 65;
+  state.dotsize = 50;
+  state.pattern = 'stochastic';
+  state.halftoneAngle = 45;
+  state.misregX = 0;
+  state.misregY = 0;
+  state.bleed = 20;
+  state.overink = 15;
+  state.grain = 30;
+  state.scanner = 10;
+  state.paper = 'white';
+  state.paperAmount = 40;
+
+  // Reset DOM controls
+  document.getElementById('blend-mode').value = 'multiply';
+  document.getElementById('sb-blend').textContent = 'Multiply';
+
+  // Reset all sliders
+  const sliderMap = [
+    ['opacity',85,'%'],['tint',70,'%'],['lpi',65,''],['dotsize',50,'%'],
+    ['bleed',20,'%'],['overink',15,'%'],['grain',30,'%'],['scanner',10,'%'],['paperAmount',40,'%']
+  ];
+  sliderMap.forEach(([key, val, unit]) => {
+    const el = document.getElementById('val-'+key);
+    if (el) el.textContent = val + unit;
+    // Find slider by oninput attr containing the key
+    const slider = document.querySelector(`input[oninput*="'${key}'"]`);
+    if (slider) slider.value = val;
+  });
+
+  // Reset density mode
+  setDensityMode('auto');
+
+  // Reset pattern chips
+  document.querySelectorAll('#pattern-chips .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#pattern-chips .chip[onclick*="stochastic"]').classList.add('active');
+  document.getElementById('sb-pattern').textContent = 'Stochastic';
+
+  // Reset paper chips
+  document.querySelectorAll('#paper-chips .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#paper-chips .chip[onclick*="white"]').classList.add('active');
+  document.getElementById('sb-paper').textContent = 'Uncoated White';
+
+  // Reset halftone angle
+  document.getElementById('halftone-angle').value = '45';
+
+  // Reset misreg pad
+  const pad = document.getElementById('misreg-pad');
+  const dot = document.getElementById('misreg-dot');
+  dot.style.left = '50%';
+  dot.style.top = '50%';
+  document.getElementById('misreg-x-val').textContent = '0px';
+  document.getElementById('misreg-y-val').textContent = '0px';
+
+  buildColorChannels();
+  if (state.sourceImage) processImage();
+}
+
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const n = parseInt(hex, 16);
+  return { r: (n>>16)&255, g: (n>>8)&255, b: n&255 };
+}
+
+function clamp(v) { return Math.max(0, Math.min(255, v)); }
+
+// ══════════════════════════════════════════════════════
+//  PRESETS
+// ══════════════════════════════════════════════════════
+const BUILTIN_PRESETS = [
+  {
+    id: 'summer-zine',
+    name: 'Summer Zine',
+    desc: 'Hot pink · yellow · red · stochastic',
+    colors: ['#FF48B0', '#FFE800', '#F15060'],
+    opacities: [1.0, 0.9, 0.95],
+    colorCount: 3,
+    blendMode: 'multiply',
+    opacity: 92,
+    tint: 88,
+    densityMode: 'auto',
+    lpi: 65,
+    dotsize: 60,
+    pattern: 'stochastic',
+    halftoneAngle: 45,
+    misregX: 2,
+    misregY: 1,
+    bleed: 22,
+    overink: 18,
+    grain: 28,
+    scanner: 6,
+    paper: 'cream',
+    paperAmount: 45,
+  },
+  {
+    id: 'punk-noir',
+    name: 'Punk Noir',
+    desc: 'Red · black · crosshatch',
+    colors: ['#F15060', '#212121'],
+    opacities: [1.0, 0.95],
+    colorCount: 2,
+    blendMode: 'multiply',
+    opacity: 95,
+    tint: 90,
+    densityMode: 'manual',
+    lpi: 42,
+    dotsize: 75,
+    pattern: 'crosshatch',
+    halftoneAngle: 45,
+    misregX: 3,
+    misregY: -2,
+    bleed: 30,
+    overink: 28,
+    grain: 40,
+    scanner: 18,
+    paper: 'rough',
+    paperAmount: 65,
+  },
+  {
+    id: 'ocean-dream',
+    name: 'Ocean Dream',
+    desc: 'Teal · blue · medium blue · dot',
+    colors: ['#00A99D', '#3255A4', '#4D80C8'],
+    opacities: [1.0, 0.95, 0.9],
+    colorCount: 3,
+    blendMode: 'multiply',
+    opacity: 90,
+    tint: 88,
+    densityMode: 'manual',
+    lpi: 55,
+    dotsize: 65,
+    pattern: 'dot',
+    halftoneAngle: 15,
+    misregX: 1,
+    misregY: 2,
+    bleed: 15,
+    overink: 10,
+    grain: 20,
+    scanner: 4,
+    paper: 'white',
+    paperAmount: 30,
+  },
+  {
+    id: 'botanical',
+    name: 'Botanical',
+    desc: 'Green · yellow · teal · black · line',
+    colors: ['#56A149', '#FFE800', '#00A99D', '#212121'],
+    opacities: [1.0, 0.9, 0.9, 0.75],
+    colorCount: 4,
+    blendMode: 'multiply',
+    opacity: 90,
+    tint: 88,
+    densityMode: 'manual',
+    lpi: 55,
+    dotsize: 60,
+    pattern: 'line',
+    halftoneAngle: 75,
+    misregX: 0,
+    misregY: 2,
+    bleed: 18,
+    overink: 12,
+    grain: 32,
+    scanner: 5,
+    paper: 'kraft',
+    paperAmount: 55,
+  },
+  {
+    id: 'psychedelic',
+    name: 'Psychedelic',
+    desc: 'Purple · pink · yellow · stochastic',
+    colors: ['#7B5EA7', '#FF48B0', '#FFE800'],
+    opacities: [1.0, 0.95, 0.9],
+    colorCount: 3,
+    blendMode: 'multiply',
+    opacity: 92,
+    tint: 88,
+    densityMode: 'auto',
+    lpi: 60,
+    dotsize: 65,
+    pattern: 'stochastic',
+    halftoneAngle: 45,
+    misregX: 4,
+    misregY: -3,
+    bleed: 25,
+    overink: 20,
+    grain: 25,
+    scanner: 10,
+    paper: 'cream',
+    paperAmount: 40,
+  },
+  {
+    id: 'propaganda',
+    name: 'Propaganda',
+    desc: 'Red · blue · black · dot',
+    colors: ['#F15060', '#3255A4', '#212121'],
+    opacities: [1.0, 0.95, 0.9],
+    colorCount: 3,
+    blendMode: 'multiply',
+    opacity: 95,
+    tint: 90,
+    densityMode: 'manual',
+    lpi: 45,
+    dotsize: 70,
+    pattern: 'dot',
+    halftoneAngle: 45,
+    misregX: -3,
+    misregY: 3,
+    bleed: 25,
+    overink: 22,
+    grain: 38,
+    scanner: 14,
+    paper: 'rough',
+    paperAmount: 60,
+  },
+];
+
+// ── PAPER COLOR PICKER ─────────────────────────────────
+function selectCustomPaper() {
+  // Activate the custom chip
+  document.querySelectorAll('#paper-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('chip-custom-paper').classList.add('active');
+  state.paper = 'custom';
+  PAPER_COLORS.custom = state.paperCustomColor;
+  document.getElementById('sb-paper').textContent = 'Custom';
+  if (state.sourceImage) scheduleProcess();
+  // Open the colour picker directly
+  document.getElementById('paper-color-picker').click();
+}
+
+function updatePaperHexPreview(input) {
+  const hex = '#' + input.value.replace('#','').padEnd(6,'0').slice(0,6);
+  document.getElementById('paper-color-preview').style.background = hex;
+  document.getElementById('paper-color-picker').value = hex;
+}
+
+function onPaperColorPick(hexVal) {
+  const hex = hexVal.startsWith('#') ? hexVal : '#' + hexVal;
+  document.getElementById('paper-color-preview').style.background = hex;
+  document.getElementById('paper-hex-input').value = hex.replace('#','').toUpperCase();
+  state.paperCustomColor = hex;
+  PAPER_COLORS.custom = hex;
+  // Auto-activate custom chip
+  document.querySelectorAll('#paper-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('chip-custom-paper').classList.add('active');
+  state.paper = 'custom';
+  document.getElementById('sb-paper').textContent = 'Custom';
+  if (state.sourceImage) scheduleProcess();
+}
+
+function applyPaperHex() {
+  const val = document.getElementById('paper-hex-input').value.replace('#','');
+  if (val.length < 6) return;
+  onPaperColorPick('#' + val);
+}
+
+// ── STALE PRESET GUARD ─────────────────────────────────
+// Clear old user presets if they were saved with broken settings
+const PRESET_SCHEMA_VER = 'v3';
+if (localStorage.getItem('riso_preset_ver') !== PRESET_SCHEMA_VER) {
+  localStorage.removeItem('riso_user_presets');
+  localStorage.setItem('riso_preset_ver', PRESET_SCHEMA_VER);
+}
+let userPresets = JSON.parse(localStorage.getItem('riso_user_presets') || '[]');
+
+function buildPresetsGrid() {
+  const grid = document.getElementById('presets-grid');
+  grid.innerHTML = '';
+  const all = [...BUILTIN_PRESETS, ...userPresets];
+  all.forEach(preset => {
+    const card = document.createElement('div');
+    card.className = 'preset-card' + (preset.user ? ' user-preset' : '');
+    card.onclick = (e) => { if (!e.target.classList.contains('preset-delete')) applyPreset(preset); };
+
+    const swatchHtml = preset.colors.slice(0, preset.colorCount).map(c =>
+      `<div class="preset-swatch" style="background:${c}"></div>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="preset-swatches">${swatchHtml}</div>
+      <div class="preset-info">
+        <span class="preset-name">${preset.name}</span>
+        <span class="preset-desc">${preset.desc}</span>
+      </div>
+      ${preset.user ? `<button class="preset-delete" onclick="deleteUserPreset('${preset.id}')" title="Delete">✕</button>` : ''}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function applyPreset(preset) {
+  state.colorCount = preset.colorCount;
+  state.colors = [...preset.colors];
+  state.opacities = [...preset.opacities];
+  state.blendMode = preset.blendMode;
+  state.opacity = preset.opacity;
+  state.tint = preset.tint;
+  state.densityMode = preset.densityMode;
+  state.lpi = preset.lpi;
+  state.dotsize = preset.dotsize;
+  state.pattern = preset.pattern;
+  state.halftoneAngle = preset.halftoneAngle;
+  state.misregX = preset.misregX;
+  state.misregY = preset.misregY;
+  state.bleed = preset.bleed;
+  state.overink = preset.overink;
+  state.grain = preset.grain;
+  state.scanner = preset.scanner;
+  state.paper = preset.paper;
+  state.paperAmount = preset.paperAmount;
+
+  // Sync all DOM controls
+  document.getElementById('blend-mode').value = preset.blendMode;
+  document.getElementById('sb-blend').textContent = document.getElementById('blend-mode').options[document.getElementById('blend-mode').selectedIndex].text;
+  document.getElementById('halftone-angle').value = String(preset.halftoneAngle);
+
+  const sliders = [
+    ['opacity', preset.opacity, '%'],
+    ['tint', preset.tint, '%'],
+    ['lpi', preset.lpi, ''],
+    ['dotsize', preset.dotsize, '%'],
+    ['bleed', preset.bleed, '%'],
+    ['overink', preset.overink, '%'],
+    ['grain', preset.grain, '%'],
+    ['scanner', preset.scanner, '%'],
+    ['paperAmount', preset.paperAmount, '%'],
+  ];
+  sliders.forEach(([key, val, unit]) => {
+    const display = document.getElementById('val-' + key);
+    if (display) display.textContent = val + unit;
+    const slider = document.querySelector(`input[oninput*="'${key}'"]`);
+    if (slider) slider.value = val;
+  });
+
+  setDensityMode(preset.densityMode);
+
+  // Pattern chips
+  document.querySelectorAll('#pattern-chips .chip').forEach(c => {
+    c.classList.toggle('active', c.getAttribute('onclick').includes(`'${preset.pattern}'`));
+  });
+  const patternNames = { stochastic:'Stochastic', diffusion:'Diffusion', line:'Line', dot:'Dot', crosshatch:'Cross Hatch' };
+  document.getElementById('sb-pattern').textContent = patternNames[preset.pattern] || preset.pattern;
+
+  // Paper chips — map legacy 'cream' to custom
+  const resolvedPaper = preset.paper === 'cream' ? 'custom' : preset.paper;
+  state.paper = resolvedPaper;
+  if (resolvedPaper === 'custom') {
+    const customColor = preset.paperColor || '#F2E8CF';
+    state.paperCustomColor = customColor;
+    PAPER_COLORS.custom = customColor;
+    document.getElementById('paper-color-preview').style.background = customColor;
+    document.getElementById('paper-hex-input').value = customColor.replace('#','').toUpperCase();
+    document.getElementById('paper-color-picker').value = customColor;
+  }
+  document.querySelectorAll('#paper-chips .chip').forEach(c => {
+    const onclick = c.getAttribute('onclick') || '';
+    c.classList.toggle('active',
+      resolvedPaper === 'custom'
+        ? c.id === 'chip-custom-paper'
+        : onclick.includes(`'${resolvedPaper}'`)
+    );
+  });
+  const paperNames = { white:'Uncoated White', custom:'Custom', kraft:'Kraft / Recycled', rough:'Rough Textured' };
+  document.getElementById('sb-paper').textContent = paperNames[resolvedPaper] || resolvedPaper;
+
+  // Misreg pad
+  const pad = document.getElementById('misreg-pad');
+  const padW = pad.offsetWidth || 72;
+  const padH = pad.offsetHeight || 72;
+  const dotX = (preset.misregX / 20 + 0.5) * padW;
+  const dotY = (preset.misregY / 20 + 0.5) * padH;
+  const dot = document.getElementById('misreg-dot');
+  dot.style.left = dotX + 'px';
+  dot.style.top = dotY + 'px';
+  document.getElementById('misreg-x-val').textContent = (preset.misregX >= 0 ? '+' : '') + preset.misregX + 'px';
+  document.getElementById('misreg-y-val').textContent = (preset.misregY >= 0 ? '+' : '') + preset.misregY + 'px';
+
+  buildColorChannels();
+
+  // Highlight active preset card
+  document.querySelectorAll('.preset-card').forEach((c, i) => {
+    const all = [...BUILTIN_PRESETS, ...userPresets];
+    c.classList.toggle('active', all[i]?.id === preset.id);
+  });
+
+  if (state.sourceImage) scheduleProcess();
+}
+
+function deleteUserPreset(id) {
+  userPresets = userPresets.filter(p => p.id !== id);
+  localStorage.setItem('riso_user_presets', JSON.stringify(userPresets));
+  buildPresetsGrid();
+}
+
+// ── SAVE PRESET MODAL ──────────────────────────────
+function openSavePresetModal() {
+  // Build color swatches preview
+  const sw = document.getElementById('sp-preview-swatches');
+  sw.innerHTML = state.colors.slice(0, state.colorCount)
+    .map(c => `<div class="sp-preview-swatch" style="background:${c}"></div>`).join('');
+  document.getElementById('sp-name-input').value = '';
+  document.getElementById('save-preset-modal').classList.add('open');
+  setTimeout(() => document.getElementById('sp-name-input').focus(), 100);
+}
+
+function closeSavePresetModal() {
+  document.getElementById('save-preset-modal').classList.remove('open');
+}
+
+function confirmSavePreset() {
+  const name = document.getElementById('sp-name-input').value.trim();
+  if (!name) { document.getElementById('sp-name-input').focus(); return; }
+
+  const patternNames = { stochastic:'Stochastic', diffusion:'Diffusion', line:'Line', dot:'Dot', crosshatch:'Cross Hatch' };
+  const paperNames = { white:'White', cream:'Cream', kraft:'Kraft', rough:'Rough' };
+
+  const preset = {
+    id: 'user_' + Date.now(),
+    name,
+    desc: `${patternNames[state.pattern]} · ${paperNames[state.paper]}`,
+    user: true,
+    colorCount: state.colorCount,
+    colors: [...state.colors],
+    opacities: [...state.opacities],
+    blendMode: state.blendMode,
+    opacity: state.opacity,
+    tint: state.tint,
+    densityMode: state.densityMode,
+    lpi: state.lpi,
+    dotsize: state.dotsize,
+    pattern: state.pattern,
+    halftoneAngle: state.halftoneAngle,
+    misregX: state.misregX,
+    misregY: state.misregY,
+    bleed: state.bleed,
+    overink: state.overink,
+    grain: state.grain,
+    scanner: state.scanner,
+    paper: state.paper,
+    paperAmount: state.paperAmount,
+  };
+
+  userPresets.push(preset);
+  localStorage.setItem('riso_user_presets', JSON.stringify(userPresets));
+  buildPresetsGrid();
+  closeSavePresetModal();
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+buildColorChannels();
+buildPresetsGrid();
+document.getElementById('sb-blend').textContent = 'Multiply';
+</script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halftone Kaleidoscope</title>
+    <style>
+        :root {
+            --bg-panel: #121212;
+            --bg-canvas: #000000;
+            --text-color: #ffffff;
+            --accent: #333333;
+            --accent-hover: #444444;
+            --border-color: #2a2a2a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        #control-panel {
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--bg-panel);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-canvas);
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: #aaaaaa;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #dddddd;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #888;
+        }
+
+        button, .btn-upload {
+            background-color: var(--accent);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: background 0.2s;
+            width: 100%;
+            display: inline-block;
+        }
+
+        button:hover, .btn-upload:hover {
+            background-color: var(--accent-hover);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="control-panel">
+        <div>
+            <h1>Halftone Kaleidoscope</h1>
+        </div>
+
+        <div class="section">
+            <label class="btn-upload">
+                Upload image
+                <input type="file" id="upload-input" accept="image/*">
+            </label>
+        </div>
+
+        <div class="section">
+            <h2>Phase 1</h2>
+            <div class="control-group">
+                <label>Halftone density</label>
+                <input type="range" id="density" min="1" max="150" value="60">
+            </div>
+            <div class="control-group">
+                <label>Halftone angle</label>
+                <input type="range" id="h-angle" min="0" max="360" value="15">
+            </div>
+            <div class="control-group">
+                <label>Amount of colours</label>
+                <input type="range" id="colors" min="2" max="32" value="16">
+            </div>
+            <div class="control-group">
+                <label>Halftone separation</label>
+                <input type="range" id="separation" min="0" max="100" value="100">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Phase 2</h2>
+            <div class="control-group">
+                <label>Number of reflections</label>
+                <input type="range" id="reflections" min="0" max="24" value="6">
+            </div>
+            <div class="control-group">
+                <label>Angle</label>
+                <input type="range" id="k-angle" min="0" max="360" value="0">
+            </div>
+            <div class="control-group">
+                <label>Deformation</label>
+                <input type="range" id="deformation" min="-1" max="1" step="0.05" value="0">
+            </div>
+        </div>
+
+        <div class="section">
+            <button id="export-btn">Export</button>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gl-canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gl-canvas');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+
+        const vsSource = `
+            attribute vec2 a_position;
+            varying vec2 v_uv;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+                v_uv = a_position * 0.5 + 0.5;
+                v_uv.y = 1.0 - v_uv.y;
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            varying vec2 v_uv;
+            uniform sampler2D u_image;
+            uniform vec2 u_resolution;
+            
+            uniform float u_density;
+            uniform float u_h_angle;
+            uniform float u_colors;
+            uniform float u_separation;
+            
+            uniform float u_reflections;
+            uniform float u_k_angle;
+            uniform float u_deformation;
+
+            float pattern(vec2 uv, float angle) {
+                float s = sin(angle), c = cos(angle);
+                vec2 rot_uv = mat2(c, -s, s, c) * uv;
+                vec2 p = rot_uv * u_density;
+                return (sin(p.x) * sin(p.y)) * 0.5 + 0.5;
+            }
+
+            void main() {
+                vec2 center = vec2(0.5);
+                vec2 p = v_uv - center;
+                
+                // Adjust for aspect ratio during rotation/kaleidoscope
+                float aspect = u_resolution.x / u_resolution.y;
+                p.x *= aspect;
+
+                float r = length(p);
+                float a = atan(p.y, p.x);
+
+                // Phase 2: Kaleidoscope
+                float tau = 6.28318530718;
+                float k_offset = radians(u_k_angle);
+                a -= k_offset;
+
+                if (u_reflections > 0.0) {
+                    float angle_step = tau / u_reflections;
+                    float local_a = mod(a, angle_step);
+                    
+                    // Deformation of the reflected module
+                    float deform_factor = sin((local_a / angle_step) * 3.14159265);
+                    r = r * (1.0 + deform_factor * u_deformation);
+                    
+                    a = abs(local_a - angle_step / 2.0);
+                }
+
+                a += k_offset;
+
+                vec2 k_uv = r * vec2(cos(a), sin(a));
+                k_uv.x /= aspect;
+                k_uv += center;
+
+                // Simulate MIRRORED_REPEAT in shader to support images of any size (NPOT fix)
+                k_uv = abs(mod(k_uv - 1.0, 2.0) - 1.0);
+
+                // Sample Image
+                vec4 texColor = texture2D(u_image, k_uv);
+
+                // Phase 1: Halftone & Colors
+                
+                // Posterize (Amount of colours)
+                float levels = max(2.0, u_colors);
+                vec3 rgb = floor(texColor.rgb * (levels - 1.0) + 0.5) / (levels - 1.0);
+
+                // RGB to CMYK conversion
+                float k = 1.0 - max(max(rgb.r, rgb.g), rgb.b);
+                float c = (1.0 - rgb.r - k) / (1.0 - k + 0.0001);
+                float m = (1.0 - rgb.g - k) / (1.0 - k + 0.0001);
+                float y = (1.0 - rgb.b - k) / (1.0 - k + 0.0001);
+
+                vec2 uv_screen = v_uv * u_resolution;
+
+                float sep = u_separation / 100.0;
+                float base_a = radians(u_h_angle);
+                float a_c = base_a + radians(15.0) * sep;
+                float a_m = base_a + radians(75.0) * sep;
+                float a_y = base_a + radians(0.0) * sep;
+                float a_k = base_a + radians(45.0) * sep;
+
+                float p_c = pattern(uv_screen, a_c);
+                float p_m = pattern(uv_screen, a_m);
+                float p_y = pattern(uv_screen, a_y);
+                float p_k = pattern(uv_screen, a_k);
+
+                float ink_c = step(p_c, c);
+                float ink_m = step(p_m, m);
+                float ink_y = step(p_y, y);
+                float ink_k = step(p_k, k);
+
+                // CMYK to RGB (Subtractive blending)
+                vec3 final_color = vec3(1.0);
+                final_color -= vec3(1.0, 0.0, 0.0) * ink_c;
+                final_color -= vec3(0.0, 1.0, 0.0) * ink_m;
+                final_color -= vec3(0.0, 0.0, 1.0) * ink_y;
+                final_color -= vec3(1.0, 1.0, 1.0) * ink_k;
+                final_color = clamp(final_color, 0.0, 1.0);
+
+                gl_FragColor = vec4(final_color, 1.0);
+            }
+        `;
+
+        function compileShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, compileShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, compileShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1.0, -1.0,  1.0, -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
+        ]), gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(program, "a_position");
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        const locations = {
+            image: gl.getUniformLocation(program, "u_image"),
+            resolution: gl.getUniformLocation(program, "u_resolution"),
+            density: gl.getUniformLocation(program, "u_density"),
+            h_angle: gl.getUniformLocation(program, "u_h_angle"),
+            colors: gl.getUniformLocation(program, "u_colors"),
+            separation: gl.getUniformLocation(program, "u_separation"),
+            reflections: gl.getUniformLocation(program, "u_reflections"),
+            k_angle: gl.getUniformLocation(program, "u_k_angle"),
+            deformation: gl.getUniformLocation(program, "u_deformation"),
+        };
+
+        let texture = gl.createTexture();
+        let imageLoaded = false;
+
+        const inputs = {
+            density: document.getElementById('density'),
+            h_angle: document.getElementById('h-angle'),
+            colors: document.getElementById('colors'),
+            separation: document.getElementById('separation'),
+            reflections: document.getElementById('reflections'),
+            k_angle: document.getElementById('k-angle'),
+            deformation: document.getElementById('deformation'),
+        };
+
+        function render() {
+            if (!imageLoaded) return;
+            
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.uniform2f(locations.resolution, canvas.width, canvas.height);
+            
+            // Map density slightly so slider feels intuitive
+            gl.uniform1f(locations.density, parseFloat(inputs.density.value) / 30.0);
+            gl.uniform1f(locations.h_angle, parseFloat(inputs.h_angle.value));
+            gl.uniform1f(locations.colors, parseFloat(inputs.colors.value));
+            gl.uniform1f(locations.separation, parseFloat(inputs.separation.value));
+            
+            gl.uniform1f(locations.reflections, parseFloat(inputs.reflections.value));
+            gl.uniform1f(locations.k_angle, parseFloat(inputs.k_angle.value));
+            gl.uniform1f(locations.deformation, parseFloat(inputs.deformation.value));
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', render);
+        });
+
+        document.getElementById('upload-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                    
+                    // Use CLAMP_TO_EDGE to allow arbitrary dimensions (NPOT)
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+                    imageLoaded = true;
+                    render();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('export-btn').addEventListener('click', () => {
+            if (!imageLoaded) return;
+            const link = document.createElement('a');
+            link.download = 'halftone-kaleidoscope.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typographic Shapes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,100..900&family=Inconsolata:wdth,wght@50..200,200..900&family=Roboto+Flex:wdth,wght@25..151,100..1000&family=Tourney:wdth,wght@75..125,100..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* The Canvas Text Container */
+        #text-canvas {
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            /* Removed overflow: hidden so extreme glyph expansions can safely breathe at the sub-pixel level */
+            /* Default base settings */
+            font-size: 24px;
+            letter-spacing: 0;
+        }
+
+        #text-canvas span {
+            display: inline-block;
+            position: relative; /* Allows z-index layering during explosions without layout thrashing */
+            font-variation-settings: "wght" var(--wght, 400), "wdth" var(--wdth, 100);
+            will-change: font-variation-settings, transform;
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #333;
+            border-radius: 2px;
+        }
+        
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        .shape-btn.active {
+            background-color: white;
+            color: black;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row font-sans">
+
+    <!-- Control Panel -->
+    <aside class="w-full md:w-80 bg-gray-900 border-r border-gray-800 p-6 flex flex-col h-auto md:h-screen overflow-y-auto z-10 shrink-0">
+        <h1 class="text-xl font-bold tracking-widest uppercase mb-6 border-b border-gray-800 pb-4">Type Settings</h1>
+        
+        <!-- Controls Grid -->
+        <div class="grid grid-cols-2 gap-6">
+
+            <!-- Font Selection -->
+            <div class="col-span-2 flex flex-col space-y-1">
+                <label for="font-family" class="text-xs text-gray-400 uppercase tracking-wider">Font Family</label>
+                <select id="font-family" class="bg-gray-800 text-white border border-gray-700 p-2 rounded text-sm w-full outline-none focus:border-white transition-colors">
+                    <option value="'Anybody', display">Anybody (High Contrast)</option>
+                    <option value="'Inconsolata', monospace">Inconsolata (Technical)</option>
+                    <option value="'Tourney', display">Tourney (Outlined/Sport)</option>
+                    <option value="'Roboto Flex', sans-serif">Roboto Flex (Clean)</option>
+                </select>
+            </div>
+
+            <!-- Pattern Principle -->
+            <div class="col-span-2 flex flex-col space-y-1">
+                <label for="distribution" class="text-xs text-gray-400 uppercase tracking-wider">Distribution</label>
+                <select id="distribution" class="bg-gray-800 text-white border border-gray-700 p-2 rounded text-sm w-full outline-none focus:border-white transition-colors">
+                    <option value="e2c">Edges to Center</option>
+                    <option value="c2e">Center to Edges</option>
+                    <option value="l2r">Left to Right</option>
+                    <option value="r2l">Right to Left</option>
+                    <option value="t2b">Top to Bottom</option>
+                    <option value="b2t">Bottom to Top</option>
+                </select>
+            </div>
+
+            <!-- Tumblers (Axes) -->
+            <div class="col-span-2 flex space-x-4">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-weight" checked class="form-checkbox h-4 w-4 text-white bg-gray-800 border-gray-700 rounded">
+                    <span class="text-sm text-gray-300">Weight</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-width" checked class="form-checkbox h-4 w-4 text-white bg-gray-800 border-gray-700 rounded">
+                    <span class="text-sm text-gray-300">Width</span>
+                </label>
+            </div>
+
+            <!-- Typographic Parameters -->
+            <div class="col-span-2 flex flex-col space-y-4 pt-4 border-t border-gray-800">
+                <div class="flex flex-col space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400 uppercase tracking-wider">
+                        <label>Size</label>
+                        <span id="val-size">24px</span>
+                    </div>
+                    <input type="range" id="size" min="12" max="72" value="24" step="1">
+                </div>
+
+                <div class="flex flex-col space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400 uppercase tracking-wider">
+                        <label>Leading</label>
+                        <span id="val-leading">0.8</span>
+                    </div>
+                    <input type="range" id="leading" min="0.5" max="1.5" value="0.8" step="0.05">
+                </div>
+
+                <div class="flex flex-col space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400 uppercase tracking-wider">
+                        <label>Tracking</label>
+                        <span id="val-tracking">0px</span>
+                    </div>
+                    <input type="range" id="tracking" min="-5" max="20" value="0" step="0.5">
+                </div>
+            </div>
+
+            <!-- Shapes -->
+            <div class="col-span-2 pt-4 border-t border-gray-800 flex flex-col space-y-2">
+                <span class="text-xs text-gray-400 uppercase tracking-wider">Shape</span>
+                <div class="flex flex-col space-y-2">
+                    <div class="flex space-x-2">
+                        <button class="shape-btn flex-1 py-1.5 border border-gray-700 rounded text-sm text-gray-400 hover:text-white transition-colors bg-white text-black font-medium" data-shape="square">Square</button>
+                        <button class="shape-btn flex-1 py-1.5 border border-gray-700 rounded text-sm text-gray-400 hover:text-white transition-colors" data-shape="circle">Circle</button>
+                        <button class="shape-btn flex-1 py-1.5 border border-gray-700 rounded text-sm text-gray-400 hover:text-white transition-colors" data-shape="diamond">Diamond</button>
+                        <button class="shape-btn flex-1 py-1.5 border border-gray-700 rounded text-sm text-gray-400 hover:text-white transition-colors" data-shape="image" id="btn-shape-image">Image</button>
+                    </div>
+                    <input type="file" id="image-upload" accept="image/*" class="hidden">
+                    <button id="btn-upload" class="w-full py-2 border border-gray-600 rounded text-sm text-gray-300 hover:bg-gray-800 transition-colors">
+                        Upload Image Map
+                    </button>
+                    <div id="contrast-wrapper" class="hidden flex-col space-y-2 pt-2 border-t border-gray-800">
+                        <div class="flex justify-between text-xs text-gray-400 uppercase tracking-wider">
+                            <label>Map Contrast</label>
+                            <span id="val-contrast">1.0x</span>
+                        </div>
+                        <input type="range" id="contrast" min="0" max="4" value="1" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Animation -->
+            <div class="col-span-2 flex flex-col space-y-4 pt-4 border-t border-gray-800">
+                <div class="flex flex-col space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400 uppercase tracking-wider">
+                        <label>Anim Length</label>
+                        <span id="val-length">4000ms</span>
+                    </div>
+                    <input type="range" id="length" min="1000" max="10000" value="4000" step="100">
+                </div>
+
+                <div class="flex flex-col space-y-1">
+                    <label for="easing" class="text-xs text-gray-400 uppercase tracking-wider">Easing</label>
+                    <select id="easing" class="bg-gray-800 text-white border border-gray-700 p-2 rounded text-sm w-full outline-none focus:border-white transition-colors">
+                        <option value="dramatic">Dramatic</option>
+                        <option value="cubic">Cubic</option>
+                        <option value="quad">Quadratic</option>
+                        <option value="sine">Sine</option>
+                        <option value="linear">Linear</option>
+                    </select>
+                </div>
+
+                <button id="btn-play" class="w-full py-3 mt-2 border border-white rounded font-bold uppercase tracking-widest text-sm hover:bg-gray-800 transition-colors">
+                    Play
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Canvas -->
+    <main class="flex-1 relative flex items-center justify-center p-4 md:p-12 overflow-hidden">
+        <!-- Wrapper enforces responsive dimension -->
+        <div id="canvas-wrapper" class="w-full max-w-[85vmin] max-h-[85vmin] relative flex items-center justify-center" style="aspect-ratio: 1 / 1;">
+            <!-- Text Canvas container where content & shapes are injected -->
+            <div id="text-canvas" class="w-full h-full absolute inset-0">
+                <!-- Text populated by JS -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. Content: Shakespeare's Sonnets ---
+        const sonnets = `FROM fairest creatures we desire increase,
+        That thereby beauty's rose might never die,
+        But as the riper should by time decease,
+        His tender heir might bear his memory:
+        But thou, contracted to thine own bright eyes,
+        Feed'st thy light's flame with self-substantial fuel,
+        Making a famine where abundance lies,
+        Thyself thy foe, to thy sweet self too cruel.
+        Thou that art now the world's fresh ornament
+        And only herald to the gaudy spring,
+        Within thine own bud buriest thy content
+        And, tender churl, mak'st waste in niggarding.
+        Pity the world, or else this glutton be,
+        To eat the world's due, by the grave and thee.
+
+        When forty winters shall besiege thy brow,
+        And dig deep trenches in thy beauty's field,
+        Thy youth's proud livery, so gazed on now,
+        Will be a tatter'd weed, of small worth held:
+        Then being ask'd where all thy beauty lies,
+        Where all the treasure of thy lusty days,
+        To say, within thine own deep-sunken eyes,
+        Were an all-eating shame and thriftless praise.
+        How much more praise deserved thy beauty's use,
+        If thou couldst answer 'This fair child of mine
+        Shall sum my count and make my old excuse,'
+        Proving his beauty by succession thine!
+        This were to be new made when thou art old,
+        And see thy blood warm when thou feel'st it cold.
+
+        Look in thy glass, and tell the face thou viewest
+        Now is the time that face should form another;
+        Whose fresh repair if now thou not renewest,
+        Thou dost beguile the world, unbless some mother.
+        For where is she so fair whose unear'd womb
+        Disdains the tillage of thy husbandry?
+        Or who is he so fond will be the tomb
+        Of his self-love, to stop posterity?
+        Thou art thy mother's glass, and she in thee
+        Calls back the lovely April of her prime:
+        So thou through windows of thine age shalt see
+        Despite of wrinkles this thy golden time.
+        But if thou live, remember'd not to be,
+        Die single, and thine image dies with thee.`;
+
+        // Clean text: Uppercase, keeping only letters to create a solid typographical texture
+        const cleanedText = sonnets.replace(/[^A-Za-z]/g, '').toUpperCase();
+        const canvas = document.getElementById('text-canvas');
+
+        // --- 2. State & DOM Elements ---
+        let charData = [];
+        let isPlaying = false;
+        let animationFrameId = null;
+        let needsStaticRender = true;
+        let currentShape = 'square';
+        
+        // Image Map State
+        let sourceImageData = null;
+        const hiddenCanvas = document.createElement('canvas');
+        const hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        // Explosion State
+        let explosion = { active: false, nx: 0, ny: 0, startTime: 0, duration: 1200 };
+
+        // UI Elements
+        const controls = {
+            shapeBtns: document.querySelectorAll('.shape-btn'),
+            fontFamily: document.getElementById('font-family'),
+            dist: document.getElementById('distribution'),
+            weight: document.getElementById('toggle-weight'),
+            width: document.getElementById('toggle-width'),
+            size: document.getElementById('size'),
+            leading: document.getElementById('leading'),
+            tracking: document.getElementById('tracking'),
+            length: document.getElementById('length'),
+            easing: document.getElementById('easing'),
+            play: document.getElementById('btn-play'),
+            uploadBtn: document.getElementById('btn-upload'),
+            imageUpload: document.getElementById('image-upload'),
+            shapeImageBtn: document.getElementById('btn-shape-image'),
+            contrast: document.getElementById('contrast'),
+            contrastWrapper: document.getElementById('contrast-wrapper')
+        };
+        
+        const labels = {
+            size: document.getElementById('val-size'),
+            leading: document.getElementById('val-leading'),
+            tracking: document.getElementById('val-tracking'),
+            length: document.getElementById('val-length'),
+            contrast: document.getElementById('val-contrast')
+        };
+
+        // --- 3. Easing Functions ---
+        // Maps a value t [0..1] to [0..1] with different acceleration curves
+        const easings = {
+            linear: t => t,
+            sine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+            quad: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+            cubic: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+            // Custom dramatic bouncing/elastic cubic mix
+            dramatic: t => t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
+            easeOutCubic: t => 1 - Math.pow(1 - t, 3)
+        };
+
+        // --- 4. Core Logic Functions ---
+
+        // Reads values from DOM
+        function getConfig() {
+            return {
+                fontFamily: controls.fontFamily.value,
+                distMode: controls.dist.value,
+                affectWeight: controls.weight.checked,
+                affectWidth: controls.width.checked,
+                animLength: parseInt(controls.length.value),
+                easing: controls.easing.value,
+                contrast: parseFloat(controls.contrast.value)
+            };
+        }
+
+        // Font specific configurations to map animations to their absolute maximum limits
+        const fontProfiles = {
+            "'Anybody', display": { minWght: 100, maxWght: 900, minWdth: 50, maxWdth: 150 },
+            "'Inconsolata', monospace": { minWght: 200, maxWght: 900, minWdth: 50, maxWdth: 200 },
+            "'Tourney', display": { minWght: 100, maxWght: 900, minWdth: 75, maxWdth: 125 },
+            "'Roboto Flex', sans-serif": { minWght: 100, maxWght: 1000, minWdth: 25, maxWdth: 151 }
+        };
+
+        // Dynamically builds the DOM layout line-by-line to physically form the shape
+        function buildLayout() {
+            const config = getConfig();
+            const fontSize = parseFloat(controls.size.value);
+            const leading = parseFloat(controls.leading.value);
+            const tracking = parseFloat(controls.tracking.value);
+            const lineHeight = fontSize * leading;
+
+            // Apply Image Aspect Ratio or Default Square
+            if (currentShape === 'image' && sourceImageData) {
+                wrapper.style.aspectRatio = `${sourceImageData.width} / ${sourceImageData.height}`;
+            } else {
+                wrapper.style.aspectRatio = '1 / 1';
+            }
+
+            // Measure container
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+
+            // Apply font to canvas
+            canvas.style.fontFamily = config.fontFamily;
+
+            // Calculate the absolute MAXIMUM character width for this specific font profile
+            // This guarantees letters will never overflow their geometric row bounds during animation
+            const testSpan = document.createElement('span');
+            testSpan.textContent = "W"; // Safest widest character
+            testSpan.style.fontFamily = config.fontFamily;
+            testSpan.style.fontSize = `${fontSize}px`;
+            testSpan.style.letterSpacing = `${tracking}px`;
+            testSpan.style.textTransform = 'uppercase';
+            testSpan.style.position = 'absolute';
+            testSpan.style.visibility = 'hidden';
+            testSpan.style.whiteSpace = 'nowrap';
+            
+            const profile = fontProfiles[config.fontFamily];
+            testSpan.style.fontVariationSettings = `"wght" ${profile.maxWght}, "wdth" ${profile.maxWdth}`;
+            
+            document.body.appendChild(testSpan);
+            // Add an extra 10% safety buffer to the width to swallow any bounding box quirks or tracking overflow
+            const maxCharW = testSpan.getBoundingClientRect().width * 1.1; 
+            document.body.removeChild(testSpan);
+
+            // Create a safe drawing zone (90% of actual container) so characters NEVER physically touch the screen edge
+            const W = rect.width * 0.90;
+            const H = rect.height * 0.90;
+
+            const numRows = Math.max(1, Math.floor(H / lineHeight));
+            const fragment = document.createDocumentFragment();
+            
+            charData = [];
+            let textIndex = 0;
+
+            for (let i = 0; i < numRows; i++) {
+                const y_center = i * lineHeight + (lineHeight / 2);
+                // Normalized Y axis: -1 (top) to 1 (bottom)
+                const ny = (y_center - H/2) / (H/2);
+                
+                let nx = 1; // square geometry
+                if (currentShape === 'circle') {
+                    nx = Math.sqrt(Math.max(0, 1 - ny*ny));
+                } else if (currentShape === 'diamond') {
+                    nx = Math.max(0, 1 - Math.abs(ny));
+                }
+                // 'image' just uses nx = 1 (full width of the bounds)
+
+                const rowW = nx * W;
+                
+                // If the shape is mathematically too narrow at this coordinate to hold even one max-width letter, disappear it.
+                if (rowW < maxCharW) continue; 
+
+                // Calculate chars safely based on the maximum possible width they could expand to
+                const charsInRow = Math.max(1, Math.floor(rowW / maxCharW));
+
+                const rowDiv = document.createElement('div');
+                // Flex justify-between perfectly pushes outer letters to the mathematical shape edge
+                rowDiv.className = charsInRow === 1 ? 'flex justify-center' : 'flex justify-between';
+                rowDiv.style.width = `${rowW}px`;
+                rowDiv.style.height = `${lineHeight}px`;
+                rowDiv.style.whiteSpace = 'nowrap';
+                rowDiv.style.fontSize = `${fontSize}px`;
+                rowDiv.style.letterSpacing = `${tracking}px`;
+
+                for (let j = 0; j < charsInRow; j++) {
+                    const span = document.createElement('span');
+                    span.textContent = cleanedText[textIndex % cleanedText.length];
+
+                    // Cache normalized coordinates [0..1] for the animation phase logic
+                    let char_nx = 0.5;
+                    if (charsInRow > 1) {
+                        const startX = (W - rowW) / 2;
+                        const charX = startX + j * (rowW / (charsInRow - 1));
+                        char_nx = charX / W;
+                    }
+                    const char_ny = y_center / H;
+                    
+                    // Sample pixel brightness from the uploaded image map
+                    let brightness = 1; 
+                    if (currentShape === 'image' && sourceImageData) {
+                        const pxX = Math.floor(char_nx * sourceImageData.width);
+                        const pxY = Math.floor(char_ny * sourceImageData.height);
+                        const safeX = Math.max(0, Math.min(pxX, sourceImageData.width - 1));
+                        const safeY = Math.max(0, Math.min(pxY, sourceImageData.height - 1));
+                        const idx = (safeY * sourceImageData.width + safeX) * 4;
+                        
+                        // Extract RGB to calculate luminance
+                        const r = sourceImageData.data[idx];
+                        const g = sourceImageData.data[idx + 1];
+                        const b = sourceImageData.data[idx + 2];
+                        brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    }
+
+                    charData.push({ el: span, x: char_nx, y: char_ny, brightness: brightness });
+                    rowDiv.appendChild(span);
+                    textIndex++;
+                }
+                fragment.appendChild(rowDiv);
+            }
+            
+            canvas.replaceChildren(fragment);
+            needsStaticRender = true;
+            if (!isPlaying) renderFrame();
+        }
+
+        // --- 5. Render Engine ---
+        function renderFrame() {
+            const config = getConfig();
+            const now = performance.now();
+            const profile = fontProfiles[config.fontFamily];
+
+            let isExploding = false;
+            let expProgress = 0;
+            if (explosion.active) {
+                expProgress = (now - explosion.startTime) / explosion.duration;
+                if (expProgress > 1) {
+                    explosion.active = false;
+                    // Reset transforms on end
+                    charData.forEach(c => {
+                        c.el.style.transform = '';
+                        c.el.style.zIndex = '';
+                    });
+                } else {
+                    isExploding = true;
+                }
+            }
+
+            charData.forEach(char => {
+                // 1. Calculate directional distance 'd' (0 = start of path, 1 = end of path)
+                let d = 0;
+                if (config.distMode === 'l2r') d = char.x;
+                else if (config.distMode === 'r2l') d = 1 - char.x;
+                else if (config.distMode === 't2b') d = char.y;
+                else if (config.distMode === 'b2t') d = 1 - char.y;
+                else if (config.distMode === 'e2c') {
+                    const dx = char.x - 0.5, dy = char.y - 0.5;
+                    d = 1 - (Math.sqrt(dx*dx + dy*dy) / 0.7071);
+                } else if (config.distMode === 'c2e') {
+                    const dx = char.x - 0.5, dy = char.y - 0.5;
+                    d = Math.sqrt(dx*dx + dy*dy) / 0.7071;
+                }
+
+                // Base static distribution weight
+                let baseDist = 1 - d;
+                if (currentShape === 'image') {
+                    // Bright pixels map to 1.0 (thick/wide), dark pixels map to 0.0 (thin/narrow)
+                    // Apply contrast adjustment centered around 0.5 (mid-gray)
+                    let adjustedBrightness = (char.brightness - 0.5) * config.contrast + 0.5;
+                    baseDist = Math.max(0, Math.min(1, adjustedBrightness));
+                }
+
+                // 2. Determine animation influence tracing the path of 'd'
+                let animPulse = 0;
+                if (isPlaying) {
+                    const rawProgress = (now % config.animLength) / config.animLength;
+                    
+                    // Wave peak follows the direction specified
+                    let localPhase = (rawProgress - d);
+                    localPhase = ((localPhase % 1.0) + 1.0) % 1.0; 
+
+                    let wave = localPhase < 0.5 ? localPhase * 2 : (1 - localPhase) * 2;
+                    animPulse = easings[config.easing](wave);
+                }
+
+                // 3. Determine Explosion Override
+                let expInfluence = 0;
+                let tx = 0, ty = 0, scale = 1;
+
+                if (isExploding) {
+                    const dx = char.x - explosion.nx;
+                    const dy = char.y - explosion.ny;
+                    // Aspect ratio correction for circular shockwave
+                    const rect = canvas.getBoundingClientRect();
+                    const aspect = rect.width / rect.height;
+                    const dist = Math.sqrt(dx*dx*aspect*aspect + dy*dy) + 0.001; 
+
+                    const blastPhase = easings.easeOutCubic(expProgress); 
+                    const currentRadius = blastPhase * 1.5; 
+                    
+                    const distToWave = Math.abs(dist - currentRadius);
+                    const waveThickness = 0.2 + expProgress * 0.2; // wave thickens/softens over time
+                    let waveIntensity = Math.max(0, 1 - distToWave / waveThickness);
+                    
+                    const decay = 1 - expProgress; // linear decay of intensity
+                    const intensity = waveIntensity * decay;
+                    
+                    expInfluence = intensity * 1.5; // High multiplier for extreme font weight/width push
+
+                    const pushForce = intensity * 150 * decay; // up to 150px physical displacement
+                    tx = (dx / dist) * pushForce;
+                    ty = (dy / dist) * pushForce;
+                    scale = 1 + intensity * 0.8;
+                }
+                
+                // Calculate combined influence factor from 0..1
+                let influence = 0;
+                if (currentShape === 'image') {
+                    // In Image mode, brightness is the primary structural map. Animation overlays as a subtle pulse.
+                    influence = Math.max(0, Math.min(1, baseDist + (isPlaying ? (animPulse * 0.4 - 0.2) : 0) + expInfluence));
+                } else {
+                    influence = Math.min(1, baseDist * 0.2 + animPulse * 0.9 + expInfluence);
+                }
+
+                let finalWght = 400; 
+                if (config.affectWeight) {
+                    finalWght = profile.minWght + (influence * (profile.maxWght - profile.minWght));
+                }
+
+                let finalWdth = 100; 
+                if (config.affectWidth) {
+                    finalWdth = profile.minWdth + (influence * (profile.maxWdth - profile.minWdth));
+                }
+
+                // Optimization: Update via CSS variables rather than triggering layout recalcs via style strings
+                char.el.style.setProperty('--wght', finalWght.toFixed(1));
+                char.el.style.setProperty('--wdth', finalWdth.toFixed(1));
+
+                if (isExploding) {
+                    char.el.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+                    char.el.style.zIndex = Math.round(expInfluence * 100); // Send expanding letters to front
+                }
+            });
+
+            if (isPlaying || isExploding) {
+                animationFrameId = requestAnimationFrame(renderFrame);
+            } else if (needsStaticRender) {
+                needsStaticRender = false;
+            }
+        }
+
+        // --- 6. Event Listeners ---
+        
+        // Shape Toggle
+        controls.shapeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Prevent switching to Image shape if no image is uploaded yet
+                if (e.target.dataset.shape === 'image' && !sourceImageData) {
+                    controls.imageUpload.click();
+                    return; 
+                }
+
+                controls.shapeBtns.forEach(b => {
+                    b.classList.remove('bg-white', 'text-black', 'font-medium');
+                    b.classList.add('text-gray-400');
+                });
+                e.target.classList.add('bg-white', 'text-black', 'font-medium');
+                e.target.classList.remove('text-gray-400', 'hover:text-white');
+
+                currentShape = e.target.dataset.shape;
+
+                // Show/hide contrast control only for Image shape
+                if (currentShape === 'image') {
+                    controls.contrastWrapper.classList.remove('hidden');
+                    controls.contrastWrapper.classList.add('flex');
+                } else {
+                    controls.contrastWrapper.classList.add('hidden');
+                    controls.contrastWrapper.classList.remove('flex');
+                }
+
+                buildLayout();
+            });
+        });
+
+        // Image Upload Handlers
+        controls.uploadBtn.addEventListener('click', () => {
+            controls.imageUpload.click();
+        });
+
+        controls.imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const img = new Image();
+            img.onload = () => {
+                // Calculate a safe size to draw to the hidden canvas (avoid memory spikes for massive files)
+                const maxDim = 800;
+                let scale = 1;
+                if (img.width > maxDim || img.height > maxDim) {
+                    scale = Math.min(maxDim / img.width, maxDim / img.height);
+                }
+                
+                hiddenCanvas.width = img.width * scale;
+                hiddenCanvas.height = img.height * scale;
+                hiddenCtx.drawImage(img, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                sourceImageData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                
+                // Automatically activate the Image shape button
+                controls.shapeImageBtn.click();
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        // Sliders & Dropdowns
+        const ranges = ['size', 'leading', 'tracking', 'length', 'contrast'];
+        ranges.forEach(id => {
+            controls[id].addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (id === 'length') labels[id].textContent = `${val}ms`;
+                else if (id === 'leading') labels[id].textContent = val;
+                else if (id === 'contrast') labels[id].textContent = `${parseFloat(val).toFixed(1)}x`;
+                else labels[id].textContent = `${val}px`;
+                
+                // If geometry changes, reconstruct the DOM rows entirely
+                if (['size', 'leading', 'tracking'].includes(id)) {
+                    buildLayout();
+                } else {
+                    if (!isPlaying) { needsStaticRender = true; renderFrame(); }
+                }
+            });
+        });
+
+        [controls.fontFamily, controls.dist, controls.weight, controls.width, controls.easing].forEach(el => {
+            el.addEventListener('change', () => {
+                // If font changes, rebuild layout entirely since character proportions alter dramatically
+                if (el.id === 'font-family') {
+                    buildLayout();
+                } else if (!isPlaying) { 
+                    needsStaticRender = true; 
+                    renderFrame(); 
+                }
+            });
+        });
+
+        // Play / Stop Animation Toggle
+        controls.play.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            controls.play.textContent = isPlaying ? 'Stop' : 'Play';
+            controls.play.classList.toggle('bg-white', !isPlaying);
+            controls.play.classList.toggle('text-black', !isPlaying);
+            controls.play.classList.toggle('bg-red-600', isPlaying);
+            controls.play.classList.toggle('text-white', isPlaying);
+            
+            if (isPlaying) {
+                renderFrame();
+            } else if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                needsStaticRender = true;
+                renderFrame();
+            }
+        });
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                buildLayout();
+            }, 250);
+        });
+
+        // Explosion Event
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            explosion.nx = (e.clientX - rect.left) / rect.width;
+            explosion.ny = (e.clientY - rect.top) / rect.height;
+            explosion.startTime = performance.now();
+            explosion.active = true;
+            
+            if (!isPlaying) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                renderFrame();
+            }
+        });
+
+        // --- 7. Initialization ---
+        document.fonts.ready.then(() => {
+            buildLayout();
+            controls.play.click(); 
+        });
+
+    </script>
+</body>
+</html>
