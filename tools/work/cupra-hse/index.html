@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modular Grid Generator</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel via CDN to compile JSX -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <style>
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    
+    /* Custom Slider */
+    .custom-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 3px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      outline: none;
+    }
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3D2426;
+      cursor: pointer;
+      border: none;
+    }
+    .custom-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #3D2426;
+      cursor: pointer;
+      border: none;
+    }
+  </style>
+</head>
+<body class="overflow-hidden bg-[#f4f4f4] font-sans text-sm">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ----- INLINE ICONS (Replacing lucide-react dependency) -----
+    const IconWrapper = ({ size = 24, className = "", children, ...props }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+        {children}
+      </svg>
+    );
+
+    const RefreshCw = (p) => <IconWrapper {...p}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></IconWrapper>;
+    const Settings = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></IconWrapper>;
+    const Save = (p) => <IconWrapper {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconWrapper>;
+    const Upload = (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></IconWrapper>;
+    const Copy = (p) => <IconWrapper {...p}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconWrapper>;
+    const Download = (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconWrapper>;
+    const Eye = (p) => <IconWrapper {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconWrapper>;
+    const EyeOff = (p) => <IconWrapper {...p}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></IconWrapper>;
+    const Trash2 = (p) => <IconWrapper {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconWrapper>;
+    const Plus = (p) => <IconWrapper {...p}><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></IconWrapper>;
+
+    // ----- DEFAULT MODULES -----
+    const DEFAULT_MODULES = [
+      {
+        id: 'm1',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#7DF0E5"/><rect x="15" y="15" width="30" height="30" fill="#D2FDFB"/><rect x="55" y="15" width="30" height="30" fill="#D2FDFB"/><rect x="15" y="55" width="30" height="30" fill="#D2FDFB"/><rect x="55" y="55" width="30" height="30" fill="#D2FDFB"/>`,
+        hidden: false
+      },
+      {
+        id: 'm2',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#FFFFFF"/><circle cx="30" cy="30" r="16" fill="none" stroke="#C35C3E" stroke-width="12"/><circle cx="70" cy="30" r="16" fill="none" stroke="#C35C3E" stroke-width="12"/><circle cx="30" cy="70" r="16" fill="none" stroke="#C35C3E" stroke-width="12"/><circle cx="70" cy="70" r="16" fill="none" stroke="#C35C3E" stroke-width="12"/>`,
+        hidden: false
+      },
+      {
+        id: 'm3',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#3B2A28"/><rect x="42" width="16" height="100" fill="#D2FDFB"/><rect y="42" width="100" height="16" fill="#D2FDFB"/>`,
+        hidden: false
+      },
+      {
+        id: 'm4',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#7DF0E5"/><rect x="42" width="16" height="100" fill="#D2FDFB"/><rect y="42" width="100" height="16" fill="#D2FDFB"/>`,
+        hidden: false
+      },
+      {
+        id: 'm5',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#D2FDFB"/><circle cx="30" cy="30" r="16" fill="none" stroke="#7DF0E5" stroke-width="12"/><circle cx="70" cy="30" r="16" fill="none" stroke="#7DF0E5" stroke-width="12"/><circle cx="30" cy="70" r="16" fill="none" stroke="#7DF0E5" stroke-width="12"/><circle cx="70" cy="70" r="16" fill="none" stroke="#7DF0E5" stroke-width="12"/>`,
+        hidden: false
+      },
+      {
+        id: 'm6',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#3B2A28"/><circle cx="30" cy="30" r="16" fill="none" stroke="#D2FDFB" stroke-width="12"/><circle cx="70" cy="30" r="16" fill="none" stroke="#D2FDFB" stroke-width="12"/><circle cx="30" cy="70" r="16" fill="none" stroke="#D2FDFB" stroke-width="12"/><circle cx="70" cy="70" r="16" fill="none" stroke="#D2FDFB" stroke-width="12"/>`,
+        hidden: false
+      },
+      {
+        id: 'm7',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#C35C3E"/>`,
+        hidden: false
+      },
+      {
+        id: 'm8',
+        viewBox: '0 0 100 100',
+        inner: `<rect width="100" height="100" fill="#7DF0E5"/>`,
+        hidden: false
+      }
+    ];
+
+    // ----- MAIN APP COMPONENT -----
+    function App() {
+      // Controls state
+      const [radius, setRadius] = useState(150);
+      const [thickness, setThickness] = useState(25);
+      const [roughness, setRoughness] = useState(40); 
+      const [blur, setBlur] = useState(10);
+      const [spread, setSpread] = useState(60); 
+      const [connectionDensity, setConnectionDensity] = useState(85); 
+      const [numSizes, setNumSizes] = useState(4); 
+      const [coverageRequired, setCoverageRequired] = useState(0.5); 
+      const [assignmentMode, setAssignmentMode] = useState('random'); 
+      const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000000));
+      
+      // Data state
+      const [modules, setModules] = useState(DEFAULT_MODULES);
+      const [elements, setElements] = useState([]);
+      const [customSvgInput, setCustomSvgInput] = useState('');
+      
+      // UI state
+      const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, text: '' });
+      
+      const svgRef = useRef(null);
+      const skipGenerate = useRef(false);
+      const fileInputRef = useRef(null);
+
+      // Core Generation Algorithm
+      const generateVisual = useCallback(() => {
+        const visibleModules = modules.filter(m => !m.hidden);
+        if (visibleModules.length === 0) {
+          setElements([]);
+          return; 
+        }
+
+        const canvasSize = 500;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // 1. Draw the "Source Visual"
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+        ctx.filter = `blur(${blur}px)`;
+        ctx.beginPath();
+        
+        const numPoints = 180;
+        for (let i = 0; i <= numPoints; i++) {
+          const angle = (i / numPoints) * Math.PI * 2;
+          const rOffset = Math.sin(angle * 4 + seed * 0.1) * roughness + Math.sin(angle * 7 - seed * 0.05) * (roughness * 0.5);
+          const r = Math.max(10, radius + rOffset);
+          const px = canvasSize / 2 + Math.cos(angle) * r;
+          const py = canvasSize / 2 + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        
+        ctx.lineWidth = thickness;
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+
+        const imgData = ctx.getImageData(0, 0, canvasSize, canvasSize).data;
+        
+        // 2. Build 2D Summed Area Table based on true Alpha gradient
+        const sat = new Int32Array((canvasSize + 1) * (canvasSize + 1));
+        for (let y = 1; y <= canvasSize; y++) {
+          for (let x = 1; x <= canvasSize; x++) {
+            const alpha = imgData[((y - 1) * canvasSize + (x - 1)) * 4 + 3];
+            sat[y * (canvasSize + 1) + x] = alpha 
+                                          + sat[(y - 1) * (canvasSize + 1) + x] 
+                                          + sat[y * (canvasSize + 1) + (x - 1)] 
+                                          - sat[(y - 1) * (canvasSize + 1) + (x - 1)];
+          }
+        }
+
+        const getSatSum = (x, y, w, h) => {
+          return sat[(y + h) * (canvasSize + 1) + (x + w)] - sat[y * (canvasSize + 1) + (x + w)] - sat[(y + h) * (canvasSize + 1) + x] + sat[y * (canvasSize + 1) + x];
+        };
+
+        // 3. Grid & Placement Setup
+        const grid = new Uint8Array(canvasSize * canvasSize);
+        const checkOccupied = (x, y, size) => {
+          for (let by = y; by < y + size; by++) {
+            let offset = by * canvasSize + x;
+            for (let bx = x; bx < x + size; bx++) {
+              if (grid[offset++]) return true;
+            }
+          }
+          return false;
+        };
+
+        const markOccupied = (x, y, size) => {
+          for (let by = y; by < y + size; by++) {
+            let offset = by * canvasSize + x;
+            for (let bx = x; bx < x + size; bx++) {
+              grid[offset++] = 1;
+            }
+          }
+        };
+
+        const getRng = (seedVal) => {
+          return function() {
+            let t = seedVal += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+          }
+        };
+
+        const rng = getRng(seed);
+        const newElements = [];
+        const BASE_UNIT = 4;
+        const sizesArr = [4, 8, 16, 32, 64].slice(0, numSizes);
+        const coreAlphaReq = coverageRequired * 255;
+
+        // Checks adjacency strictly (Edge vs Corner)
+        const checkConnections = (x, y, size) => {
+          let edgeCount = 0;
+          let cornerCount = 0;
+          for (let i = 0; i < newElements.length; i++) {
+            const el = newElements[i];
+            if (!(x >= el.x + el.size || el.x >= x + size || y >= el.y + el.size || el.y >= y + size)) return { overlap: true };
+
+            const xOverlap = !(x >= el.x + el.size || el.x >= x + size);
+            const yOverlap = !(y >= el.y + el.size || el.y >= y + size);
+            const xTouch = (x === el.x + el.size) || (el.x === x + size);
+            const yTouch = (y === el.y + el.size) || (el.y === y + size);
+
+            if (xTouch && yOverlap) edgeCount++;
+            else if (yTouch && xOverlap) edgeCount++;
+            else if (xTouch && yTouch) cornerCount++;
+          }
+          return { overlap: false, edgeCount, cornerCount };
+        };
+
+        // Generates a valid candidate coordinate growing off a specific existing element
+        const getCandidate = (baseEl, size, isCornerTarget) => {
+          const candidates = [];
+          if (!isCornerTarget) {
+            const step = BASE_UNIT;
+            for (let ox = baseEl.x - size + step; ox <= baseEl.x + baseEl.size - step; ox += step) {
+              candidates.push({ x: ox, y: baseEl.y - size });
+              candidates.push({ x: ox, y: baseEl.y + baseEl.size });
+            }
+            for (let oy = baseEl.y - size + step; oy <= baseEl.y + baseEl.size - step; oy += step) {
+              candidates.push({ x: baseEl.x - size, y: oy });
+              candidates.push({ x: baseEl.x + baseEl.size, y: oy });
+            }
+          } else {
+            candidates.push({ x: baseEl.x - size, y: baseEl.y - size });
+            candidates.push({ x: baseEl.x + baseEl.size, y: baseEl.y - size });
+            candidates.push({ x: baseEl.x - size, y: baseEl.y + baseEl.size });
+            candidates.push({ x: baseEl.x + baseEl.size, y: baseEl.y + baseEl.size });
+          }
+          if (candidates.length === 0) return null;
+          return candidates[Math.floor(rng() * candidates.length)];
+        };
+
+        // 4. Place First Seed Element
+        let maxAlpha = -1;
+        let startX = -1, startY = -1;
+        const startSize = sizesArr[sizesArr.length > 1 ? 1 : 0]; // Start with moderately large block
+        for (let y = 0; y <= canvasSize - startSize; y += BASE_UNIT * 2) {
+          for (let x = 0; x <= canvasSize - startSize; x += BASE_UNIT * 2) {
+            const sum = getSatSum(x, y, startSize, startSize);
+            if (sum > maxAlpha) { maxAlpha = sum; startX = x; startY = y; }
+          }
+        }
+        
+        if (startX !== -1) {
+          markOccupied(startX, startY, startSize);
+          const chosenMod = assignmentMode === 'size' ? visibleModules[1 % visibleModules.length] : visibleModules[Math.floor(rng() * visibleModules.length)];
+          newElements.push({
+            id: rng().toString(36).substr(2, 9),
+            x: startX, y: startY, size: startSize, sizeIdx: 1,
+            modId: chosenMod.id,
+            modIdx: modules.findIndex(m => m.id === chosenMod.id)
+          });
+        }
+
+        // 5. Growth Packing Algorithm
+        const maxAttempts = 150000; 
+        let consecutiveFails = 0;
+
+        for (let i = 0; i < maxAttempts; i++) {
+          if (newElements.length === 0) break;
+          if (consecutiveFails > 8000) break; // Saturated
+
+          const sizeIdx = Math.floor(rng() * sizesArr.length);
+          const size = sizesArr[sizeIdx];
+          
+          let baseElIdx;
+          if (rng() > 0.3 && newElements.length > 15) {
+            baseElIdx = newElements.length - 1 - Math.floor(rng() * 15);
+          } else {
+            baseElIdx = Math.floor(rng() * newElements.length);
+          }
+          const baseEl = newElements[baseElIdx];
+          
+          const isCornerTarget = (rng() * 100) > connectionDensity;
+          const cand = getCandidate(baseEl, size, isCornerTarget);
+          if (!cand) { consecutiveFails++; continue; }
+          
+          const { x, y } = cand;
+          if (x < 0 || y < 0 || x + size > canvasSize || y + size > canvasSize) { consecutiveFails++; continue; }
+          if (checkOccupied(x, y, size)) { consecutiveFails++; continue; }
+
+          const sizeRatio = numSizes > 1 ? sizeIdx / (numSizes - 1) : 1; 
+          const spreadEffect = spread / 100;
+          const reduction = spreadEffect * (1.0 - sizeRatio * 0.5); 
+          const reqAlpha = Math.max(1, coreAlphaReq * (1 - reduction));
+          const avgAlpha = getSatSum(x, y, size, size) / (size * size);
+
+          if (avgAlpha >= reqAlpha) {
+            const { overlap, edgeCount } = checkConnections(x, y, size);
+            if (overlap) { consecutiveFails++; continue; }
+            
+            if (isCornerTarget && edgeCount > 0 && (rng() * 100) > connectionDensity) {
+              consecutiveFails++; continue;
+            }
+
+            markOccupied(x, y, size);
+            const chosenMod = assignmentMode === 'size' ? visibleModules[sizeIdx % visibleModules.length] : visibleModules[Math.floor(rng() * visibleModules.length)];
+            
+            newElements.push({
+              id: rng().toString(36).substr(2, 9),
+              x, y, size, sizeIdx,
+              modId: chosenMod.id,
+              modIdx: modules.findIndex(m => m.id === chosenMod.id)
+            });
+            consecutiveFails = 0;
+          } else {
+            consecutiveFails++;
+          }
+        }
+
+        setElements(newElements);
+      }, [radius, thickness, roughness, blur, spread, connectionDensity, numSizes, coverageRequired, assignmentMode, modules, seed]);
+
+      useEffect(() => {
+        if (skipGenerate.current) {
+          skipGenerate.current = false;
+          return;
+        }
+        generateVisual();
+      }, [generateVisual]);
+
+      // Parameters Randomizer
+      const randomiseParameters = () => {
+        setRadius(Math.floor(Math.random() * 180) + 50); 
+        setThickness(Math.floor(Math.random() * 149) + 1); 
+        setRoughness(Math.floor(Math.random() * 26)); 
+        setBlur(Math.floor(Math.random() * 80)); 
+        setSpread(Math.floor(Math.random() * 100)); 
+        setConnectionDensity(Math.floor(Math.random() * 100)); 
+        setNumSizes(Math.floor(Math.random() * 5) + 1); 
+        setCoverageRequired(parseFloat((Math.random() * 0.9 + 0.1).toFixed(2))); 
+      };
+
+      // JSON Export/Import
+      const handleSaveJSON = () => {
+        const data = {
+          controls: { radius, thickness, roughness, blur, spread, connectionDensity, numSizes, coverageRequired, assignmentMode, seed },
+          modules,
+          elements
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'modular-visual.json';
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const handleLoadJSON = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.controls) {
+              skipGenerate.current = true;
+              setRadius(data.controls.radius);
+              setThickness(data.controls.thickness);
+              setRoughness(data.controls.roughness);
+              setBlur(data.controls.blur);
+              setSpread(data.controls.spread);
+              setConnectionDensity(data.controls.connectionDensity);
+              setNumSizes(data.controls.numSizes);
+              setCoverageRequired(data.controls.coverageRequired);
+              setAssignmentMode(data.controls.assignmentMode);
+              setSeed(data.controls.seed);
+            }
+            if (data.modules) setModules(data.modules);
+            if (data.elements) setElements(data.elements);
+          } catch (err) {
+            alert("Failed to parse JSON file.");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      // Handlers
+      const handleElementClick = (clickedId) => {
+        setElements(prev => {
+          const clickedEl = prev.find(e => e.id === clickedId);
+          if (!clickedEl) return prev;
+
+          const visibleModules = modules.filter(m => !m.hidden);
+          if (visibleModules.length === 0) return prev;
+
+          const sizesArr = [4, 8, 16, 32, 64].slice(0, numSizes);
+          let newSizeIdx = Math.floor(Math.random() * numSizes);
+          if (numSizes > 1 && sizesArr[newSizeIdx] === clickedEl.size) {
+            newSizeIdx = (newSizeIdx + 1) % numSizes;
+          }
+          const newSize = sizesArr[newSizeIdx];
+          
+          const newChosenMod = assignmentMode === 'size'
+            ? visibleModules[newSizeIdx % visibleModules.length]
+            : visibleModules[Math.floor(Math.random() * visibleModules.length)];
+
+          const newEl = { 
+            id: Math.random().toString(36).substr(2, 9),
+            x: clickedEl.x, y: clickedEl.y, 
+            size: newSize, sizeIdx: newSizeIdx, 
+            modId: newChosenMod.id,
+            modIdx: modules.findIndex(m => m.id === newChosenMod.id)
+          };
+
+          const isCollision = (el1, el2) => {
+            return !(el1.x + el1.size <= el2.x || el1.x >= el2.x + el2.size ||
+                    el1.y + el1.size <= el2.y || el1.y >= el2.y + el2.size);
+          };
+
+          const intersectingIds = new Set();
+          prev.forEach(el => {
+            if (isCollision(newEl, el)) intersectingIds.add(el.id);
+          });
+          intersectingIds.add(clickedEl.id);
+
+          const survivingElements = prev.filter(el => !intersectingIds.has(el.id));
+          const removedElements = prev.filter(el => intersectingIds.has(el.id));
+
+          const BASE_UNIT = 4;
+          const cols = 500 / BASE_UNIT;
+          const freedGrid = new Uint8Array(cols * cols);
+
+          const markFreed = (el, val) => {
+            const startX = el.x / BASE_UNIT;
+            const startY = el.y / BASE_UNIT;
+            const s = el.size / BASE_UNIT;
+            for(let y = startY; y < startY + s; y++) {
+              if(y >= cols || y < 0) continue;
+              for(let x = startX; x < startX + s; x++) {
+                if(x >= cols || x < 0) continue;
+                freedGrid[y * cols + x] = val;
+              }
+            }
+          };
+
+          removedElements.forEach(el => markFreed(el, 1));
+          markFreed(newEl, 0);
+
+          const newFillElements = [];
+          const checkFreedFit = (startX, startY, s) => {
+            if (startX + s > cols || startY + s > cols) return false;
+            for(let y = startY; y < startY + s; y++) {
+              for(let x = startX; x < startX + s; x++) {
+                if (freedGrid[y * cols + x] === 0) return false;
+              }
+            }
+            return true;
+          };
+
+          const markFreedFilled = (startX, startY, s) => {
+            for(let y = startY; y < startY + s; y++) {
+              for(let x = startX; x < startX + s; x++) {
+                freedGrid[y * cols + x] = 0;
+              }
+            }
+          };
+
+          for (let y = 0; y < cols; y++) {
+            for (let x = 0; x < cols; x++) {
+              if (freedGrid[y * cols + x] === 1) {
+                let placed = false;
+                for (let sIdx = numSizes - 1; sIdx >= 0; sIdx--) {
+                  const sSize = sizesArr[sIdx];
+                  const sBlocks = sSize / BASE_UNIT;
+                  if (checkFreedFit(x, y, sBlocks)) {
+                    markFreedFilled(x, y, sBlocks);
+                    const mChosen = assignmentMode === 'size' 
+                      ? visibleModules[sIdx % visibleModules.length] 
+                      : visibleModules[Math.floor(Math.random() * visibleModules.length)];
+                    
+                    newFillElements.push({
+                      id: Math.random().toString(36).substr(2, 9),
+                      x: x * BASE_UNIT, y: y * BASE_UNIT,
+                      size: sSize, sizeIdx: sIdx, 
+                      modId: mChosen.id,
+                      modIdx: modules.findIndex(m => m.id === mChosen.id)
+                    });
+                    placed = true;
+                    break;
+                  }
+                }
+                if (!placed) freedGrid[y * cols + x] = 0;
+              }
+            }
+          }
+
+          return [...survivingElements, newEl, ...newFillElements];
+        });
+        setTooltip(prev => ({ ...prev, show: false })); 
+      };
+
+      const handleMouseMove = (e) => {
+        const target = e.target.closest('[data-el-id]');
+        if (target) {
+          const id = target.getAttribute('data-el-id');
+          const el = elements.find(e => e.id === id);
+          if (el) {
+            const logicalSize = el.size / 4; 
+            const mIndex = modules.findIndex(m => m.id === (el.modId || modules[el.modIdx]?.id)) + 1;
+            setTooltip({
+              show: true,
+              x: e.clientX + 15,
+              y: e.clientY + 15,
+              text: `Module: ${mIndex} | Grid Size: ${logicalSize}x${logicalSize}\nClick to mutate & refit`
+            });
+            return;
+          }
+        }
+        setTooltip({ show: false, x: 0, y: 0, text: '' });
+      };
+
+      const toggleModuleVisibility = (idToToggle) => {
+        setModules(modules.map(m => m.id === idToToggle ? { ...m, hidden: !m.hidden } : m));
+      };
+
+      const handleAddModule = () => {
+        if (!customSvgInput.trim()) return;
+        const match = customSvgInput.match(/viewBox="([^"]+)"/i);
+        const viewBox = match ? match[1] : "0 0 100 100";
+        let inner = customSvgInput;
+        const innerMatch = customSvgInput.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+        if (innerMatch) inner = innerMatch[1];
+        
+        setModules([...modules, { id: Math.random().toString(36), viewBox, inner, hidden: false }]);
+        setCustomSvgInput("");
+      };
+
+      const removeModule = (idToRemove) => {
+        if (modules.length <= 1) return alert("Must have at least one module.");
+        setModules(modules.filter(m => m.id !== idToRemove));
+      };
+
+      const getSvgString = () => {
+        if (!svgRef.current) return '';
+        const clone = svgRef.current.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.style.backgroundColor = 'transparent'; 
+        return new XMLSerializer().serializeToString(clone);
+      };
+
+      const exportSVG = () => {
+        const blob = new Blob([getSvgString()], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'modular-visual.svg';
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const exportPNG = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        canvas.width = 2000;
+        canvas.height = 2000;
+
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = 'modular-visual.png';
+          link.click();
+        };
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(getSvgString())));
+      };
+
+      return (
+        <div className="flex h-screen bg-[#f4f4f4] font-sans text-sm overflow-hidden">
+          
+          {/* LEFT SIDEBAR - LIGHT INTERFACE */}
+          <div className="w-80 bg-white border-r border-gray-200 text-gray-800 p-5 overflow-y-auto shadow-sm z-10 flex flex-col gap-6 custom-scrollbar shrink-0">
+            
+            {/* SVG Logo Title */}
+            <div className="mb-2">
+              <svg height="40" viewBox="0 0 358 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clipPath="url(#clip0_821_88219)">
+                <path d="M104.634 59.4144C103.774 58.5543 102.872 57.7507 101.931 57C102.872 56.2502 103.774 55.4457 104.634 54.5856C107.569 51.6513 109.874 48.2322 111.485 44.4239C113.154 40.4774 114 36.2891 114 31.9756C114 27.6621 113.154 23.4738 111.485 19.5274C109.874 15.719 107.569 12.3 104.634 9.36561C101.7 6.43127 98.281 4.12624 94.4726 2.51541C90.5262 0.846195 86.3379 0 82.0244 0C77.7109 0 73.5226 0.846195 69.5761 2.51541C65.7678 4.12624 62.3487 6.43127 59.4144 9.36561C58.5543 10.2257 57.7507 11.1284 57 12.0692C56.2502 11.1284 55.4457 10.2257 54.5856 9.36561C51.6513 6.43127 48.2322 4.12624 44.4239 2.51541C40.4774 0.846195 36.2891 0 31.9756 0C27.6621 0 23.4738 0.846195 19.5274 2.51541C15.719 4.12624 12.3 6.43127 9.36561 9.36561C6.43127 12.3 4.12624 15.719 2.51541 19.5274C0.846195 23.4738 0 27.6621 0 31.9756C0 36.2891 0.846195 40.4774 2.51541 44.4239C4.12624 48.2322 6.43127 51.6513 9.36561 54.5856C10.2257 55.4457 11.1284 56.2493 12.0692 57C11.1284 57.7498 10.2257 58.5543 9.36561 59.4144C6.43127 62.3487 4.12624 65.7678 2.51541 69.5761C0.846195 73.5226 0 77.7109 0 82.0244C0 86.3379 0.846195 90.5262 2.51541 94.4726C4.12624 98.281 6.43127 101.7 9.36561 104.634C12.3 107.569 15.719 109.874 19.5274 111.485C23.4738 113.154 27.6621 114 31.9756 114C36.2891 114 40.4774 113.154 44.4239 111.485C48.2322 109.874 51.6513 107.569 54.5856 104.634C55.4457 103.774 56.2493 102.872 57 101.931C57.7498 102.872 58.5543 103.774 59.4144 104.634C62.3487 107.569 65.7678 109.874 69.5761 111.485C73.5226 113.154 77.7109 114 82.0244 114C86.3379 114 90.5262 113.154 94.4726 111.485C98.281 109.874 101.7 107.569 104.634 104.634C107.569 101.7 109.874 98.281 111.485 94.4726C113.154 90.5262 114 86.3379 114 82.0244C114 77.7109 113.154 73.5226 111.485 69.5761C109.874 65.7678 107.569 62.3487 104.634 59.4144ZM82.0244 100.098C72.0591 100.098 63.9512 91.9897 63.9512 82.0244H50.0488C50.0488 91.9897 41.9409 100.098 31.9756 100.098C22.0103 100.098 13.9024 91.9897 13.9024 82.0244C13.9024 72.0591 22.0103 63.9512 31.9756 63.9512V50.0488C22.0103 50.0488 13.9024 41.9409 13.9024 31.9756C13.9024 22.0103 22.0103 13.9024 31.9756 13.9024C41.9409 13.9024 50.0488 22.0103 50.0488 31.9756H63.9512C63.9512 22.0103 72.0591 13.9024 82.0244 13.9024C91.9897 13.9024 100.098 22.0103 100.098 31.9756C100.098 41.9409 91.9897 50.0488 82.0244 50.0488V63.9512C91.9897 63.9512 100.098 72.0591 100.098 82.0244C100.098 91.9897 91.9897 100.098 82.0244 100.098Z" fill="#3D2426"/>
+                <path d="M63.9512 36.9805H50.0488V50.0488H36.9805V63.9512H50.0488V77.0195H63.9512V63.9512H77.0195V50.0488H63.9512V36.9805Z" fill="#3D2426"/>
+                </g>
+                <path d="M215.797 15.8788L215.888 97.3035C215.888 99.0922 214.436 100.544 212.648 100.544H198.675C196.886 100.544 195.435 99.0922 195.435 97.3035V63.4867H166.777V97.3035C166.777 99.0922 165.325 100.544 163.536 100.544H149.369C147.581 100.544 146.129 99.0922 146.129 97.3035V15.8788C146.129 14.0901 147.581 12.6384 149.369 12.6384H163.446C165.234 12.6384 166.686 14.0901 166.686 15.8788V46.7015H195.344V15.8788C195.344 14.0901 196.796 12.6384 198.584 12.6384H212.57C214.359 12.6384 215.81 14.0901 215.81 15.8788H215.797Z" fill="#3D2426"/>
+                <path d="M227.023 85.6397L234.864 77.9794C236.109 76.761 238.105 76.7351 239.362 77.9535C244.067 82.5678 250.976 86.0675 259.453 86.0675C267.463 86.0675 274.021 82.9826 274.021 76.2296C274.021 70.0599 268.811 68.0249 262.926 66.1973L252.985 63.2032C240.244 59.2499 225.869 53.4561 225.869 36.4764C225.869 19.4968 240.438 11.0977 259.44 11.0977C275.499 11.0977 285.155 16.9563 290.262 21.3892C291.623 22.5687 291.74 24.6425 290.534 25.9776L283.328 34.0267C282.122 35.3747 280.062 35.4784 278.739 34.26C274.216 30.1123 268.202 26.7293 260.114 26.7293C252.026 26.7293 247.178 29.8142 247.178 35.2192C247.178 41.4926 254.799 43.9034 259.142 45.1607L269.174 48.2456C279.206 51.3304 295.317 56.4502 295.317 74.7779C295.317 92.0557 280.839 102.088 260.295 102.088C246.66 102.088 234.916 97.6551 227.023 90.28C225.688 89.0357 225.714 86.91 227.023 85.6268V85.6397Z" fill="#3D2426"/>
+                <path d="M357.733 86.8953V97.3035C357.733 99.0922 356.281 100.544 354.493 100.544H307.416C305.627 100.544 304.176 99.0922 304.176 97.3035V15.8788C304.176 14.0901 305.627 12.6384 307.416 12.6384H354.493C356.281 12.6384 357.733 14.0901 357.733 15.8788V26.287C357.733 28.0757 356.281 29.5274 354.493 29.5274H324.824V47.181H351.589C353.378 47.181 354.83 48.6327 354.83 50.4214V59.4816C354.83 61.2703 353.378 62.722 351.589 62.722H324.824V83.655H354.493C356.281 83.655 357.733 85.1066 357.733 86.8953Z" fill="#3D2426"/>
+                <defs>
+                <clipPath id="clip0_821_88219">
+                <rect width="114" height="114" fill="white"/>
+                </clipPath>
+                </defs>
+              </svg>
+            </div>
+
+            {/* Randomize Buttons Group */}
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
+                className="w-full bg-[#3D2426] hover:bg-[#2d1b1c] text-white py-2 px-4 rounded flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm"
+              >
+                <RefreshCw size={16} /> Randomise modules
+              </button>
+              <button 
+                onClick={randomiseParameters}
+                className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2 px-4 rounded flex items-center justify-center gap-2 transition-colors font-medium text-sm shadow-sm"
+              >
+                <Settings size={16} /> Randomise parameters
+              </button>
+            </div>
+
+            {/* Sliders Area */}
+            <div className="flex flex-col gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700" title="100% = solid edge-packed blocks, 0% = sparsely chained by corners">
+                  Structure Density <span className="text-[#3D2426]">{connectionDensity}%</span>
+                </label>
+                <input type="range" min="0" max="100" value={connectionDensity} onChange={e => setConnectionDensity(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <hr className="border-gray-200 my-1" />
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700">
+                  Source Radius <span className="text-[#3D2426]">{radius}</span>
+                </label>
+                <input type="range" min="50" max="230" value={radius} onChange={e => setRadius(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700">
+                  Source Stroke Thickness <span className="text-[#3D2426]">{thickness}</span>
+                </label>
+                <input type="range" min="1" max="150" value={thickness} onChange={e => setThickness(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700" title="Distorts the circle into an organic, jagged shape.">
+                  Shape Roughness <span className="text-[#3D2426]">{roughness}</span>
+                </label>
+                <input type="range" min="0" max="25" value={roughness} onChange={e => setRoughness(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700" title="Increases the width of the blur footprint.">
+                  Source Blur <span className="text-[#3D2426]">{blur}</span>
+                </label>
+                <input type="range" min="0" max="80" value={blur} onChange={e => setBlur(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700" title="Allows smaller modules to spawn into fainter blurred areas, creating a gradient.">
+                  Spread (Gradual Fade) <span className="text-[#3D2426]">{spread}%</span>
+                </label>
+                <input type="range" min="0" max="100" value={spread} onChange={e => setSpread(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700" title="Required opacity of the ink in the core.">
+                  Core Strictness <span className="text-[#3D2426]">{coverageRequired.toFixed(2)}</span>
+                </label>
+                <input type="range" min="0.1" max="1.0" step="0.05" value={coverageRequired} onChange={e => setCoverageRequired(Number(e.target.value))} className="custom-slider" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="flex justify-between text-xs font-semibold text-gray-700">
+                  Module Sizes (Max: 2^{numSizes-1}) <span className="text-[#3D2426]">{numSizes} sizes</span>
+                </label>
+                <input type="range" min="1" max="5" value={numSizes} onChange={e => setNumSizes(Number(e.target.value))} className="custom-slider" />
+              </div>
+            </div>
+
+            {/* Modules Management */}
+            <div className="flex flex-col gap-3">
+              <h3 className="font-semibold text-gray-800 border-b border-gray-200 pb-2">Module Settings</h3>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-gray-600">Assignment Mode</label>
+                <div className="flex bg-gray-200 rounded p-1 shadow-inner">
+                  <button 
+                    className={`flex-1 py-1 text-xs rounded transition-colors ${assignmentMode === 'size' ? 'bg-white text-[#3D2426] shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => setAssignmentMode('size')}
+                  >
+                    1 Size = 1 Type
+                  </button>
+                  <button 
+                    className={`flex-1 py-1 text-xs rounded transition-colors ${assignmentMode === 'random' ? 'bg-white text-[#3D2426] shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => setAssignmentMode('random')}
+                  >
+                    Fully Random
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {modules.map((mod, i) => (
+                  <div key={mod.id} className={`relative group aspect-square rounded border flex items-center justify-center p-1 transition-colors ${mod.hidden ? 'bg-gray-200 border-gray-300 opacity-50 grayscale' : 'bg-gray-100 border-gray-200'}`}>
+                    <svg viewBox={mod.viewBox} className="w-full h-full text-gray-800" dangerouslySetInnerHTML={{ __html: mod.inner }} />
+                    
+                    {/* Actions overlay */}
+                    <div className="absolute -top-2 -right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => toggleModuleVisibility(mod.id)}
+                        className="bg-gray-700 text-white p-1.5 rounded-full hover:bg-gray-900 shadow"
+                        title={mod.hidden ? "Show Module" : "Hide Module"}
+                      >
+                        {mod.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
+                      </button>
+                      <button 
+                        onClick={() => removeModule(mod.id)}
+                        className="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow"
+                        title="Delete Module"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 bg-white/90 w-full text-[10px] text-center text-gray-700 border-t border-gray-200 font-medium">{i+1}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2">
+                <textarea 
+                  value={customSvgInput}
+                  onChange={e => setCustomSvgInput(e.target.value)}
+                  placeholder='Paste <svg> or <path> code here to add a new module'
+                  className="bg-white border border-gray-300 rounded p-2 text-xs text-gray-800 placeholder-gray-400 h-20 resize-none focus:outline-none focus:border-[#3D2426] focus:ring-1 focus:ring-[#3D2426] custom-scrollbar shadow-inner"
+                />
+                <button 
+                  onClick={handleAddModule}
+                  className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 py-1.5 px-3 rounded text-xs flex items-center justify-center gap-2 transition-colors font-medium shadow-sm"
+                >
+                  <Plus size={14} /> Add Custom Module
+                </button>
+              </div>
+            </div>
+
+            {/* Exports */}
+            <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-gray-200">
+              <div className="flex gap-2">
+                <button onClick={handleSaveJSON} className="flex-1 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 py-1.5 px-3 rounded text-xs flex items-center justify-center gap-2 transition-colors shadow-sm font-medium">
+                  <Save size={14} /> Save JSON
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 py-1.5 px-3 rounded text-xs flex items-center justify-center gap-2 transition-colors shadow-sm font-medium">
+                  <Upload size={14} /> Load JSON
+                </button>
+                <input type="file" ref={fileInputRef} onChange={handleLoadJSON} accept=".json" className="hidden" />
+              </div>
+              <button onClick={exportSVG} className="bg-[#F5F1F1] hover:bg-[#EAE2E2] border border-[#3D2426]/20 text-[#3D2426] py-2 px-4 rounded flex items-center justify-center gap-2 transition-colors font-medium">
+                <Copy size={16} /> Export SVG
+              </button>
+              <button onClick={exportPNG} className="bg-[#F5F1F1] hover:bg-[#EAE2E2] border border-[#3D2426]/20 text-[#3D2426] py-2 px-4 rounded flex items-center justify-center gap-2 transition-colors font-medium">
+                <Download size={16} /> Export PNG (Transparent)
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT MAIN AREA - CANVAS */}
+          <div 
+            className="flex-1 relative overflow-hidden bg-white flex items-center justify-center"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}
+          >
+            <div className="w-full h-full max-w-4xl max-h-[90vh] aspect-square bg-transparent">
+              <svg 
+                ref={svgRef}
+                viewBox="0 0 500 500" 
+                className="w-full h-full cursor-crosshair"
+                style={{ backgroundColor: 'transparent' }}
+              >
+                {elements.map((el) => {
+                  const mod = el.modId 
+                    ? modules.find(m => m.id === el.modId) || modules[0]
+                    : modules[el.modIdx] || modules[0];
+
+                  return (
+                    <svg 
+                      key={el.id}
+                      data-el-id={el.id}
+                      x={el.x} 
+                      y={el.y} 
+                      width={el.size} 
+                      height={el.size} 
+                      viewBox={mod.viewBox}
+                      preserveAspectRatio="xMidYMid meet"
+                      className="hover:opacity-80 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); handleElementClick(el.id); }}
+                      dangerouslySetInnerHTML={{ __html: mod.inner }}
+                    />
+                  )
+                })}
+              </svg>
+            </div>
+
+            {/* Custom Tooltip */}
+            {tooltip.show && (
+              <div 
+                className="fixed bg-gray-900/95 text-white text-xs py-1.5 px-3 rounded shadow-lg pointer-events-none z-50 whitespace-pre border border-gray-700"
+                style={{ left: tooltip.x, top: tooltip.y }}
+              >
+                {tooltip.text}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

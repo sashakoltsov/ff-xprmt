@@ -42,7 +42,7 @@ function sessionsView(m) {
   }).join('');
   return `<div class="wrap">
     <p class="eyebrow">Saffron · AI Tools</p>
-    <h1 class="title">AI × FF Artefacts</h1>
+    <h1 class="title">AI × FF Tools</h1>
     <div class="grid">${cards}</div>
   </div>`;
 }

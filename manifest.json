@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T15:21:26.378Z",
+  "generated": "2026-06-17T17:25:14.986Z",
   "sessions": [
     {
       "id": "s04",
@@ -83,9 +83,16 @@
       "title": "Project Tools",
       "tools": [
         {
+          "slug": "cupra-hse",
+          "name": "HSE Tool",
+          "author": "Sasha",
+          "path": "tools/work/cupra-hse/index.html",
+          "cover": "tools/work/cupra-hse/cover.jpg"
+        },
+        {
           "slug": "randomizer",
           "name": "Randomizer",
-          "author": "Juan E.",
+          "author": "Juan F.",
           "path": "tools/work/randomizer/index.html",
           "cover": "tools/work/randomizer/cover.jpg"
         }
