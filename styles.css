@@ -56,6 +56,23 @@ body::after {
 }
 body.is-tool::after { display: none; }
 
+/* fixed brandmark bleeding off the bottom edge, over the yellow gradient.
+   Full width with a flexible vw padding (≈60px at a 1550px window), and
+   dipped below the fold by 1/10 of its own (scaling) height. */
+.brandmark {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 0 3.87vw;
+  transform: translateY(10%);
+  pointer-events: none;
+  line-height: 0;
+}
+.brandmark img { display: block; width: 100%; height: auto; }
+body.is-tool .brandmark { display: none; }
+
 /* ---- layout ---- */
 .wrap {
   position: relative;
