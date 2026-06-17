@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JED TOOL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #171717;
+            color: #333;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        @media (min-width: 768px) {
+            #app-container {
+                flex-direction: row;
+            }
+        }
+
+        /* Control Panel Styles */
+        #control-panel {
+            width: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            z-index: 40;
+            flex-shrink: 0;
+            position: relative;
+        }
+        @media (min-width: 768px) {
+            #control-panel {
+                width: 320px;
+                min-width: 320px;
+                height: 100%;
+                border-right: 1px solid #e5e7eb;
+            }
+        }
+
+        /* Enforce Vertical Stacking */
+        #settings-content {
+            background-color: #ffffff;
+            width: 100%;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            max-height: calc(100dvh - 72px); /* Accounts for header */
+            overflow-y: auto;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+        }
+        #settings-content.open {
+            display: flex;
+        }
+        @media (min-width: 768px) {
+            #settings-content {
+                position: relative;
+                top: 0;
+                flex: 1;
+                max-height: none;
+                border-bottom: none;
+                box-shadow: none;
+                display: flex !important;
+            }
+        }
+
+        .panel-section {
+            padding: 20px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        /* Collapsible Section Styles */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        .section-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #6b7280;
+            cursor: pointer;
+            user-select: none;
+            outline: none;
+        }
+        .section-summary svg {
+            transition: transform 0.2s ease;
+            color: #9ca3af;
+        }
+        details[open] .section-summary svg {
+            transform: rotate(180deg);
+        }
+        .section-content {
+            padding-top: 16px;
+        }
+
+        /* Custom Form Controls */
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #374151;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background-color: #f9fafb;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: #3b82f6;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+            font-weight: 400;
+            cursor: pointer;
+            margin-bottom: 0;
+        }
+
+        .radio-label input {
+            margin-right: 6px;
+            accent-color: #3b82f6;
+        }
+
+        /* Palette Previews */
+        .palette-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .palette-row {
+            display: flex;
+            gap: 8px;
+        }
+        .palette-btn {
+            height: 28px;
+            flex: 1;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            padding: 0;
+            outline: none;
+            background-repeat: no-repeat !important;
+            background-size: 100% 100% !important;
+        }
+        .palette-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .palette-btn.active {
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
+            z-index: 1;
+        }
+
+        /* Shape Visuals */
+        .shape-icon {
+            display: inline-block;
+            margin-right: 6px;
+            color: #6b7280;
+        }
+        
+        .radio-label:hover .shape-icon,
+        .radio-label input:checked ~ .shape-icon {
+            color: #3b82f6;
+        }
+
+        /* Alignment Matrix */
+        .align-matrix {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            width: 120px;
+            margin-bottom: 16px;
+        }
+        .align-btn {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #9ca3af;
+            transition: all 0.15s;
+        }
+        .align-btn:hover {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+        .align-btn.active {
+            background: #eff6ff;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background: #9ca3af;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        input[type=range]:disabled::-webkit-slider-runnable-track {
+            background: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+        .flex-row-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .value-badge {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Shape Library Items Styling Update */
+        .lib-item {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.2s;
+            aspect-ratio: 1;
+            box-shadow: inset 0 0 0 1px #d1d5db;
+        }
+        .lib-item:hover { box-shadow: inset 0 0 0 1px #9ca3af; }
+        .lib-item.active { background: #1e3a8a; box-shadow: 0 0 0 2px #3b82f6; border-color: transparent; }
+        
+        .lib-item svg { 
+            width: 100%; 
+            height: 100%; 
+            max-height: 40px; 
+            pointer-events: none; 
+            /* Recolor logic to dark gray for inactive, blue for active */
+            filter: grayscale(100%) brightness(0.3);
+            transition: filter 0.2s;
+        }
+        .lib-item.active svg {
+            /* Transform grey into the branding blue */
+            filter: grayscale(100%) brightness(0.6) sepia(1) hue-rotate(190deg) saturate(400%);
+        }
+        
+        .lib-item-delete {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.1s;
+            border: 2px solid white;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .lib-item-delete svg { width: 10px; height: 10px; max-height: 10px; stroke-width: 3px; filter: none; }
+        .lib-item:hover .lib-item-delete { opacity: 1; }
+        .lib-item-delete:hover { transform: scale(1.1); background: #dc2626; }
+
+        /* Play/Pause Button & Timeline */
+        .anim-controls-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .play-btn {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .play-btn:hover {
+            background-color: #2563eb;
+        }
+        .play-btn.playing {
+            background-color: #ef4444;
+        }
+        .play-btn.playing:hover {
+            background-color: #dc2626;
+        }
+        
+        .anim-timeline {
+            flex-grow: 1;
+            margin-bottom: 0 !important;
+        }
+
+        /* Easing Graph */
+        .bezier-container {
+            width: 100%;
+            margin-top: 8px;
+            display: flex;
+            justify-content: center;
+        }
+        .bezier-canvas {
+            background: #f9fafb;
+            border-radius: 8px;
+            cursor: crosshair;
+            width: 200px;
+            height: 150px;
+        }
+
+        /* Watermark Layout Styles */
+        .watermark-container {
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-shrink: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .watermark-container button { pointer-events: auto; }
+        
+        @media (max-width: 767px) {
+            .watermark-container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+            }
+        }
+        @media (min-width: 768px) {
+            .watermark-container {
+                margin-top: auto;
+                background-color: #ffffff;
+            }
+        }
+
+        /* Preview Area */
+        #preview-area {
+            flex-grow: 1;
+            position: relative;
+            background-color: #171717; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #p5-canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Control Panel -->
+    <div id="control-panel">
+        
+        <!-- Header / Logo -->
+        <div id="header-bar" class="px-5 pt-5 pb-4 border-b border-gray-200 flex justify-between items-end shrink-0 relative bg-white z-50">
+            <div class="flex items-end gap-3">
+                <svg style="width: 150px; height: auto; display: block;" viewBox="0 0 356 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g clip-path="url(#clip0_9256_25598)">
+                    <path d="M289.8 80.4756V20.0834H312.095C331.186 20.0834 343.588 29.5653 343.588 48.6425C343.588 67.7197 331.186 77.1874 312.095 77.1874H306.085C301.436 77.1874 294.647 78.0662 289.8 80.4756ZM278.858 87.3355H312.874C338.854 87.3355 355.819 72.5244 355.819 48.6283C355.819 24.7322 338.854 9.92116 312.874 9.92116H278.858C278.362 9.92116 278.178 10.2188 278.178 10.6015V86.6693C278.178 87.052 278.377 87.3496 278.858 87.3496V87.3355ZM148.082 88.8945C166.011 88.8945 180.652 82.4173 180.652 57.2456V10.5873C180.652 10.1054 180.269 9.90698 179.887 9.90698H135.198C134.816 9.90698 134.518 10.1054 134.518 10.4881V19.2897C134.518 19.6724 134.518 20.055 135.099 20.055H169.03V57.2173C169.03 72.5102 163.885 78.7039 148.096 78.7039C136.757 78.7039 128.324 75.7134 127.162 62.0504C127.063 61.3701 126.864 61.1716 126.283 61.1716L116.972 61.2708C116.49 61.2708 116.093 61.4693 116.093 61.852V62.5323C116.093 79.7528 127.332 88.8662 148.082 88.8662M201.402 87.3355H260.433C260.731 87.3355 261.113 87.0378 261.113 86.7544V77.7543C261.113 77.4567 260.816 77.1732 260.433 77.1732H254.622C236.594 77.1732 224.958 77.2724 212.358 80.7591V55.1055C218.169 53.4614 226.403 52.7811 237.175 52.7811H256.847C257.23 52.7811 257.428 52.4834 257.428 52.1008V43.2992C257.428 42.9165 257.329 42.6189 256.847 42.6189H254.622C239.698 42.6189 225.255 42.137 212.358 48.4299V20.0692H259.172C259.668 20.0692 259.852 19.7716 259.852 19.4881V10.5873C259.852 10.1054 259.654 9.90698 259.172 9.90698H201.402C201.019 9.90698 200.721 10.1054 200.721 10.5873V86.7544C200.721 87.137 200.92 87.3355 201.402 87.3355Z" fill="#0D75FF"/>
+                    <path d="M34.9657 48.1465C31.0255 53.4331 26.0224 57.926 19.9846 61.1433L4.73416 69.2504C4.09636 69.5906 3.30266 69.2788 3.04754 68.5985C1.51683 64.6158 0.482185 60.4063 0.000294666 56.2819C-0.0563983 55.7291 0.28376 55.2189 0.80817 55.0347L32.6555 44.4614C36.6807 43.0441 36.7941 39.8835 36.5531 37.8708C37.5736 43.2709 35.561 47.2252 34.9515 48.1465H34.9657Z" fill="url(#paint0_linear_9256_25598)"/>
+                    <path d="M44.0364 1.14799L44.6458 18.4252C45.0285 29.2961 41.2868 39.5433 35.0506 48.0331C35.0222 48.0615 34.9939 48.1182 34.9655 48.1465C35.575 47.2252 37.5876 43.2709 36.5671 37.8709V37.8L29.7923 4.86138C29.6789 4.3228 29.9482 3.77004 30.4584 3.54327C34.271 1.89917 38.3813 0.694444 42.6332 0.0141276C43.3561 -0.113432 44.008 0.425152 44.0364 1.14799Z" fill="#0D75FF"/>
+                    <path d="M66.3025 48.1465C70.2426 53.4331 75.2458 57.926 81.2836 61.1433L96.534 69.2504C97.1718 69.5906 97.9655 69.2788 98.2206 68.5985C99.7513 64.6158 100.772 60.4063 101.254 56.2819C101.31 55.7291 100.97 55.2189 100.446 55.0347L68.5985 44.4614C64.5733 43.0441 64.4599 39.8835 64.7009 37.8708C63.6804 43.2709 65.693 47.2252 66.3025 48.1465Z" fill="url(#paint1_linear_9256_25598)"/>
+                    <path d="M57.2319 1.14799L56.6225 18.4252C56.2398 29.2961 59.9816 39.5433 66.2178 48.0331C66.2461 48.0615 66.2745 48.1182 66.3028 48.1465C65.6934 47.2252 63.6808 43.2709 64.7013 37.8709V37.8L71.4761 4.86138C71.5895 4.3228 71.3202 3.77004 70.8099 3.54327C66.9973 1.89917 62.8871 0.694444 58.6351 0.0141276C57.9123 -0.113432 57.2603 0.425152 57.2319 1.14799Z" fill="#0D75FF"/>
+                    <path d="M44.7027 65.041C38.1547 65.8063 31.7625 67.904 25.9657 71.5181L11.3247 80.6741C10.7152 81.0567 10.5877 81.9071 11.0412 82.4599C13.72 85.7764 16.8523 88.767 20.183 91.2473C20.6365 91.5733 21.246 91.5308 21.657 91.1623L46.7437 68.8677C49.9893 66.0898 52.7815 67.5638 54.3972 68.7969C50.2303 65.211 45.8082 64.9701 44.6885 65.041H44.7027Z" fill="url(#paint2_linear_9256_25598)"/>
+                    <path d="M89.9437 80.6884L75.2744 71.5183C66.0476 65.7497 55.3042 63.8647 44.8302 65.0127C44.7877 65.0127 44.731 65.0127 44.6885 65.0269C45.794 64.956 50.216 65.197 54.3972 68.7828L54.4538 68.8253L79.5972 91.1482C80.0082 91.5167 80.6318 91.5592 81.0712 91.2333C84.4019 88.7529 87.5059 85.7907 90.213 82.46C90.6807 81.9073 90.5531 81.071 89.9295 80.6742L89.9437 80.6884Z" fill="#0D75FF"/>
+                    </g>
+                    <defs>
+                    <linearGradient id="paint0_linear_9256_25598" x1="0.286168" y1="63.9394" x2="39.9641" y2="41.0231" gradientUnits="userSpaceOnUse">
+                    <stop offset="0.4" stop-color="#0D75FF"/>
+                    <stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/>
+                    <stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/>
+                    <stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/>
+                    <stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/>
+                    <stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/>
+                    <stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/>
+                    <stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/>
+                    <stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/>
+                    <stop offset="1" stop-color="#0D75FF" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="paint1_linear_9256_25598" x1="100.98" y1="63.8668" x2="61.29" y2="40.9575" gradientUnits="userSpaceOnUse">
+                    <stop offset="0.4" stop-color="#0D75FF"/>
+                    <stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/>
+                    <stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/>
+                    <stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/>
+                    <stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/>
+                    <stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/>
+                    <stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/>
+                    <stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/>
+                    <stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/>
+                    <stop offset="1" stop-color="#0D75FF" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="paint2_linear_9256_25598" x1="13.7342" y1="87.1512" x2="53.4193" y2="64.2473" gradientUnits="userSpaceOnUse">
+                    <stop offset="0.4" stop-color="#0D75FF"/>
+                    <stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/>
+                    <stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/>
+                    <stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/>
+                    <stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/>
+                    <stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/>
+                    <stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/>
+                    <stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/>
+                    <stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/>
+                    <stop offset="1" stop-color="#0D75FF" stop-opacity="0"/>
+                    </linearGradient>
+                    <clipPath id="clip0_9256_25598">
+                    <rect width="355.82" height="91.46" fill="white"/>
+                    </clipPath>
+                    </defs>
+                </svg>
+                <span class="text-[10px] font-bold text-gray-500 tracking-[0.15em] leading-none mb-[2px]">TOOL</span>
+            </div>
+            <!-- Mobile Toggle -->
+            <button id="mobile-settings-toggle" class="md:hidden text-gray-500 hover:text-blue-600 transition-colors p-1">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+
+        <!-- Scrollable Settings Area -->
+        <div id="settings-content">
+            <div class="panel-section" id="panel-artboard">
+                <details>
+                    <summary class="section-summary">
+                        <span>Artboard</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <label>Proportion</label>
+                        <select id="ctrl-proportion" style="margin-bottom: 24px;">
+                            <option value="1:1">1:1 (Square)</option>
+                            <option value="2:3">2:3</option>
+                            <option value="3:4" selected>3:4</option>
+                            <option value="3:5">3:5</option>
+                            <option value="9:16">9:16 (Story)</option>
+                            <option value="1:2">1:2</option>
+                        </select>
+
+                        <label>Orientation</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="artboard-orient" value="vertical"> Vertical
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="artboard-orient" value="horizontal" checked> Horizontal
+                            </label>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="panel-section" id="panel-grid">
+                <details>
+                    <summary class="section-summary">
+                        <span>Grid</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <label>Section Orientation</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="section-orient" value="vertical" checked> Vertical
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="section-orient" value="horizontal"> Horizontal
+                            </label>
+                        </div>
+
+                        <div class="flex-row-between">
+                            <label>Number of Sections</label>
+                            <span class="value-badge" id="val-sections">11</span>
+                        </div>
+                        <input type="range" id="ctrl-sections" min="1" max="31" step="2" value="11">
+                    </div>
+                </details>
+            </div>
+
+            <div class="panel-section" id="panel-color">
+                <details>
+                    <summary class="section-summary">
+                        <span>Color & Gradient</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <label>Gradient Palette</label>
+                        <div class="palette-grid">
+                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Warm</div>
+                            <div class="palette-row">
+                                <button class="palette-btn" data-palette="Warm 1" style="background: linear-gradient(to right, #F4B700, #F86C67, #D3581B, #71301D)" title="Warm 1 (Amber to Deep Red)"></button>
+                                <button class="palette-btn" data-palette="Warm 2" style="background: linear-gradient(to right, #FBF5DE, #F7C882, #D3581B, #71301D)" title="Warm 2 (Cream to Deep Red)"></button>
+                                <button class="palette-btn active" data-palette="Warm 3" style="background: linear-gradient(to right, #C3F4FB, #FFDE8A, #F4B700, #F86C67)" title="Warm 3 (Ice to Coral)"></button>
+                            </div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Cool</div>
+                            <div class="palette-row">
+                                <button class="palette-btn" data-palette="Cool 1" style="background: linear-gradient(to right, #1EAAE6, #6EEEE7, #C3F4FB)" title="Cool 1 (Cyan to Ice)"></button>
+                                <button class="palette-btn" data-palette="Cool 2" style="background: linear-gradient(to right, #0052B6, #0D69F4, #0D69F4, #10D79E)" title="Cool 2 (Deep Blue to Mint)"></button>
+                                <button class="palette-btn" data-palette="Cool 3" style="background: linear-gradient(to right, #010831, #0056A9, #1186CC)" title="Cool 3 (Midnight to Azure)"></button>
+                            </div>
+                        </div>
+
+                        <label>Gradient Type</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="grad-type" value="linear"> Linear
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="grad-type" value="radial"> Radial
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="grad-type" value="ellipsoid" checked> Smart
+                            </label>
+                        </div>
+
+                        <div id="direction-container" class="opacity-50 pointer-events-none transition-opacity">
+                            <div class="flex-row-between">
+                                <label>Rotation Angle</label>
+                                <span class="value-badge" id="val-direction">0°</span>
+                            </div>
+                            <input type="range" id="ctrl-direction" min="0" max="360" value="0">
+                        </div>
+
+                        <div id="spread-container" style="display: block; margin-top: 12px;">
+                            <div class="flex-row-between">
+                                <label>Center Size (Spread)</label>
+                                <span class="value-badge" id="val-spread">2.5</span>
+                            </div>
+                            <input type="range" id="ctrl-spread" min="2.2" max="10" step="0.1" value="2.5">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="panel-section" id="panel-comp">
+                <details>
+                    <summary class="section-summary">
+                        <span>Composition</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <label>Variation Shape Across Sections</label>
+                        <div class="radio-group" style="flex-wrap: wrap; gap: 12px 16px;">
+                            <label class="radio-label">
+                                <input type="radio" name="var-shape" value="V" checked>
+                                <svg class="shape-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 4 12 20 22 4"></polyline></svg>
+                                V Shape
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="var-shape" value="Peak">
+                                <svg class="shape-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 20 12 4 22 20"></polyline></svg>
+                                Peak
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="var-shape" value="Diagonal">
+                                <svg class="shape-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="4"></line></svg>
+                                Diagonal
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="var-shape" value="X">
+                                <svg class="shape-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="4" x2="20" y2="20"></line><line x1="20" y1="4" x2="4" y2="20"></line></svg>
+                                X Shape
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="var-shape" value="Wave">
+                                <svg class="shape-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C 7 2, 12 22, 22 12"></path></svg>
+                                Wave
+                            </label>
+                        </div>
+
+                        <!-- Wave Sub-Settings -->
+                        <div id="wave-settings" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e5e7eb;">
+                            <div class="flex-row-between mb-2">
+                                <label>Wave Peaks</label>
+                                <span class="value-badge" id="val-wave-peaks">2</span>
+                            </div>
+                            <input type="range" id="ctrl-wave-peaks" min="1" max="5" value="2">
+                            
+                            <label class="block font-medium text-sm text-gray-700 mb-2 mt-4">Wave Shape Graph</label>
+                            <div class="bezier-container">
+                                <canvas id="wave-bezier-canvas" class="bezier-canvas"></canvas>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Shape the distribution of the wave peaks.</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="panel-section" id="panel-shape">
+                <details>
+                    <summary class="section-summary">
+                        <span>Shape Library</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        
+                        <div class="flex gap-2 mb-4">
+                            <button id="btn-load-lib" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded transition-colors flex items-center justify-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Load</button>
+                            <button id="btn-save-lib" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded transition-colors flex items-center justify-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Save</button>
+                        </div>
+                        <input type="file" id="lib-upload" accept=".json" class="hidden" />
+
+                        <label class="text-xs font-semibold text-gray-500 mb-2">Upload SVG to Library</label>
+                        <input type="file" id="svg-upload" accept=".svg" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer mb-4" />
+                        
+                        <label class="text-xs font-semibold text-gray-500 mb-2 mt-2">Shapes:</label>
+                        <div id="shape-library-grid" class="grid grid-cols-3 gap-2 mb-2">
+                            <!-- Items rendered via JS -->
+                        </div>
+                        <button id="clear-svg-btn" class="text-xs font-semibold text-red-500 hidden hover:underline cursor-pointer w-full text-center mb-4 mt-2">Deselect Shape</button>
+                        
+                        <label class="text-xs font-semibold text-gray-500 mb-2 pt-2 border-t border-gray-100">Mask Alignment</label>
+                        <div class="flex justify-center mb-4">
+                            <div class="align-matrix">
+                                <button class="align-btn" data-align="top-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 3 3 3 3 21"></polyline><rect x="3" y="3" width="10" height="10"></rect></svg></button>
+                                <button class="align-btn" data-align="top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><rect x="6" y="8" width="12" height="12"></rect></svg></button>
+                                <button class="align-btn" data-align="top-right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 3 21 3 21 21"></polyline><rect x="11" y="3" width="10" height="10"></rect></svg></button>
+                                <button class="align-btn" data-align="left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="3"></line><rect x="8" y="6" width="12" height="12"></rect></svg></button>
+                                <button class="align-btn active" data-align="center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"></line><line x1="3" y1="12" x2="21" y2="12"></line><rect x="8" y="8" width="8" height="8"></rect></svg></button>
+                                <button class="align-btn" data-align="right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="20" y1="21" x2="20" y2="3"></line><rect x="4" y="6" width="12" height="12"></rect></svg></button>
+                                <button class="align-btn" data-align="bottom-left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 21 3 21 3 3"></polyline><rect x="3" y="11" width="10" height="10"></rect></svg></button>
+                                <button class="align-btn" data-align="bottom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="20" x2="21" y2="20"></line><rect x="6" y="4" width="12" height="12"></rect></svg></button>
+                                <button class="align-btn" data-align="bottom-right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 21 21 21 21 3"></polyline><rect x="11" y="11" width="10" height="10"></rect></svg></button>
+                            </div>
+                        </div>
+
+                        <div class="flex-row-between">
+                            <label>Shape Scale</label>
+                            <span class="value-badge" id="val-shape-scale">85%</span>
+                        </div>
+                        <input type="range" id="ctrl-shape-scale" min="20" max="200" step="1" value="85">
+                        
+                        <div class="flex-row-between mt-3 opacity-50 pointer-events-none transition-opacity" id="offset-label-container">
+                            <label>Edge Offset</label>
+                            <span class="value-badge" id="val-shape-offset">0px</span>
+                        </div>
+                        <input type="range" id="ctrl-shape-offset" min="0" max="200" step="1" value="0" disabled>
+
+                        <div class="mt-4 border-t border-gray-100 pt-3" id="mask-spread-container">
+                            <div class="flex-row-between">
+                                <label>Mask Spread (Smart/Radial)</label>
+                                <span class="value-badge" id="val-mask-spread">2.5</span>
+                            </div>
+                            <input type="range" id="ctrl-mask-spread" min="2.2" max="10" step="0.1" value="2.5">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="panel-section" id="panel-anim">
+                <details>
+                    <summary class="section-summary">
+                        <span>Animation</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <!-- Position Animation -->
+                        <label class="text-xs font-semibold text-gray-500 mb-2 mt-2">Position</label>
+                        <div class="anim-controls-row">
+                            <button id="play-pos-btn" class="play-btn playing">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            </button>
+                            <input type="range" id="ctrl-pos-timeline" class="anim-timeline" min="0" max="1" step="0.001" value="0">
+                        </div>
+
+                        <div class="flex-row-between mt-2">
+                            <label>Length</label>
+                            <span class="value-badge" id="val-pos-length">5.0s</span>
+                        </div>
+                        <input type="range" id="ctrl-pos-length" min="0.5" max="20" step="0.5" value="5">
+                        
+                        <div class="mt-4 mb-6">
+                            <label class="block font-medium text-sm text-gray-700 mb-2">Position Easing Graph</label>
+                            <div class="bezier-container">
+                                <canvas id="pos-bezier-canvas" class="bezier-canvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Rotation Animation -->
+                        <div id="rotation-animation-section" style="display: none;">
+                            <label class="text-xs font-semibold text-gray-500 mb-2 border-t border-gray-200 pt-4">Rotation</label>
+                            <div class="anim-controls-row">
+                                <button id="play-rot-btn" class="play-btn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                </button>
+                                <input type="range" id="ctrl-rot-timeline" class="anim-timeline" min="0" max="1" step="0.001" value="0">
+                            </div>
+
+                            <div class="flex-row-between mt-2">
+                                <label>Length</label>
+                                <span class="value-badge" id="val-rot-length">10.0s</span>
+                            </div>
+                            <input type="range" id="ctrl-rot-length" min="0.5" max="20" step="0.5" value="10">
+
+                            <div class="mt-4 mb-6">
+                                <label class="block font-medium text-sm text-gray-700 mb-2">Rotation Easing Graph</label>
+                                <div class="bezier-container">
+                                    <canvas id="rot-bezier-canvas" class="bezier-canvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Mode -->
+                        <label class="text-xs font-semibold text-gray-500 mb-2 border-t border-gray-200 pt-4">Interactive Mode</label>
+                        <label class="flex items-center gap-2 cursor-pointer mb-2">
+                            <input type="checkbox" id="ctrl-interactive" class="w-4 h-4 rounded text-blue-600" />
+                            <span class="text-sm font-medium text-gray-700">React to Mouse</span>
+                        </label>
+                        <div id="interactive-settings" class="opacity-50 pointer-events-none transition-opacity">
+                            <div class="flex-row-between mt-3">
+                                <label>Effect (Gravity & Shrink)</label>
+                                <span class="value-badge" id="val-int-effect">50%</span>
+                            </div>
+                            <input type="range" id="ctrl-int-effect" min="0" max="100" value="50">
+
+                            <div class="flex-row-between mt-2">
+                                <label>Delay (Trailing)</label>
+                                <span class="value-badge" id="val-int-delay">80%</span>
+                            </div>
+                            <input type="range" id="ctrl-int-delay" min="0" max="99" value="80">
+                        </div>
+
+                    </div>
+                </details>
+            </div>
+
+            <!-- Export Settings Panel -->
+            <div class="panel-section" id="panel-export" style="background-color: rgba(13, 117, 255, 0.2);">
+                <details>
+                    <summary class="section-summary">
+                        <span class="text-blue-700">Export</span>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </summary>
+                    <div class="section-content">
+                        <label>Format</label>
+                        <select id="export-format">
+                            <option value="png">PNG Image</option>
+                            <option value="jpeg">JPG Image</option>
+                            <option value="webm">WebM Video (Animated)</option>
+                        </select>
+                        <p class="text-[10px] text-gray-500 mb-3 leading-tight" id="export-hint">Exports the static artboard at high resolution.</p>
+
+                        <div class="flex-row-between">
+                            <label>Size (Longest Side)</label>
+                            <span class="value-badge" id="val-export-size">2000px</span>
+                        </div>
+                        <input type="range" id="ctrl-export-size" min="1000" max="8000" step="100" value="2000">
+
+                        <button id="btn-export" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg mt-3 transition-colors text-sm shadow">
+                            Export Artboard
+                        </button>
+                        
+                        <div id="export-progress" class="hidden text-xs text-center mt-3 text-blue-600 font-bold bg-blue-50 py-2 rounded">
+                            Recording Video Loop...
+                        </div>
+                    </div>
+                </details>
+            </div>
+            
+            <!-- Watermark Layout -->
+            <div class="watermark-container">
+                <!-- Re-trigger onboarding button -->
+                <button id="btn-help" class="w-6 h-6 rounded-full border border-[#171717]/20 text-[#171717]/30 flex items-center justify-center text-xs font-bold hover:bg-[#171717]/5 hover:text-[#171717]/60 transition-colors cursor-pointer shrink-0">?</button>
+
+                <!-- Watermark overlay -->
+                <div class="flex items-end gap-[8px]">
+                    <span class="text-[#171717] opacity-20 font-bold tracking-widest text-[10px] mb-[1px] leading-none">BY</span>
+                    <svg style="width: 80px; height: auto;" viewBox="0 0 269 39" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7.54432 10.7583C7.54432 8.06636 11.4446 6.7015 15.7197 6.7015C19.9948 6.7015 22.837 8.08053 25.4988 10.7063L30.4715 6.33785C27.2734 2.16772 21.3851 0 15.7766 0C5.13868 0 0.436527 4.63768 0.436527 10.7583C0.436527 17.5637 6.10188 20.4634 12.7826 22.1022L19.2499 23.6843C23.525 24.7375 24.7017 25.7953 24.7017 28.0622C24.7017 30.4897 22.1917 32.5441 16.4172 32.5441C10.6427 32.5441 7.7958 30.8959 4.87771 27.5994L0 32.0718C2.43886 34.9149 7.57753 38.9811 16.2037 38.9811C24.2177 38.9811 31.7573 34.9715 31.7573 27.8497C31.7573 20.3595 26.1441 18.3524 20.9628 17.0348L14.5477 15.4007C9.3094 14.0831 7.54906 13.3416 7.54906 10.7583M58.5752 23.0137H50.1389L54.357 8.82199L58.5752 23.0137ZM63.4862 38.523H71.0115L58.0913 0.807581H50.6181L37.5365 38.5277H45.1188L48.0559 29.4035H60.4969L63.4862 38.5277V38.523ZM86.5509 7.71688H107.395V0.807581H79.3387V38.5277H86.5556V24.2321H102.641V17.5873H86.5556V7.7216L86.5509 7.71688ZM123.395 7.71688H144.239V0.807581H116.183V38.5277H123.399V24.2321H139.484V17.5873H123.399V7.7216L123.395 7.71688ZM177.235 12.6238C177.235 15.5754 175.844 18.4799 170.288 18.4799H160.025V7.40046H170.445C174.72 7.40046 177.23 9.19508 177.23 12.6238M184.978 38.523L178.724 22.9098C182.463 20.7987 184.228 17.2662 184.228 12.5199C184.228 6.13478 180.058 0.807581 170.065 0.807581H153.017V38.5277H160.015V24.7044H172.362L177.704 38.5277H184.973L184.978 38.523ZM221.48 19.3205C221.48 28.9737 215.924 32.4024 210.524 32.4024C205.557 32.4024 199.303 29.0776 199.303 19.585C199.303 11.2495 204.489 6.81957 210.524 6.81957C216.56 6.81957 221.48 10.4608 221.48 19.3205ZM228.692 19.2166C228.692 7.82078 222.012 0.0661177 210.524 0.0661177C199.037 0.0661177 192.086 8.18915 192.086 19.2686C192.086 30.348 198.658 39 210.524 39C222.391 39 228.692 30.2961 228.692 19.2166ZM268.995 38.523V0.807581H261.778V26.2346L245.537 0.807581H237.575V38.5277H244.787V12.8363L261.033 38.5277H268.995V38.523Z" fill="#171717" fill-opacity="0.2"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Tooltip -->
+    <div id="onboarding-tooltip" class="fixed w-[260px] bg-[#222] text-white p-[16px] rounded-[8px] shadow-2xl z-50 transition-all duration-150 ease-out opacity-0 scale-95 pointer-events-none -translate-y-1/2">
+        <svg class="absolute -left-[9px] top-1/2 -translate-y-1/2 drop-shadow-md hidden md:block" width="9" height="18" viewBox="0 0 9 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 0L0 9L9 18V0Z" fill="#222"/>
+        </svg>
+        <button id="ob-btn-close" class="absolute top-0 right-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white cursor-pointer z-10 transition-colors">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <div id="ob-text" class="mb-4 text-[12px] leading-relaxed text-gray-100 opacity-90 mt-1"></div>
+        <div class="flex justify-between items-center mt-2">
+            <span id="ob-counter" class="text-[11px] text-gray-400 font-medium"></span>
+            <div class="flex gap-1">
+                <button id="ob-btn-back" class="text-gray-400 hover:text-white p-1 cursor-pointer transition-colors hidden">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <button id="ob-btn-next" class="text-gray-400 hover:text-white p-1 cursor-pointer transition-colors">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Area -->
+    <div id="preview-area">
+        <div id="p5-canvas-container"></div>
+    </div>
+</div>
+
+<script>
+    // --- Configuration State ---
+    const config = {
+        proportion: '3:4',
+        artboardOrientation: 'horizontal',
+        sectionOrientation: 'vertical',
+        sectionCount: 11,
+        palette: 'Warm 3',
+        gradientType: 'ellipsoid',
+        gradientDirection: 0,
+        gradientSpread: 2.5,
+        variationShape: 'V',
+        maskSpread: 2.5,
+
+        shapeScale: 85,
+        shapeAlign: 'center',
+        shapeOffset: 0,
+        
+        animPosPlaying: true,
+        animPosPhase: 0,
+        animPosLength: 5,
+
+        animRotPlaying: false,
+        animRotPhase: 0,
+        animRotLength: 10,
+
+        interactiveMode: false,
+        intEffect: 50,
+        intDelay: 80,
+
+        wavePeaks: 2
+    };
+
+    let uploadedSVG = null;
+    let activeShapeId = null;
+    let smoothMouseX = window.innerWidth / 2;
+    let smoothMouseY = window.innerHeight / 2;
+    
+    // Global cached mask canvases for live preview to avoid memory leaks
+    const previewInvCanvas = document.createElement('canvas');
+    const previewMaskCanvas = document.createElement('canvas');
+
+    const palettes = {
+        'Warm 1': ['#F4B700', '#F86C67', '#D3581B', '#71301D'],
+        'Warm 2': ['#FBF5DE', '#F7C882', '#D3581B', '#71301D'],
+        'Warm 3': ['#C3F4FB', '#FFDE8A', '#F4B700', '#F86C67'],
+        'Cool 1': ['#1EAAE6', '#6EEEE7', '#C3F4FB'],
+        'Cool 2': ['#0052B6', '#0D69F4', '#0D69F4', '#10D79E'],
+        'Cool 3': ['#010831', '#0056A9', '#1186CC']
+    };
+
+    // --- Shape Library Array ---
+    // Precisely matched to Prompt 1 source SVGs
+    let shapeLibrary = [
+        {
+            id: 'default_1',
+            svgData: `<svg width="102" height="92" viewBox="0 0 102 92" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M34.9657 48.1467C31.0255 53.4333 26.0224 57.9262 19.9846 61.1436L4.73416 69.2507C4.09636 69.5908 3.30266 69.279 3.04754 68.5987C1.51683 64.616 0.482185 60.4066 0.000294666 56.2821C-0.0563983 55.7294 0.28376 55.2192 0.80817 55.0349L32.6555 44.4617C36.6807 43.0443 36.7941 39.8837 36.5531 37.8711C37.5736 43.2711 35.561 47.2254 34.9515 48.1467H34.9657Z" fill="url(#paint0_linear_17_24)"/><path d="M44.0364 1.14774L44.6458 18.4249C45.0285 29.2958 41.2868 39.5431 35.0506 48.0329C35.0222 48.0612 34.9939 48.1179 34.9655 48.1463C35.575 47.225 37.5876 43.2706 36.5671 37.8706V37.7998L29.7923 4.86114C29.6789 4.32255 29.9482 3.7698 30.4584 3.54302C34.271 1.89893 38.3813 0.6942 42.6332 0.0138835C43.3561 -0.113676 44.008 0.424908 44.0364 1.14774Z" fill="#0D75FF"/><path d="M66.3025 48.1467C70.2426 53.4333 75.2458 57.9262 81.2836 61.1436L96.534 69.2507C97.1718 69.5908 97.9655 69.279 98.2206 68.5987C99.7513 64.616 100.772 60.4066 101.254 56.2821C101.31 55.7294 100.97 55.2192 100.446 55.0349L68.5985 44.4617C64.5733 43.0443 64.4599 39.8837 64.7009 37.8711C63.6804 43.2711 65.693 47.2254 66.3025 48.1467Z" fill="url(#paint1_linear_17_24)"/><path d="M57.2319 1.14774L56.6225 18.4249C56.2398 29.2958 59.9816 39.5431 66.2178 48.0329C66.2461 48.0612 66.2745 48.1179 66.3028 48.1463C65.6934 47.225 63.6808 43.2706 64.7013 37.8706V37.7998L71.4761 4.86114C71.5895 4.32255 71.3202 3.7698 70.8099 3.54302C66.9973 1.89893 62.8871 0.6942 58.6351 0.0138835C57.9123 -0.113676 57.2603 0.424908 57.2319 1.14774Z" fill="#0D75FF"/><path d="M44.7027 65.0407C38.1547 65.8061 31.7625 67.9037 25.9657 71.5179L11.3247 80.6738C10.7152 81.0565 10.5877 81.9069 11.0412 82.4597C13.72 85.7762 16.8523 88.7667 20.183 91.2471C20.6365 91.573 21.246 91.5305 21.657 91.162L46.7437 68.8675C49.9893 66.0895 52.7815 67.5636 54.3972 68.7966C50.2303 65.2108 45.8082 64.9699 44.6885 65.0407H44.7027Z" fill="url(#paint2_linear_17_24)"/><path d="M89.9437 80.6884L75.2744 71.5183C66.0476 65.7497 55.3042 63.8647 44.8302 65.0127C44.7877 65.0127 44.731 65.0127 44.6885 65.0269C45.794 64.956 50.216 65.197 54.3972 68.7828L54.4538 68.8253L79.5972 91.1482C80.0082 91.5167 80.6318 91.5592 81.0712 91.2333C84.4019 88.7529 87.5059 85.7907 90.213 82.46C90.6807 81.9073 90.5531 81.071 89.9295 80.6742L89.9437 80.6884Z" fill="#0D75FF"/><defs><linearGradient id="paint0_linear_17_24" x1="0.286168" y1="63.9397" x2="39.9641" y2="41.0233" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#0D75FF"/><stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/><stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/><stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/><stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/><stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/><stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/><stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/><stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/><stop offset="1" stop-color="#0D75FF" stop-opacity="0"/></linearGradient><linearGradient id="paint1_linear_17_24" x1="100.98" y1="63.867" x2="61.29" y2="40.9578" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#0D75FF"/><stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/><stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/><stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/><stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/><stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/><stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/><stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/><stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/><stop offset="1" stop-color="#0D75FF" stop-opacity="0"/></linearGradient><linearGradient id="paint2_linear_17_24" x1="13.7342" y1="87.151" x2="53.4193" y2="64.247" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#0D75FF"/><stop offset="0.48" stop-color="#0D75FF" stop-opacity="0.99"/><stop offset="0.56" stop-color="#0D75FF" stop-opacity="0.94"/><stop offset="0.63" stop-color="#0D75FF" stop-opacity="0.87"/><stop offset="0.7" stop-color="#0D75FF" stop-opacity="0.76"/><stop offset="0.78" stop-color="#0D75FF" stop-opacity="0.62"/><stop offset="0.85" stop-color="#0D75FF" stop-opacity="0.46"/><stop offset="0.92" stop-color="#0D75FF" stop-opacity="0.26"/><stop offset="0.99" stop-color="#0D75FF" stop-opacity="0.04"/><stop offset="1" stop-color="#0D75FF" stop-opacity="0"/></linearGradient></defs></svg>`
+        },
+        {
+            id: 'default_2',
+            svgData: `<svg viewBox="0 0 983 230" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_9256_22349)"><path d="M604.362 26.4051C611.534 26.4051 617.605 20.5224 617.605 13.3772C617.605 6.23193 611.534 -0.0268555 604.362 -0.0268555C597.19 -0.0268555 591.119 6.01704 591.119 13.3772C591.119 20.7373 597.002 26.4051 604.362 26.4051ZM567.078 26.4051C574.438 26.4051 580.321 20.5224 580.321 13.3772C580.321 6.23193 574.438 -0.0268555 567.078 -0.0268555C559.718 -0.0268555 553.835 6.01704 553.835 13.3772C553.835 20.7373 559.906 26.4051 567.078 26.4051ZM549.269 175.353V60.8956H591.522C627.705 60.8956 651.209 78.8661 651.209 115.022C651.209 151.178 627.705 169.122 591.522 169.122H580.133C571.322 169.122 558.455 170.787 549.269 175.353ZM528.505 188.381H592.973C642.21 188.381 674.364 160.311 674.364 115.022C674.364 69.7331 642.21 41.6626 592.973 41.6626H528.505C527.564 41.6626 527.215 42.2267 527.215 42.9519V187.119C527.215 187.844 527.591 188.408 528.505 188.408V188.381ZM280.651 191.309C314.631 191.309 342.38 179.033 342.38 131.327V42.9251C342.38 42.0118 341.654 41.6357 340.929 41.6357H256.234C255.509 41.6357 254.945 42.0118 254.945 42.737V59.4182C254.945 60.1434 254.945 60.8687 256.046 60.8687H320.353V131.3C320.353 160.284 310.602 172.023 280.678 172.023C259.189 172.023 243.206 166.355 241.003 140.46C240.815 139.171 240.439 138.795 239.338 138.795L221.69 138.983C220.777 138.983 220.024 139.359 220.024 140.084V141.373C220.024 174.01 241.326 191.282 280.651 191.282M906.772 229.829C913.944 229.829 920.014 223.946 920.014 216.801C920.014 209.656 913.944 203.424 906.772 203.424C899.599 203.424 893.529 209.468 893.529 216.801C893.529 224.134 899.411 229.829 906.772 229.829ZM685.753 188.381H900.889C950.126 188.381 982.28 160.311 982.28 115.022C982.28 69.7331 950.126 41.6626 900.889 41.6626H848.159C847.219 41.6626 846.87 42.2267 846.87 42.9519V59.4719C846.87 60.3852 847.434 60.9224 848.32 60.9224H900.325C935.218 60.9224 959.125 78.7049 959.125 115.049C959.125 151.393 935.245 169.148 900.325 169.148H808.834C823.527 156.308 831.612 137.962 831.612 115.049C831.612 69.7331 799.459 41.6894 750.221 41.6894H691.26C690.347 41.6894 689.97 42.2535 689.97 42.9788V59.4988C689.97 60.4121 690.535 60.9493 691.421 60.9493H749.657C784.551 60.9493 808.458 78.7318 808.458 115.076C808.458 151.42 784.578 169.175 749.657 169.175H726.153C703.562 169.175 696.928 174.118 685.914 183.116C685.001 183.842 684.464 183.681 684.464 184.567V187.146C684.464 187.871 684.84 188.435 685.753 188.435M381.705 188.381H493.584C494.148 188.381 494.874 187.817 494.874 187.28V170.223C494.874 169.659 494.31 169.122 493.584 169.122H482.571C448.403 169.122 426.349 169.31 402.469 175.918V127.298C413.483 124.182 429.089 122.892 449.504 122.892H486.788C487.514 122.892 487.89 122.328 487.89 121.603V104.922C487.89 104.197 487.702 103.633 486.788 103.633H482.571C454.286 103.633 426.914 102.719 402.469 114.646V60.8956H491.194C492.134 60.8956 492.483 60.3315 492.483 59.7942V42.9251C492.483 42.0118 492.107 41.6357 491.194 41.6357H381.705C380.98 41.6357 380.416 42.0118 380.416 42.9251V187.28C380.416 188.005 380.792 188.381 381.705 188.381Z" fill="#FBF7EB"/><path d="M66.2679 114.109C58.8003 124.128 49.3181 132.643 37.875 138.741L8.97177 154.106C7.76299 154.75 6.25873 154.159 5.77522 152.87C2.87415 145.295 0.913244 137.317 -5.53541e-05 129.527C-0.107502 128.48 0.537179 127.513 1.53106 127.163L61.8894 107.125C69.5181 104.438 69.733 98.4482 69.2764 94.6338C71.2104 104.868 67.396 112.363 66.241 114.109H66.2679Z" fill="url(#paint0_linear_9256_22349)"/><path d="M83.4593 25.0351L84.6143 57.7795C85.3396 78.3825 78.2481 97.8035 66.4289 113.894C66.3752 113.947 66.3215 114.055 66.2678 114.109C67.4228 112.363 71.2372 104.868 69.3031 94.6339V94.4995L56.4632 32.0729C56.2483 31.0521 56.7587 30.0045 57.7257 29.5747C64.9515 26.4588 72.7414 24.1755 80.7999 22.8862C82.1699 22.6444 83.4055 23.6651 83.4593 25.0351Z" fill="#FBF7EB"/><path d="M125.659 114.109C133.126 124.128 142.609 132.643 154.052 138.741L182.955 154.106C184.164 154.75 185.668 154.159 186.152 152.87C189.053 145.322 190.987 137.344 191.9 129.527C192.007 128.48 191.363 127.513 190.369 127.163L130.01 107.125C122.382 104.438 122.167 98.4482 122.623 94.6338C120.689 104.868 124.504 112.363 125.659 114.109Z" fill="url(#paint1_linear_9256_22349)"/><path d="M108.468 25.0351L107.313 57.7795C106.587 78.3825 113.679 97.8035 125.498 113.894C125.552 113.947 125.605 114.055 125.659 114.109C124.504 112.363 120.69 104.868 122.624 94.6339V94.4995L135.464 32.0729C135.678 31.0521 135.168 30.0045 134.201 29.5747C126.975 26.4588 119.185 24.1755 111.127 22.8862C109.757 22.6444 108.521 23.6651 108.468 25.0351Z" fill="#FBF7EB"/><path d="M84.7217 146.101C72.3116 147.551 60.197 151.527 49.2105 158.377L21.4623 175.729C20.3073 176.454 20.0655 178.066 20.9251 179.114C26.002 185.399 31.9384 191.067 38.2509 195.768C39.1105 196.386 40.2655 196.305 41.0445 195.607L88.5898 153.353C94.7412 148.088 100.033 150.882 103.095 153.219C95.1978 146.423 86.8169 145.966 84.6949 146.101H84.7217Z" fill="url(#paint2_linear_9256_22349)"/><path d="M170.464 175.756L142.662 158.377C125.175 147.444 104.814 143.871 84.9634 146.047C84.8829 146.047 84.7754 146.047 84.6948 146.074C86.79 145.94 95.1709 146.396 103.095 153.192L103.203 153.273L150.855 195.58C151.634 196.279 152.816 196.359 153.649 195.741C159.961 191.041 165.844 185.426 170.975 179.114C171.861 178.066 171.619 176.481 170.437 175.729L170.464 175.756Z" fill="#FBF7EB"/></g><defs><linearGradient id="paint0_linear_9256_22349" x1="0.589153" y1="143.973" x2="75.8118" y2="100.554" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#FBF7EB"/><stop offset="0.48" stop-color="#FBF7EB" stop-opacity="0.98"/><stop offset="0.56" stop-color="#FBF7EB" stop-opacity="0.94"/><stop offset="0.63" stop-color="#FBF7EB" stop-opacity="0.86"/><stop offset="0.71" stop-color="#FBF7EB" stop-opacity="0.76"/><stop offset="0.78" stop-color="#FBF7EB" stop-opacity="0.62"/><stop offset="0.85" stop-color="#FBF7EB" stop-opacity="0.45"/><stop offset="0.92" stop-color="#FBF7EB" stop-opacity="0.25"/><stop offset="0.99" stop-color="#FBF7EB" stop-opacity="0.02"/><stop offset="1" stop-color="#FBF7EB" stop-opacity="0"/></linearGradient><linearGradient id="paint1_linear_9256_22349" x1="191.337" y1="143.922" x2="116.114" y2="100.504" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#FBF7EB"/><stop offset="0.48" stop-color="#FBF7EB" stop-opacity="0.98"/><stop offset="0.56" stop-color="#FBF7EB" stop-opacity="0.94"/><stop offset="0.63" stop-color="#FBF7EB" stop-opacity="0.86"/><stop offset="0.71" stop-color="#FBF7EB" stop-opacity="0.76"/><stop offset="0.78" stop-color="#FBF7EB" stop-opacity="0.62"/><stop offset="0.85" stop-color="#FBF7EB" stop-opacity="0.45"/><stop offset="0.92" stop-color="#FBF7EB" stop-opacity="0.25"/><stop offset="0.99" stop-color="#FBF7EB" stop-opacity="0.02"/><stop offset="1" stop-color="#FBF7EB" stop-opacity="0"/></linearGradient><linearGradient id="paint2_linear_9256_22349" x1="26.0288" y1="188.032" x2="101.242" y2="144.596" gradientUnits="userSpaceOnUse"><stop offset="0.4" stop-color="#FBF7EB"/><stop offset="0.48" stop-color="#FBF7EB" stop-opacity="0.98"/><stop offset="0.56" stop-color="#FBF7EB" stop-opacity="0.94"/><stop offset="0.63" stop-color="#FBF7EB" stop-opacity="0.86"/><stop offset="0.71" stop-color="#FBF7EB" stop-opacity="0.76"/><stop offset="0.78" stop-color="#FBF7EB" stop-opacity="0.62"/><stop offset="0.85" stop-color="#FBF7EB" stop-opacity="0.45"/><stop offset="0.92" stop-color="#FBF7EB" stop-opacity="0.25"/><stop offset="0.99" stop-color="#FBF7EB" stop-opacity="0.02"/><stop offset="1" stop-color="#FBF7EB" stop-opacity="0"/></linearGradient><clipPath id="clip0_9256_22349"><rect width="982.28" height="229.829" fill="white"/></clipPath></defs></svg>`
+        }
+    ];
+
+    // --- Bezier Curve Editors ---
+    const bezierStates = {
+        pos: { p1: { x: 0.42, y: 0.0 }, p2: { x: 0.58, y: 1.0 }, dragging: 0 },
+        rot: { p1: { x: 0.42, y: 0.0 }, p2: { x: 0.58, y: 1.0 }, dragging: 0 },
+        wave: { p1: { x: 0.42, y: 0.0 }, p2: { x: 0.58, y: 1.0 }, dragging: 0 }
+    };
+
+    window.editors = {};
+
+    function initBezierEditor(canvasId, stateObj) {
+        const cvs = document.getElementById(canvasId);
+        const ctx = cvs.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        // Logical (CSS) dimensions
+        const logicalW = 200;
+        const logicalH = 150;
+        
+        cvs.style.width = logicalW + 'px';
+        cvs.style.height = logicalH + 'px';
+        cvs.width = logicalW * dpr;
+        cvs.height = logicalH * dpr;
+
+        const W = logicalW;
+        const H = logicalH;
+        const padding = 20;
+        const w = W - padding * 2;
+        const h = H - padding * 2;
+
+        function render(currentPhase) {
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, W, H);
+            
+            // Grid lines
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding); ctx.lineTo(padding + w, padding);
+            ctx.moveTo(padding, padding + h); ctx.lineTo(padding + w, padding + h);
+            ctx.moveTo(padding, padding); ctx.lineTo(padding, padding + h);
+            ctx.moveTo(padding + w, padding); ctx.lineTo(padding + w, padding + h);
+            ctx.stroke();
+
+            const getX = (val) => padding + val * w;
+            const getY = (val) => padding + h - val * h; // Y is inverted
+
+            const p0x = getX(0), p0y = getY(0);
+            const p1x = getX(stateObj.p1.x), p1y = getY(stateObj.p1.y);
+            const p2x = getX(stateObj.p2.x), p2y = getY(stateObj.p2.y);
+            const p3x = getX(1), p3y = getY(1);
+
+            // Lines to handles
+            ctx.strokeStyle = '#6b7280';
+            ctx.beginPath();
+            ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y);
+            ctx.moveTo(p3x, p3y); ctx.lineTo(p2x, p2y);
+            ctx.stroke();
+
+            // Bezier curve
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(p0x, p0y);
+            ctx.bezierCurveTo(p1x, p1y, p2x, p2y, p3x, p3y);
+            ctx.stroke();
+
+            // Handles
+            function drawHandle(x, y, active) {
+                ctx.fillStyle = active ? '#3b82f6' : '#9ca3af';
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            drawHandle(p1x, p1y, stateObj.dragging === 1);
+            drawHandle(p2x, p2y, stateObj.dragging === 2);
+
+            // Playhead indicator dot
+            if (currentPhase !== undefined) {
+                let yVal = solveBezierY(currentPhase, stateObj.p1.x, stateObj.p1.y, stateObj.p2.x, stateObj.p2.y);
+                ctx.fillStyle = '#4b5563';
+                ctx.beginPath();
+                ctx.arc(getX(currentPhase), getY(yVal), 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function getEventPos(e) {
+            const rect = cvs.getBoundingClientRect();
+            let clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+            
+            let rawX = clientX - rect.left;
+            let rawY = clientY - rect.top;
+            
+            let nx = (rawX - padding) / w;
+            let ny = (h - (rawY - padding)) / h;
+            
+            nx = Math.max(0, Math.min(1, nx));
+            return { x: nx, y: ny, rawX, rawY };
+        }
+
+        const handleStart = (e) => {
+            const pos = getEventPos(e);
+            const getX = (val) => padding + val * w;
+            const getY = (val) => padding + h - val * h;
+            
+            const p1x = getX(stateObj.p1.x), p1y = getY(stateObj.p1.y);
+            const p2x = getX(stateObj.p2.x), p2y = getY(stateObj.p2.y);
+            
+            const dist1 = Math.hypot(pos.rawX - p1x, pos.rawY - p1y);
+            const dist2 = Math.hypot(pos.rawX - p2x, pos.rawY - p2y);
+            
+            // Expanded hit area slightly for easier mobile tapping
+            if (dist1 < 20) stateObj.dragging = 1;
+            else if (dist2 < 20) stateObj.dragging = 2;
+        };
+
+        const handleMove = (e) => {
+            if (stateObj.dragging !== 0 && e.cancelable) {
+                e.preventDefault(); // Prevent scrolling while dragging on mobile
+            }
+            if (stateObj.dragging === 0) return;
+            
+            const pos = getEventPos(e);
+            if (stateObj.dragging === 1) {
+                stateObj.p1.x = pos.x;
+                stateObj.p1.y = pos.y;
+            } else {
+                stateObj.p2.x = pos.x;
+                stateObj.p2.y = pos.y;
+            }
+        };
+
+        const handleEnd = () => { stateObj.dragging = 0; };
+
+        cvs.addEventListener('mousedown', handleStart);
+        cvs.addEventListener('touchstart', handleStart, { passive: false });
+
+        cvs.addEventListener('mousemove', handleMove);
+        cvs.addEventListener('touchmove', handleMove, { passive: false });
+
+        cvs.addEventListener('mouseup', handleEnd);
+        cvs.addEventListener('mouseleave', handleEnd);
+        cvs.addEventListener('touchend', handleEnd);
+        cvs.addEventListener('touchcancel', handleEnd);
+
+        return { render };
+    }
+
+    function solveBezierY(x, p1x, p1y, p2x, p2y) {
+        if (x <= 0) return 0;
+        if (x >= 1) return 1;
+        let t0 = 0, t1 = 1, t = x;
+        for (let i = 0; i < 15; i++) {
+            let cx = 3 * Math.pow(1 - t, 2) * t * p1x + 3 * (1 - t) * Math.pow(t, 2) * p2x + Math.pow(t, 3);
+            if (Math.abs(cx - x) < 0.001) break;
+            if (cx < x) t0 = t;
+            else t1 = t;
+            t = (t0 + t1) / 2;
+        }
+        return 3 * Math.pow(1 - t, 2) * t * p1y + 3 * (1 - t) * Math.pow(t, 2) * p2y + Math.pow(t, 3);
+    }
+
+    // --- Onboarding Logic ---
+    const onboardingSteps = [
+        { id: 'panel-artboard', text: "Choose orientation and proportion of the artboard. I've added the most common ones for now." },
+        { id: 'panel-grid', text: "Change the grid orientation and number of sections (from 1 to 31)." },
+        { id: 'panel-color', text: "Choose between the grads. I've experimented with different grad types: 'Linear' is the one we use now, 'Radial' uses different logic (looks more dynamic), 'Smart' uses a more complex (and new) logic, with ellipse-shaped grads fitting a section." },
+        { id: 'panel-comp', text: "Choose one of the three compositions from the visual system. I've added a few addition ones we can play with. 'Wave' creates a wavy shape which we can adjust number of peaks for; and the curvature of their shape using the graph." },
+        { id: 'panel-shape', text: "This is WIP but we can add shapes which would acts as overlays on top of the grid. We can refine the logic of this overlay and in theory introduce layers to create illustrations. JED logo is here now just to show how it works, we can 'bake in' more shapes." },
+        { id: 'panel-anim', text: "Ambient animation, can turn it on/off and control the length of it. We can also change its easing via graph – it gives us really cool and quick way to explore animation." },
+        { id: 'panel-export', text: "Can export both static and animation. Animation records one cycle so it's a loop. WebM is the only format which gets exported smoothly but it's easy to convert to mp4 or gif later on." }
+    ];
+    let currentObStep = 0;
+
+    function showOnboardingStep(index) {
+        if(index < 0 || index >= onboardingSteps.length) {
+            closeOnboarding();
+            return;
+        }
+        currentObStep = index;
+        const step = onboardingSteps[index];
+        const target = document.getElementById(step.id);
+        const tooltip = document.getElementById('onboarding-tooltip');
+        
+        // Mobile handling to ensure panel is open
+        if (window.innerWidth < 768) {
+            const content = document.getElementById('settings-content');
+            content.classList.remove('hidden');
+            content.classList.add('flex');
+        }
+
+        // Fold all panels, then explicitly open the active one
+        document.querySelectorAll('.panel-section details').forEach(d => d.open = false);
+        const details = target.querySelector('details');
+        if(details) details.open = true;
+
+        // Smooth scroll to the target
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Function to update position relative to panel
+        const updatePos = () => {
+            const targetRect = target.getBoundingClientRect();
+            const panelRect = document.getElementById('control-panel').getBoundingClientRect();
+            
+            if (window.innerWidth < 768) {
+                tooltip.style.left = '50%';
+                tooltip.style.top = 'auto';
+                tooltip.style.bottom = '20px';
+                tooltip.style.transform = 'translateX(-50%)';
+            } else {
+                tooltip.style.left = `${panelRect.right + 15}px`;
+                tooltip.style.top = `${targetRect.top + (targetRect.height / 2)}px`;
+                tooltip.style.bottom = 'auto';
+                tooltip.style.transform = 'translateY(-50%)';
+            }
+        };
+
+        // Update Text
+        document.getElementById('ob-text').innerText = step.text;
+        document.getElementById('ob-counter').innerText = `${index + 1}/${onboardingSteps.length}`;
+        
+        const btnBack = document.getElementById('ob-btn-back');
+        const btnNext = document.getElementById('ob-btn-next');
+        
+        // Show/Hide BACK button
+        btnBack.style.display = index === 0 ? 'none' : 'block';
+        
+        // Finish vs Next icon
+        if (index === onboardingSteps.length - 1) {
+            btnNext.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        } else {
+            btnNext.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        }
+        
+        // Position it immediately
+        updatePos();
+        tooltip.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+        tooltip.classList.add('opacity-100', 'scale-100');
+
+        // Since scrollIntoView is smooth, we track it for a split second to stick the tooltip to the element
+        if (window.obInterval) clearInterval(window.obInterval);
+        let ticks = 0;
+        window.obInterval = setInterval(() => {
+            updatePos();
+            if (++ticks > 30) clearInterval(window.obInterval);
+        }, 16);
+    }
+
+    function closeOnboarding() {
+        const tooltip = document.getElementById('onboarding-tooltip');
+        tooltip.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        tooltip.classList.remove('opacity-100', 'scale-100');
+        if (window.obInterval) clearInterval(window.obInterval);
+    }
+
+    function setupOnboarding() {
+        const btnHelp = document.getElementById('btn-help');
+        const btnClose = document.getElementById('ob-btn-close');
+        const btnNext = document.getElementById('ob-btn-next');
+        const btnBack = document.getElementById('ob-btn-back');
+        
+        btnHelp.addEventListener('click', () => showOnboardingStep(0));
+        btnClose.addEventListener('click', closeOnboarding);
+        
+        btnNext.addEventListener('click', () => {
+            if (currentObStep < onboardingSteps.length - 1) {
+                showOnboardingStep(currentObStep + 1);
+            } else {
+                closeOnboarding();
+            }
+        });
+        
+        btnBack.addEventListener('click', () => {
+            if (currentObStep > 0) {
+                showOnboardingStep(currentObStep - 1);
+            }
+        });
+        
+        // Auto-start on first load via animation frame for robustness
+        if (!sessionStorage.getItem('jed_onboarding_seen_v2')) {
+            requestAnimationFrame(() => {
+                setTimeout(() => showOnboardingStep(0), 400);
+            });
+            sessionStorage.setItem('jed_onboarding_seen_v2', 'true');
+        }
+    }
+
+
+    // --- Shape Library UI Logic ---
+    function renderShapeLibrary() {
+        const grid = document.getElementById('shape-library-grid');
+        grid.innerHTML = '';
+        
+        shapeLibrary.forEach((shape, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'lib-item';
+            if (shape.id === activeShapeId) btn.classList.add('active');
+            
+            btn.innerHTML = shape.svgData;
+            
+            // Delete button
+            const del = document.createElement('button');
+            del.className = 'lib-item-delete';
+            del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            del.addEventListener('click', (e) => {
+                e.stopPropagation();
+                shapeLibrary.splice(idx, 1);
+                if (activeShapeId === shape.id) {
+                    activateShape(null);
+                } else {
+                    renderShapeLibrary();
+                }
+            });
+            btn.appendChild(del);
+
+            btn.addEventListener('click', () => {
+                activateShape(shape.id);
+            });
+
+            grid.appendChild(btn);
+        });
+    }
+
+    function activateShape(id) {
+        if (!id) {
+            uploadedSVG = null;
+            activeShapeId = null;
+            document.getElementById('clear-svg-btn').classList.add('hidden');
+            renderShapeLibrary();
+            return;
+        }
+
+        let shape = shapeLibrary.find(s => s.id === id);
+        if (!shape) return;
+
+        activeShapeId = id;
+        const blob = new Blob([shape.svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = function() {
+            uploadedSVG = img;
+            document.getElementById('clear-svg-btn').classList.remove('hidden');
+            renderShapeLibrary(); // To update active styling
+            URL.revokeObjectURL(url);
+        }
+        img.src = url;
+    }
+
+
+    // --- UI Listeners Setup ---
+    function setupUI() {
+        const updateVal = (id, val) => document.getElementById(id).innerText = val;
+
+        setupOnboarding();
+
+        // Mobile specific toggles
+        document.getElementById('mobile-settings-toggle').addEventListener('click', () => {
+            const content = document.getElementById('settings-content');
+            content.classList.toggle('open');
+        });
+
+        // Exact height calc for mobile absolute positioning
+        const adjustMobileHeight = () => {
+            if (window.innerWidth < 768) {
+                const header = document.getElementById('header-bar');
+                const content = document.getElementById('settings-content');
+                content.style.maxHeight = `calc(100dvh - ${header.offsetHeight}px)`;
+            } else {
+                document.getElementById('settings-content').style.maxHeight = 'none';
+            }
+        };
+        window.addEventListener('resize', adjustMobileHeight);
+        adjustMobileHeight();
+
+
+        document.getElementById('ctrl-proportion').addEventListener('change', (e) => config.proportion = e.target.value);
+        
+        document.querySelectorAll('input[name="artboard-orient"]').forEach(el => {
+            el.addEventListener('change', (e) => config.artboardOrientation = e.target.value);
+        });
+
+        document.querySelectorAll('input[name="section-orient"]').forEach(el => {
+            el.addEventListener('change', (e) => config.sectionOrientation = e.target.value);
+        });
+
+        document.getElementById('ctrl-sections').addEventListener('input', (e) => {
+            config.sectionCount = parseInt(e.target.value);
+            updateVal('val-sections', config.sectionCount);
+        });
+
+        document.querySelectorAll('.palette-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                config.palette = e.target.dataset.palette;
+            });
+        });
+
+        document.querySelectorAll('input[name="grad-type"]').forEach(el => {
+            el.addEventListener('change', (e) => {
+                config.gradientType = e.target.value;
+                const isLinear = config.gradientType === 'linear';
+                
+                const dirCont = document.getElementById('direction-container');
+                dirCont.classList.toggle('opacity-50', !isLinear);
+                dirCont.classList.toggle('pointer-events-none', !isLinear);
+                
+                document.getElementById('spread-container').style.display = !isLinear ? 'block' : 'none';
+                document.getElementById('mask-spread-container').style.display = !isLinear ? 'block' : 'none';
+                
+                const rotAnimSection = document.getElementById('rotation-animation-section');
+                if (!isLinear) {
+                    rotAnimSection.style.display = 'none';
+                    config.animRotPlaying = false;
+                    togglePlayBtn(document.getElementById('play-rot-btn'), false);
+                } else {
+                    rotAnimSection.style.display = 'block';
+                }
+            });
+        });
+
+        document.getElementById('ctrl-direction').addEventListener('input', (e) => {
+            config.gradientDirection = parseInt(e.target.value);
+            updateVal('val-direction', config.gradientDirection + '°');
+        });
+
+        document.getElementById('ctrl-spread').addEventListener('input', (e) => {
+            config.gradientSpread = parseFloat(e.target.value);
+            updateVal('val-spread', config.gradientSpread.toFixed(1));
+        });
+
+        document.querySelectorAll('input[name="var-shape"]').forEach(el => {
+            el.addEventListener('change', (e) => {
+                config.variationShape = e.target.value;
+                document.getElementById('wave-settings').style.display = (config.variationShape === 'Wave') ? 'block' : 'none';
+            });
+        });
+
+        document.getElementById('ctrl-wave-peaks').addEventListener('input', (e) => {
+            config.wavePeaks = parseInt(e.target.value);
+            updateVal('val-wave-peaks', config.wavePeaks);
+        });
+
+        // --- Shape Library Actions ---
+        renderShapeLibrary();
+        activateShape('default_1'); // initial load
+
+        document.getElementById('svg-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const svgText = event.target.result;
+                const newId = 'shape_' + Date.now();
+                shapeLibrary.push({ id: newId, svgData: svgText });
+                activateShape(newId);
+                // Reset input so same file can be uploaded again if needed
+                document.getElementById('svg-upload').value = '';
+            }
+            reader.readAsText(file);
+        });
+
+        document.getElementById('btn-save-lib').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(shapeLibrary));
+            const a = document.createElement('a');
+            a.setAttribute("href", dataStr);
+            a.setAttribute("download", "jed-shape-library.json");
+            a.click();
+        });
+
+        document.getElementById('btn-load-lib').addEventListener('click', () => {
+            document.getElementById('lib-upload').click();
+        });
+
+        document.getElementById('lib-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    if(Array.isArray(parsed)) {
+                        shapeLibrary = parsed;
+                        activateShape(shapeLibrary.length > 0 ? shapeLibrary[0].id : null);
+                    }
+                } catch(err) {
+                    alert("Invalid JSON file.");
+                }
+                document.getElementById('lib-upload').value = '';
+            }
+            reader.readAsText(file);
+        });
+
+        document.getElementById('clear-svg-btn').addEventListener('click', function() {
+            activateShape(null);
+        });
+
+        // Mask Alignment & Scale & Offset
+        document.querySelectorAll('.align-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+                const targetBtn = e.target.closest('.align-btn');
+                targetBtn.classList.add('active');
+                config.shapeAlign = targetBtn.dataset.align;
+                
+                // Toggle Offset Slider
+                const offsetSlider = document.getElementById('ctrl-shape-offset');
+                const offsetCont = document.getElementById('offset-label-container');
+                if (config.shapeAlign === 'center') {
+                    offsetSlider.disabled = true;
+                    offsetCont.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    offsetSlider.disabled = false;
+                    offsetCont.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            });
+        });
+
+        document.getElementById('ctrl-shape-scale').addEventListener('input', (e) => {
+            config.shapeScale = parseInt(e.target.value);
+            updateVal('val-shape-scale', config.shapeScale + '%');
+        });
+
+        document.getElementById('ctrl-shape-offset').addEventListener('input', (e) => {
+            config.shapeOffset = parseInt(e.target.value);
+            updateVal('val-shape-offset', config.shapeOffset + 'px');
+        });
+
+        document.getElementById('ctrl-mask-spread').addEventListener('input', (e) => {
+            config.maskSpread = parseFloat(e.target.value);
+            updateVal('val-mask-spread', config.maskSpread.toFixed(1));
+        });
+
+        // Setup generic animation controls
+        const setupAnimCtrl = (prefix, propPrefix) => {
+            const lengthSlider = document.getElementById(`ctrl-${prefix}-length`);
+            const timeline = document.getElementById(`ctrl-${prefix}-timeline`);
+            const playBtn = document.getElementById(`play-${prefix}-btn`);
+
+            if (lengthSlider) {
+                lengthSlider.addEventListener('input', (e) => {
+                    config[`anim${propPrefix}Length`] = parseFloat(e.target.value);
+                    updateVal(`val-${prefix}-length`, config[`anim${propPrefix}Length`].toFixed(1) + 's');
+                });
+            }
+
+            if (timeline) {
+                timeline.addEventListener('input', (e) => {
+                    config[`anim${propPrefix}Phase`] = parseFloat(e.target.value);
+                });
+            }
+
+            if (playBtn) {
+                playBtn.addEventListener('click', () => {
+                    config[`anim${propPrefix}Playing`] = !config[`anim${propPrefix}Playing`];
+                    togglePlayBtn(playBtn, config[`anim${propPrefix}Playing`]);
+                });
+            }
+        };
+
+        setupAnimCtrl('pos', 'Pos');
+        setupAnimCtrl('rot', 'Rot');
+
+        // Interactive settings
+        document.getElementById('ctrl-interactive').addEventListener('change', (e) => {
+            config.interactiveMode = e.target.checked;
+            const container = document.getElementById('interactive-settings');
+            container.classList.toggle('opacity-50', !config.interactiveMode);
+            container.classList.toggle('pointer-events-none', !config.interactiveMode);
+        });
+
+        document.getElementById('ctrl-int-effect').addEventListener('input', (e) => {
+            config.intEffect = parseInt(e.target.value);
+            updateVal('val-int-effect', config.intEffect + '%');
+        });
+
+        document.getElementById('ctrl-int-delay').addEventListener('input', (e) => {
+            config.intDelay = parseInt(e.target.value);
+            updateVal('val-int-delay', config.intDelay + '%');
+        });
+
+        // Helper to toggle play/pause SVG
+        function togglePlayBtn(btn, isPlaying) {
+            if (isPlaying) {
+                btn.classList.add('playing');
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+            } else {
+                btn.classList.remove('playing');
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+            }
+        }
+
+        // Export Controls
+        document.getElementById('ctrl-export-size').addEventListener('input', (e) => {
+            updateVal('val-export-size', e.target.value + 'px');
+        });
+        
+        document.getElementById('export-format').addEventListener('change', (e) => {
+            let hint = document.getElementById('export-hint');
+            if (e.target.value === 'webm') {
+                hint.innerText = "Exports a perfectly looped WebM video based on animation lengths. Size is automatically capped at 2000px to prevent browser crashing.";
+            } else {
+                hint.innerText = "Exports the static artboard at high resolution.";
+            }
+        });
+
+        document.getElementById('btn-export').addEventListener('click', handleExport);
+
+        // Init Graphs
+        window.editors.pos = initBezierEditor('pos-bezier-canvas', bezierStates.pos);
+        window.editors.rot = initBezierEditor('rot-bezier-canvas', bezierStates.rot);
+        window.editors.wave = initBezierEditor('wave-bezier-canvas', bezierStates.wave);
+    }
+
+
+    // --- Global Recording State ---
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    const videoRecordCanvas = document.createElement('canvas'); // Dedicated hidden canvas for recording WebM
+    const exportInvCanvas = document.createElement('canvas');
+    const exportMaskCanvas = document.createElement('canvas');
+
+
+    // --- High-Resolution / Video Export Logic ---
+    function handleExport() {
+        let format = document.getElementById('export-format').value;
+        let maxSize = parseInt(document.getElementById('ctrl-export-size').value);
+        
+        if (format === 'webm' && maxSize > 2000) {
+            maxSize = 2000;
+        }
+
+        let parts = config.proportion.split(':');
+        let ratio = parseInt(parts[0]) / parseInt(parts[1]);
+        if (config.artboardOrientation === 'horizontal') {
+            if (ratio < 1) ratio = 1 / ratio;
+        } else {
+            if (ratio > 1) ratio = 1 / ratio;
+        }
+
+        let exportW, exportH;
+        if (ratio > 1) {
+            exportW = maxSize;
+            exportH = maxSize / ratio;
+        } else {
+            exportH = maxSize;
+            exportW = maxSize * ratio;
+        }
+
+        if (format === 'webm') {
+            startVideoExport(exportW, exportH);
+        } else {
+            let c = document.createElement('canvas');
+            c.width = exportW;
+            c.height = exportH;
+            
+            renderComposition(c.getContext('2d'), 0, 0, exportW, exportH, exportInvCanvas, exportMaskCanvas);
+            
+            let link = document.createElement('a');
+            link.download = `key-visual.${format}`;
+            link.href = c.toDataURL(`image/${format}`);
+            link.click();
+        }
+    }
+
+    function startVideoExport(w, h) {
+        if (!config.animPosPlaying && !config.animRotPlaying) {
+            alert("Please turn on an animation to export a looping WebM video.");
+            return;
+        }
+
+        isRecording = true;
+        recordedChunks = [];
+        videoRecordCanvas.width = w;
+        videoRecordCanvas.height = h;
+        
+        config.animPosPhase = 0;
+        config.animRotPhase = 0;
+
+        let stream = videoRecordCanvas.captureStream(60); 
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+        
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'key-visual-animated.webm';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('btn-export').classList.remove('hidden');
+            document.getElementById('export-progress').classList.add('hidden');
+            isRecording = false;
+        };
+        
+        mediaRecorder.start();
+        document.getElementById('btn-export').classList.add('hidden');
+        document.getElementById('export-progress').classList.remove('hidden');
+        
+        let durations = [];
+        if(config.animPosPlaying) durations.push(config.animPosLength);
+        if(config.animRotPlaying) durations.push(config.animRotLength);
+        let duration = durations.length > 0 ? Math.max(...durations) : 5;
+        
+        setTimeout(() => {
+            if(mediaRecorder.state === 'recording') mediaRecorder.stop();
+        }, duration * 1000);
+    }
+
+
+    // --- P5.js Main Logic ---
+    function setup() {
+        const container = document.getElementById('p5-canvas-container');
+        let canvas = createCanvas(container.clientWidth, container.clientHeight);
+        canvas.parent('p5-canvas-container');
+        pixelDensity(window.devicePixelRatio);
+        setupUI();
+    }
+
+    function windowResized() {
+        const container = document.getElementById('p5-canvas-container');
+        resizeCanvas(container.clientWidth, container.clientHeight);
+    }
+
+    function draw() {
+        // --- 1. Advance Animation & Graph Renderers ---
+        if (config.animPosPlaying) {
+            config.animPosPhase += (deltaTime / 1000) / config.animPosLength;
+            if (config.animPosPhase >= 1) config.animPosPhase %= 1;
+            document.getElementById('ctrl-pos-timeline').value = config.animPosPhase;
+        }
+
+        if (config.animRotPlaying) {
+            config.animRotPhase += (deltaTime / 1000) / config.animRotLength;
+            if (config.animRotPhase >= 1) config.animRotPhase %= 1;
+            document.getElementById('ctrl-rot-timeline').value = config.animRotPhase;
+        }
+
+        // Render Graph states live
+        if(window.editors.pos) window.editors.pos.render(config.animPosPhase);
+        if(window.editors.rot) window.editors.rot.render(config.animRotPhase);
+        if(window.editors.wave) window.editors.wave.render(undefined);
+
+        // Interactive mouse smoothing
+        if (config.interactiveMode && !isRecording) {
+            let delayFactor = config.intDelay / 100;
+            // Map delay so 0% is instant, 99% is heavily smoothed
+            let easing = map(delayFactor, 0, 0.99, 0.8, 0.01);
+            smoothMouseX += (mouseX - smoothMouseX) * easing;
+            smoothMouseY += (mouseY - smoothMouseY) * easing;
+        }
+
+        // --- 2. Calculate Live Preview Layout bounds ---
+        let parts = config.proportion.split(':');
+        let ratio = parseInt(parts[0]) / parseInt(parts[1]);
+        if (config.artboardOrientation === 'horizontal') {
+            if (ratio < 1) ratio = 1 / ratio;
+        } else {
+            if (ratio > 1) ratio = 1 / ratio;
+        }
+
+        let pad = Math.min(width, height) * 0.05; 
+        let availW = width - pad * 2;
+        let availH = height - pad * 2;
+        
+        let aw, ah;
+        if (availW / availH > ratio) {
+            ah = availH;
+            aw = ah * ratio;
+        } else {
+            aw = availW;
+            ah = aw / ratio;
+        }
+
+        let ax = (width - aw) / 2;
+        let ay = (height - ah) / 2;
+
+        // --- 3. Render the standard live preview UI background ---
+        noStroke();
+        fill('#171717');
+        rect(0, 0, width, height);
+
+        // --- 4. Render Main Preview Artboard ---
+        renderComposition(drawingContext, ax, ay, aw, ah, previewInvCanvas, previewMaskCanvas);
+
+        // --- 5. Simultaneously Render High-Res Frame if Video Exporting ---
+        if (isRecording) {
+            renderComposition(videoRecordCanvas.getContext('2d'), 0, 0, videoRecordCanvas.width, videoRecordCanvas.height, exportInvCanvas, exportMaskCanvas);
+        }
+    }
+
+
+    // --- Core Abstracted Rendering Engine ---
+    function renderComposition(ctx, ax, ay, aw, ah, tempInvCanvas, tempMaskCanvas) {
+        
+        ctx.fillStyle = '#171717';
+        ctx.fillRect(ax, ay, aw, ah);
+
+        let count = config.sectionCount;
+
+        if (uploadedSVG) {
+            if (tempInvCanvas.width !== aw || tempInvCanvas.height !== ah) {
+                tempInvCanvas.width = aw;
+                tempInvCanvas.height = ah;
+                tempMaskCanvas.width = aw;
+                tempMaskCanvas.height = ah;
+            }
+            const invCtx = tempInvCanvas.getContext('2d');
+            invCtx.clearRect(0, 0, aw, ah);
+        }
+
+        for (let i = 0; i < count; i++) {
+            let sx, sy, sw, sh;
+            if (config.sectionOrientation === 'vertical') {
+                sw = aw / count;
+                sh = ah;
+                sx = ax + i * sw;
+                sy = ay;
+            } else {
+                sw = aw;
+                sh = ah / count;
+                sx = ax;
+                sy = ay + i * sh;
+            }
+
+            let localPosPhase = config.animPosPhase;
+            let localRotPhase = config.animRotPhase;
+
+            let t_final = 0;
+            let easedPosPhase = solveBezierY(localPosPhase, bezierStates.pos.p1.x, bezierStates.pos.p1.y, bezierStates.pos.p2.x, bezierStates.pos.p2.y);
+
+            if (count > 1) {
+                let normI = i / (count - 1);
+                if (config.variationShape === 'Wave') {
+                    let phaseOffset = easedPosPhase * 2; 
+                    let wavePhase = normI * config.wavePeaks + phaseOffset;
+                    
+                    let localX = (wavePhase * 2) % 2;
+                    if (localX < 0) localX += 2; 
+                    if (localX > 1) localX = 2 - localX; 
+                    
+                    let waveT = solveBezierY(localX, bezierStates.wave.p1.x, bezierStates.wave.p1.y, bezierStates.wave.p2.x, bezierStates.wave.p2.y);
+                    t_final = 0.15 + 0.7 * waveT;
+                } else {
+                    let t_base = 0;
+                    if (config.variationShape === 'V' || config.variationShape === 'X') {
+                        t_base = Math.abs(normI - 0.5) * 2;
+                    } else if (config.variationShape === 'Peak') {
+                        t_base = 1 - Math.abs(normI - 0.5) * 2;
+                    } else if (config.variationShape === 'Diagonal') {
+                        t_base = normI;
+                    }
+                    let combinedPhase = t_base + easedPosPhase * 2;
+                    t_final = (1 + Math.cos(combinedPhase * Math.PI)) / 2; 
+                }
+            }
+
+            // Draw layers
+            drawGradientSection(ctx, sx, sy, sw, sh, t_final, i, false, localRotPhase, ax, ay, aw, ah);
+
+            if (uploadedSVG) {
+                const invCtx = tempInvCanvas.getContext('2d');
+                drawGradientSection(invCtx, sx - ax, sy - ay, sw, sh, t_final, i, true, localRotPhase, 0, 0, aw, ah);
+            }
+        }
+
+        // Composite Mask Layer
+        if (uploadedSVG) {
+            const invCtx = tempInvCanvas.getContext('2d');
+            const maskCtx = tempMaskCanvas.getContext('2d');
+            maskCtx.clearRect(0, 0, aw, ah);
+            
+            let imgW = uploadedSVG.width;
+            let imgH = uploadedSVG.height;
+            
+            // Align and Scale math
+            let fitScale = Math.min(aw / imgW, ah / imgH);
+            let scale = fitScale * (config.shapeScale / 100);
+            
+            let dw = imgW * scale;
+            let dh = imgH * scale;
+            
+            let dx = (aw - dw) / 2;
+            let dy = (ah - dh) / 2;
+
+            if (config.shapeAlign.includes('left')) dx = config.shapeOffset;
+            if (config.shapeAlign.includes('right')) dx = aw - dw - config.shapeOffset;
+            if (config.shapeAlign.includes('top')) dy = config.shapeOffset;
+            if (config.shapeAlign.includes('bottom')) dy = ah - dh - config.shapeOffset;
+
+            maskCtx.drawImage(uploadedSVG, dx, dy, dw, dh);
+
+            invCtx.globalCompositeOperation = 'destination-in';
+            invCtx.drawImage(tempMaskCanvas, 0, 0);
+            invCtx.globalCompositeOperation = 'source-over'; 
+
+            ctx.drawImage(tempInvCanvas, ax, ay);
+        }
+    }
+
+
+    function drawGradientSection(ctx, x, y, w, h, t_val, sectionIndex, isMask, rotPhase, artboardX, artboardY, artboardW, artboardH) {
+        let cx = x + w / 2;
+        let cy = y + h / 2;
+
+        let drawX = x - 0.5;
+        let drawY = y - 0.5;
+        let drawW = w + 1;
+        let drawH = h + 1;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(drawX, drawY, drawW, drawH);
+        ctx.clip();
+
+        let grad;
+        let colors = [...palettes[config.palette]];
+        if (isMask) colors.reverse();
+
+        // --- Rotation Logic ---
+        let angleRad = (config.gradientDirection - 90) * Math.PI / 180;
+        let easedRotPhase = solveBezierY(rotPhase, bezierStates.rot.p1.x, bezierStates.rot.p1.y, bezierStates.rot.p2.x, bezierStates.rot.p2.y);
+        angleRad += easedRotPhase * Math.PI * 2;
+
+        let currentSpread = isMask ? config.maskSpread : config.gradientSpread;
+
+        // --- Center Position Shift for Radial/Ellipsoid ---
+        let gradCx = cx;
+        let gradCy = cy;
+        if (config.gradientType === 'radial' || config.gradientType === 'ellipsoid') {
+            let shiftAmount = (t_val - 0.5) * 1.2; 
+            if (config.sectionOrientation === 'vertical') {
+                gradCy += shiftAmount * h;
+            } else {
+                gradCx += shiftAmount * w;
+            }
+        }
+
+        // --- Interactive Mode Logic ---
+        if (config.interactiveMode && !isRecording) {
+            // Base coordinates of the current section's center mapped to the entire browser window
+            let globalCx = artboardX + gradCx;
+            let globalCy = artboardY + gradCy;
+            
+            let d = Math.hypot(smoothMouseX - globalCx, smoothMouseY - globalCy);
+            let maxR = Math.max(width, height) * 0.8;
+            
+            let influence = Math.max(0, 1 - (d / maxR));
+            influence = Math.pow(influence, 2); // quadratic falloff for localized heat
+            
+            let effect = config.intEffect / 100;
+            let gravity = effect * influence;
+            
+            // Shift center towards mouse for ALL gradients
+            gradCx += (smoothMouseX - globalCx) * gravity;
+            gradCy += (smoothMouseY - globalCy) * gravity;
+            
+            // Shrink gradient
+            let shrinkFactor = 1 - (effect * influence * 0.85);
+            currentSpread *= Math.max(0.05, shrinkFactor);
+        }
+
+        if (config.gradientType === 'linear') {
+            let R = Math.abs(w/2 * Math.cos(angleRad)) + Math.abs(h/2 * Math.sin(angleRad));
+            R *= Math.max(0.1, currentSpread * 0.5); 
+
+            let x1 = gradCx - R * Math.cos(angleRad);
+            let y1 = gradCy - R * Math.sin(angleRad);
+            let x2 = gradCx + R * Math.cos(angleRad);
+            let y2 = gradCy + R * Math.sin(angleRad);
+
+            grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        } else if (config.gradientType === 'ellipsoid') {
+            ctx.translate(gradCx, gradCy);
+            ctx.scale((w / 2) * currentSpread, (h / 2) * currentSpread);
+            grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        } else {
+            let maxR = Math.sqrt(w*w/4 + h*h/4);
+            maxR = Math.max(maxR * (currentSpread * 0.6), w * currentSpread); 
+            grad = ctx.createRadialGradient(gradCx, gradCy, 0, gradCx, gradCy, maxR);
+        }
+
+        // Apply color stops
+        let numStops = 16; 
+        for (let j = 0; j <= numStops; j++) {
+            let baseStop = j / numStops;
+            let finalStop;
+            
+            let scaledIdx = baseStop * (colors.length - 1);
+            let idx1 = Math.floor(scaledIdx);
+            let idx2 = Math.ceil(scaledIdx);
+            let fract = scaledIdx - idx1;
+            
+            let colorStr;
+            if (idx1 === idx2) {
+                colorStr = colors[idx1];
+            } else {
+                let c1 = color(colors[idx1]);
+                let c2 = color(colors[idx2]);
+                colorStr = lerpColor(c1, c2, fract).toString('#rrggbb');
+            }
+
+            let maxPow = (config.variationShape === 'X' || config.variationShape === 'Wave') ? 1.6 : 2.5; 
+            if ((config.gradientType === 'radial' || config.gradientType === 'ellipsoid') && maxPow > 1.5) {
+                maxPow = 1.5;
+            }
+
+            if (config.variationShape === 'X') {
+                let s = baseStop * 2 - 1;
+                let p = Math.pow(maxPow, 1 - t_val * 2);
+                finalStop = (Math.sign(s) * Math.pow(Math.abs(s), p) + 1) / 2;
+            } else {
+                let stopPow = Math.pow(maxPow, t_val * 2 - 1);
+                finalStop = Math.pow(baseStop, stopPow);
+            }
+
+            finalStop = Math.max(0, Math.min(1, finalStop));
+            grad.addColorStop(finalStop, colorStr);
+        }
+
+        ctx.fillStyle = grad;
+        if (config.gradientType === 'ellipsoid') {
+            // Fill an oversized area to completely cover the clipped section regardless of the scale matrix applied above
+            let s = 10000 / Math.max(currentSpread, 0.0001);
+            ctx.fillRect(-s, -s, s * 2, s * 2);
+        } else {
+            // For linear/radial where no context coordinate scaling was used
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+</script>
+</body>
+</html>

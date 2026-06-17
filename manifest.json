@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T17:25:14.986Z",
+  "generated": "2026-06-17T17:54:43.441Z",
   "sessions": [
     {
       "id": "s04",
@@ -83,11 +83,25 @@
       "title": "Project Tools",
       "tools": [
         {
+          "slug": "colour-worlds",
+          "name": "Colour palette generator",
+          "author": "Sasha",
+          "path": "tools/work/colour-worlds/index.html",
+          "cover": "tools/work/colour-worlds/cover.jpg"
+        },
+        {
           "slug": "cupra-hse",
           "name": "HSE Tool",
           "author": "Sasha",
           "path": "tools/work/cupra-hse/index.html",
           "cover": "tools/work/cupra-hse/cover.jpg"
+        },
+        {
+          "slug": "jed-tool",
+          "name": "JED Tool",
+          "author": "Sasha",
+          "path": "tools/work/jed-tool/index.html",
+          "cover": "tools/work/jed-tool/cover.jpg"
         },
         {
           "slug": "randomizer",

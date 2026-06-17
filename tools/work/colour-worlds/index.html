@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colour Worlds Synthesis</title>
+  
+  <!-- Standalone React & Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              950: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    body { background-color: #ffffff; margin: 0; overflow: hidden; }
+    @media (prefers-color-scheme: dark) { body { background-color: #09090b; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // --- Inline SVG Icons ---
+    const Icons = {
+      Download: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+      Plus: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      Minus: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      Wand2: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>,
+      Check: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="20 6 9 17 4 12"/></svg>,
+      RefreshCw: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+      ArrowLeftRight: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>,
+      Layers: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+      X: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+      Sun: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>,
+      Moon: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>,
+      GlobeIcon: (p) => (
+        <svg viewBox="0 0 24 24" fill="none" {...p}>
+          <clipPath id="globe-clip"><circle cx="12" cy="12" r="10" /></clipPath>
+          <g clipPath="url(#globe-clip)">
+            <rect x="0" y="0" width="6" height="24" fill="#a3e635" />
+            <rect x="6" y="0" width="6" height="24" fill="#facc15" />
+            <rect x="12" y="0" width="6" height="24" fill="#fb923c" />
+            <rect x="18" y="0" width="6" height="24" fill="#ef4444" />
+          </g>
+        </svg>
+      )
+    };
+
+    // --- Color Math & Utilities ---
+    const hexToRgb = (hex) => {
+      let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 0, g: 0, b: 0 };
+    };
+
+    const rgbToHex = (r, g, b) => "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+
+    const rgbToHsl = (r, g, b) => {
+      r /= 255; g /= 255; b /= 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) { h = s = 0; } else {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return { h: h * 360, s: s * 100, l: l * 100 };
+    };
+
+    const hslToRgb = (h, s, l) => {
+      h /= 360; s /= 100; l /= 100;
+      let r, g, b;
+      if (s === 0) { r = g = b = l; } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1; if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        let p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+      }
+      return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+    };
+
+    const hslToHex = (h, s, l) => {
+      const { r, g, b } = hslToRgb(h, s, l);
+      return rgbToHex(r, g, b);
+    };
+
+    // --- Oklab Perceptual Color Math ---
+    const srgbToLinear = (x) => {
+      x /= 255;
+      return x >= 0.04045 ? Math.pow((x + 0.055) / 1.055, 2.4) : x / 12.92;
+    };
+    const linearToSrgb = (x) => {
+      x = x >= 0.0031308 ? 1.055 * Math.pow(x, 1 / 2.4) - 0.055 : 12.92 * x;
+      return Math.max(0, Math.min(255, Math.round(x * 255)));
+    };
+    const rgbToOklab = (r, g, b) => {
+      const lr = srgbToLinear(r), lg = srgbToLinear(g), lb = srgbToLinear(b);
+      const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
+      const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
+      const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
+      const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+      return {
+        L: 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+        a: 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+        b: 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_
+      };
+    };
+    const oklabToRgb = (L, a, b) => {
+      const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+      const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+      const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+      const l = l_*l_*l_, m = m_*m_*m_, s = s_*s_*s_;
+      const lr =  4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+      const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+      const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+      return { r: linearToSrgb(lr), g: linearToSrgb(lg), b: linearToSrgb(lb) };
+    };
+    const rgbToOklch = (r, g, b) => {
+      const { L, a, b: bVal } = rgbToOklab(r, g, b);
+      const C = Math.sqrt(a * a + bVal * bVal);
+      let h = Math.atan2(bVal, a) * (180 / Math.PI);
+      if (h < 0) h += 360;
+      return { L, C, h };
+    };
+    const oklchToHex = (L, C, h) => {
+      const hRad = h * (Math.PI / 180);
+      const a = C * Math.cos(hRad);
+      const b = C * Math.sin(hRad);
+      const rgb = oklabToRgb(L, a, b);
+      return rgbToHex(rgb.r, rgb.g, rgb.b);
+    };
+
+    // --- Cubic Bezier Easing Math ---
+    const getBezierValue = (t, p0, p1, p2, p3) => {
+      const u = 1 - t;
+      return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+    };
+    const solveBezier = (x, cx1, cy1, cx2, cy2) => {
+      if (x === 0) return 0;
+      if (x === 1) return 1;
+      let t = x;
+      for (let i = 0; i < 5; i++) {
+        let currentX = getBezierValue(t, 0, cx1, cx2, 1);
+        let derivativeX = 3*Math.pow(1-t, 2)*cx1 + 6*(1-t)*t*(cx2 - cx1) + 3*t*t*(1 - cx2);
+        if (Math.abs(derivativeX) < 1e-6) break;
+        t = t - (currentX - x) / derivativeX;
+      }
+      t = Math.max(0, Math.min(1, t));
+      return getBezierValue(t, 0, cy1, cy2, 1);
+    };
+
+    // --- Independent Channel Interpolator ---
+    // Instead of blending raw RGB, we blend H, S, and L independently using their respective curve factors
+    const interpolateIndependent = (hex1, hex2, t_h, t_s, t_l, isUniform) => {
+      const c1 = hexToRgb(hex1), c2 = hexToRgb(hex2);
+      if (isUniform) {
+        const ok1 = rgbToOklch(c1.r, c1.g, c1.b);
+        const ok2 = rgbToOklch(c2.r, c2.g, c2.b);
+        
+        let h1 = ok1.h, h2 = ok2.h;
+        let deltaH = h2 - h1;
+        if (deltaH > 180) deltaH -= 360;
+        else if (deltaH < -180) deltaH += 360;
+        let h = (h1 + t_h * deltaH) % 360;
+        if (h < 0) h += 360;
+
+        let C = ok1.C + t_s * (ok2.C - ok1.C);
+        let L = ok1.L + t_l * (ok2.L - ok1.L);
+        return oklchToHex(L, C, h);
+      } else {
+        const hsl1 = rgbToHsl(c1.r, c1.g, c1.b);
+        const hsl2 = rgbToHsl(c2.r, c2.g, c2.b);
+
+        let h1 = hsl1.h, h2 = hsl2.h;
+        let deltaH = h2 - h1;
+        if (deltaH > 180) deltaH -= 360;
+        else if (deltaH < -180) deltaH += 360;
+        let h = (h1 + t_h * deltaH) % 360;
+        if (h < 0) h += 360;
+
+        let s = hsl1.s + t_s * (hsl2.s - hsl1.s);
+        let l = hsl1.l + t_l * (hsl2.l - hsl1.l);
+        return hslToHex(h, s, l);
+      }
+    };
+
+    const getEasing = (cfg, channel, idx) => {
+      if (cfg.easings && cfg.easings[channel] && cfg.easings[channel][idx]) {
+        return cfg.easings[channel][idx];
+      }
+      return { x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 };
+    };
+
+    const generateDefaultEasings = (numInputs) => {
+      const len = Math.max(1, numInputs - 1);
+      return {
+        all: Array.from({length: len}, () => ({ x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 })),
+        h: Array.from({length: len}, () => ({ x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 })),
+        s: Array.from({length: len}, () => ({ x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 })),
+        l: Array.from({length: len}, () => ({ x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 }))
+      };
+    };
+
+    // --- Core Generation Engine ---
+    const generatePaletteForConfig = (config, forceReset = false) => {
+      let newColors = []; 
+      const count = config.numColors;
+      const adj = config.globalAdjustments;
+      const mode = config.mode;
+      const perceptuallyUniform = config.perceptuallyUniform;
+      const N = config.inputs.length;
+
+      if (N === 1) {
+        const rgbRaw = hexToRgb(config.inputs[0]);
+        let baseRaw = perceptuallyUniform 
+          ? rgbToOklch(rgbRaw.r, rgbRaw.g, rgbRaw.b) 
+          : rgbToHsl(rgbRaw.r, rgbRaw.g, rgbRaw.b);
+          
+        const adjBaseH = (baseRaw.h + adj.h + 360) % 360;
+        let adjBaseS, adjBaseL;
+        if (perceptuallyUniform) {
+            adjBaseS = Math.max(0, Math.min(0.4, baseRaw.C + (adj.s / 100) * 0.4));
+            adjBaseL = Math.max(0, Math.min(1, baseRaw.L + (adj.l / 100)));
+        } else {
+            adjBaseS = Math.max(0, Math.min(100, baseRaw.s + adj.s));
+            adjBaseL = Math.max(0, Math.min(100, baseRaw.l + adj.l));
+        }
+
+        const harmonyMap = {
+          'complementary': [0, 180],
+          'split-complementary': [0, 150, 210],
+          'triadic': [0, 120, 240],
+          'tetradic': [0, 60, 180, 240],
+          'square': [0, 90, 180, 270]
+        };
+
+        const mappedAngles = [];
+        const mappedSubSteps = [];
+
+        if (harmonyMap[mode]) {
+          const M = harmonyMap[mode].length;
+          for (let idx = 0; idx < count; idx++) {
+            const group = Math.floor((idx * M) / count);
+            mappedAngles.push(harmonyMap[mode][group]);
+            const groupStart = Math.ceil((group * count) / M);
+            const groupEnd = Math.ceil(((group + 1) * count) / M);
+            const localSize = groupEnd - groupStart;
+            const localIndex = idx - groupStart;
+            mappedSubSteps.push(localSize > 1 ? localIndex / (localSize - 1) : 0.5);
+          }
+        }
+
+        let baseIdx = Math.floor((count - 1) / 2);
+        if (harmonyMap[mode]) baseIdx = 0;
+
+        for (let i = 0; i < count; i++) {
+          let h = adjBaseH;
+          let s = adjBaseS;
+          let l = adjBaseL;
+          let isBase = false;
+
+          if (harmonyMap[mode]) {
+             h = (adjBaseH + mappedAngles[i]) % 360;
+             const subStep = mappedSubSteps[i];
+             isBase = (i === 0);
+             if (perceptuallyUniform) {
+                 l = Math.max(0, Math.min(1, adjBaseL + (subStep - 0.5) * 0.4));
+             } else {
+                 l = Math.max(0, Math.min(100, adjBaseL + (subStep - 0.5) * 40));
+             }
+          } else {
+             const offset = i - baseIdx;
+             const step = baseIdx > 0 ? offset / baseIdx : 0; 
+             isBase = (i === baseIdx);
+
+             switch (mode) {
+               case 'monochromatic':
+                 l = perceptuallyUniform 
+                   ? adjBaseL + offset * (0.6 / Math.max(1, count - 1))
+                   : adjBaseL + offset * (60 / Math.max(1, count - 1)); 
+                 break;
+               case 'analogous':
+                 h = (adjBaseH + offset * 15) % 360; 
+                 break;
+               case 'discordant':
+                 const disc = config.discordance !== undefined ? config.discordance : 50;
+                 const hueShift = 137.5 + (disc - 50) * 1.5; 
+                 h = (adjBaseH + (offset * hueShift)) % 360;
+                 if (perceptuallyUniform) {
+                    s = adjBaseS + ((offset%2===0?1:-1) * 0.1) * (disc / 50);
+                    l = adjBaseL + ((offset%3===0?1:-1) * 0.15) * (disc / 50);
+                 } else {
+                    s = adjBaseS + ((offset%2===0?1:-1) * 30) * (disc / 50);
+                    l = adjBaseL + ((offset%3===0?1:-1) * 25) * (disc / 50);
+                 }
+                 break;
+               case 'itten-light-dark':
+                 l = perceptuallyUniform ? adjBaseL - step * 0.45 : adjBaseL - step * 45;
+                 break;
+               case 'itten-cold-warm':
+                 h = (adjBaseH + step * 90 + 360) % 360;
+                 break;
+               case 'itten-saturation':
+                 s = perceptuallyUniform ? adjBaseS - Math.abs(step) * 0.3 : adjBaseS - Math.abs(step) * 60;
+                 break;
+               default:
+                 break;
+             }
+          }
+
+          if (perceptuallyUniform) {
+             s = Math.max(0, Math.min(0.4, s));
+             l = Math.max(0, Math.min(1, l));
+             newColors.push({ hex: oklchToHex(l, s, h), isBase });
+          } else {
+             s = Math.max(0, Math.min(100, s));
+             l = Math.max(0, Math.min(100, l));
+             newColors.push({ hex: hslToHex(h, s, l), isBase });
+          }
+        }
+      } else if (N >= 2) {
+        for (let i = 0; i < count; i++) {
+          let globalFactor = count > 1 ? i / (count - 1) : 0;
+          let isBase = false;
+          
+          for (let j = 0; j < N; j++) {
+             let segBoundary = j / (N - 1);
+             if (Math.abs(globalFactor - segBoundary) < 0.001) {
+                 isBase = true;
+                 break;
+             }
+          }
+
+          let segIdx = Math.floor(globalFactor * (N - 1));
+          segIdx = Math.min(segIdx, N - 2);
+
+          let segmentSize = 1 / (N - 1);
+          let localFactor = (globalFactor - segIdx * segmentSize) / segmentSize;
+
+          let e_all = getEasing(config, 'all', segIdx);
+          let eased_all = solveBezier(localFactor, e_all.x1, e_all.y1, e_all.x2, e_all.y2);
+
+          let e_h = getEasing(config, 'h', segIdx);
+          let eased_h = solveBezier(eased_all, e_h.x1, e_h.y1, e_h.x2, e_h.y2);
+          
+          let e_s = getEasing(config, 's', segIdx);
+          let eased_s = solveBezier(eased_all, e_s.x1, e_s.y1, e_s.x2, e_s.y2);
+          
+          let e_l = getEasing(config, 'l', segIdx);
+          let eased_l = solveBezier(eased_all, e_l.x1, e_l.y1, e_l.x2, e_l.y2);
+
+          let generatedHex = interpolateIndependent(
+            config.inputs[segIdx], config.inputs[segIdx+1], 
+            eased_h, eased_s, eased_l, perceptuallyUniform
+          );
+            
+          if (adj.h !== 0 || adj.s !== 0 || adj.l !== 0) {
+             if (perceptuallyUniform) {
+                const { L, C, h } = rgbToOklch(...Object.values(hexToRgb(generatedHex)));
+                const adjH = (h + adj.h + 360) % 360;
+                const adjS = Math.max(0, Math.min(0.4, C + (adj.s / 100) * 0.4));
+                const adjL = Math.max(0, Math.min(1, L + (adj.l / 100)));
+                generatedHex = oklchToHex(adjL, adjS, adjH);
+             } else {
+                const { h, s, l } = rgbToHsl(...Object.values(hexToRgb(generatedHex)));
+                const adjH = (h + adj.h + 360) % 360;
+                const adjS = Math.max(0, Math.min(100, s + adj.s));
+                const adjL = Math.max(0, Math.min(100, l + adj.l));
+                generatedHex = hslToHex(adjH, adjS, adjL);
+             }
+          }
+            
+          newColors.push({ hex: generatedHex, isBase });
+        }
+      }
+
+      let newPalette = [];
+      if (config.palette.length === count && !forceReset) {
+        newPalette = newColors.map((colObj, i) => (
+          config.palette[i] ? { ...config.palette[i], hex: colObj.hex, isBase: colObj.isBase } : { id: `color-${Date.now()}-${i}`, hex: colObj.hex, isBase: colObj.isBase, ratio: 100/count }
+        ));
+      } else {
+        const equalRatio = 100 / count;
+        newPalette = newColors.map((colObj, i) => ({
+          id: `color-${Date.now()}-${i}`,
+          hex: colObj.hex,
+          isBase: colObj.isBase,
+          ratio: equalRatio
+        }));
+      }
+
+      return { ...config, palette: newPalette };
+    };
+
+    const getNextId = (configs) => {
+      const ids = configs.map(c => c.id);
+      for (let i = 65; i <= 90; i++) {
+        const char = String.fromCharCode(i);
+        if (!ids.includes(char)) return char;
+      }
+      return `P${configs.length + 1}`;
+    };
+
+    function App() {
+      const [appTheme, setAppTheme] = useState('dark');
+      const [appMode, setAppMode] = useState('harmony'); 
+      const [activeTab, setActiveTab] = useState(0);
+      const [copied, setCopied] = useState(false);
+      const [activeTune, setActiveTune] = useState({ cIdx: null, colorIdx: null }); 
+      const [activeCurveTab, setActiveCurveTab] = useState('all');
+      
+      const [previewMode, setPreviewMode] = useState('theme');
+      const [previewGrey, setPreviewGrey] = useState(50);
+      
+      const defaultConfig = {
+        id: 'A',
+        inputs: ['#3B82F6'],
+        numColors: 5,
+        mode: 'analogous',
+        globalAdjustments: { h: 0, s: 0, l: 0 },
+        perceptuallyUniform: false,
+        harmonyLock: true,
+        discordance: 50, 
+        easings: generateDefaultEasings(1),
+        paletteRatio: 100,
+        palette: []
+      };
+
+      const [configs, setConfigs] = useState(() => [generatePaletteForConfig(defaultConfig, true)]);
+      
+      const wheelRef = useRef(null);
+      const bezierSvgRef = useRef(null);
+      const wheelDragIndex = useRef(null);
+      const bezierDragData = useRef(null);
+
+      const updateConfig = (cIdx, updates, forceReset = false) => {
+        setConfigs(prev => {
+          const newConfigs = [...prev];
+          const newConfig = { ...newConfigs[cIdx], ...updates };
+          newConfigs[cIdx] = generatePaletteForConfig(newConfig, forceReset);
+          return newConfigs;
+        });
+      };
+
+      const switchAppMode = (mode) => {
+        if (mode === appMode) return;
+        setAppMode(mode);
+        setActiveTab(0);
+        setActiveTune({ cIdx: null, colorIdx: null });
+        setActiveCurveTab('all');
+
+        if (mode === 'harmony') {
+          setConfigs(prev => [generatePaletteForConfig({
+            ...prev[activeTab],
+            inputs: [prev[activeTab].inputs[0]],
+            paletteRatio: 100,
+            discordance: 50
+          }, true)]);
+        } else if (mode === 'blend') {
+          setConfigs(prev => {
+            const base = prev[activeTab];
+            const newInputs = base.inputs.length >= 2 ? base.inputs : [base.inputs[0], '#10B981'];
+            const newEasings = base.easings || generateDefaultEasings(newInputs.length);
+            return [generatePaletteForConfig({ ...base, inputs: newInputs, easings: newEasings, paletteRatio: 100, discordance: 50 }, true)];
+          });
+        } else if (mode === 'multi') {
+          setConfigs(prev => {
+            const c1 = { ...prev[0], id: 'A', paletteRatio: 33.33 };
+            const c2 = generatePaletteForConfig({ ...c1, id: 'B', inputs: ['#10B981'], mode: 'complementary', paletteRatio: 33.33, discordance: 50 }, true);
+            const c3 = generatePaletteForConfig({ ...c1, id: 'C', inputs: ['#F59E0B'], mode: 'triadic', paletteRatio: 33.34, discordance: 50 }, true);
+            return [c1, c2, c3];
+          });
+        }
+      };
+
+      const handleReset = () => {
+        updateConfig(activeTab, { 
+          globalAdjustments: { h: 0, s: 0, l: 0 },
+          discordance: 50,
+          easings: generateDefaultEasings(configs[activeTab].inputs.length)
+        }, true);
+        
+        if (appMode === 'multi') {
+          setConfigs(prev => {
+            const newConfigs = prev.map(c => ({...c}));
+            const equalRatio = 100 / newConfigs.length;
+            newConfigs.forEach(c => c.paletteRatio = equalRatio);
+            return newConfigs;
+          });
+        }
+      };
+
+      const handleAutoBalance = () => {
+        setConfigs(prev => {
+          const newConfigs = [...prev];
+          const cfg = { ...newConfigs[activeTab] };
+          const newPal = cfg.palette.map(c => ({...c}));
+          
+          let totalInverseLuminance = 0;
+          const shares = newPal.map(color => {
+            const rgb = hexToRgb(color.hex);
+            const lum = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+            const requiredSpace = 1 / (lum + 0.1); 
+            totalInverseLuminance += requiredSpace;
+            return requiredSpace;
+          });
+
+          newPal.forEach((color, i) => {
+            color.ratio = (shares[i] / totalInverseLuminance) * 100;
+          });
+
+          cfg.palette = newPal;
+          newConfigs[activeTab] = cfg;
+          return newConfigs;
+        });
+      };
+
+      const activeConfig = configs[activeTab] || configs[0];
+
+      const handleAddPalette = () => {
+        setConfigs(prev => {
+          const newConfigs = prev.map(c => ({...c}));
+          const newConfig = generatePaletteForConfig({
+            ...defaultConfig,
+            id: getNextId(newConfigs),
+            inputs: ['#10B981'],
+            mode: 'analogous',
+            paletteRatio: 0,
+            discordance: 50,
+            easings: generateDefaultEasings(1)
+          }, true);
+          
+          newConfigs.push(newConfig);
+          const equalRatio = 100 / newConfigs.length;
+          newConfigs.forEach(c => c.paletteRatio = equalRatio);
+          
+          setActiveTab(newConfigs.length - 1);
+          return newConfigs;
+        });
+      };
+
+      const handleRemovePalette = (e, index) => {
+        e.stopPropagation();
+        if (configs.length <= 1) return;
+        setConfigs(prev => {
+          const newConfigs = prev.filter((_, i) => i !== index);
+          const equalRatio = 100 / newConfigs.length;
+          newConfigs.forEach(c => c.paletteRatio = equalRatio);
+          return newConfigs;
+        });
+        
+        if (activeTab >= configs.length - 1) {
+          setActiveTab(Math.max(0, configs.length - 2));
+        } else if (activeTab > index) {
+          setActiveTab(activeTab - 1);
+        }
+      };
+
+      const handleAddInput = () => {
+        if (activeConfig.inputs.length < 5) {
+          const newColor = activeConfig.inputs.length === 1 ? '#F59E0B' : '#10B981';
+          const newEasings = activeConfig.easings ? { ...activeConfig.easings } : generateDefaultEasings(activeConfig.inputs.length);
+          
+          ['all', 'h', 's', 'l'].forEach(channel => {
+             newEasings[channel] = [...(newEasings[channel] || []), { x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 }];
+          });
+
+          updateConfig(activeTab, { inputs: [...activeConfig.inputs, newColor], easings: newEasings });
+        }
+      };
+
+      const handleRemoveInput = (index) => {
+        const newInputs = activeConfig.inputs.filter((_, i) => i !== index);
+        if (newInputs.length < 2 && appMode === 'blend') return; 
+        
+        const newEasings = activeConfig.easings ? { ...activeConfig.easings } : generateDefaultEasings(activeConfig.inputs.length);
+        ['all', 'h', 's', 'l'].forEach(channel => {
+           if (newEasings[channel] && newEasings[channel].length > 0) {
+              newEasings[channel] = newEasings[channel].slice(0, newInputs.length - 1);
+           }
+        });
+
+        updateConfig(activeTab, { inputs: newInputs, easings: newEasings });
+      };
+
+      const handleSwapInputs = () => {
+        const newInputs = [...activeConfig.inputs].reverse();
+        updateConfig(activeTab, { inputs: newInputs });
+      };
+
+      const updateInputColor = (index, hex) => {
+        const newInputs = [...activeConfig.inputs];
+        newInputs[index] = hex;
+        updateConfig(activeTab, { inputs: newInputs });
+      };
+
+      const updateRatio = (cIdx, colorIdx, newRatio) => {
+        setConfigs(prev => {
+          const newConfigs = [...prev];
+          const cfg = { ...newConfigs[cIdx] };
+          const newPal = cfg.palette.map(c => ({...c}));
+          
+          const oldRatio = newPal[colorIdx].ratio;
+          const clampedRatio = Math.max(1, Math.min(99, newRatio));
+          
+          const oldRemaining = 100 - oldRatio;
+          const newRemaining = 100 - clampedRatio;
+
+          newPal[colorIdx].ratio = clampedRatio;
+
+          if (oldRemaining <= 0.001) {
+            const share = newRemaining / Math.max(1, newPal.length - 1);
+            for (let i = 0; i < newPal.length; i++) {
+              if (i !== colorIdx) newPal[i].ratio = share;
+            }
+          } else {
+            for (let i = 0; i < newPal.length; i++) {
+              if (i !== colorIdx) {
+                const proportion = newPal[i].ratio / oldRemaining;
+                newPal[i].ratio = proportion * newRemaining;
+              }
+            }
+          }
+          
+          cfg.palette = newPal;
+          newConfigs[cIdx] = cfg;
+          return newConfigs;
+        });
+      };
+
+      const updatePaletteRatio = (cIdx, newRatio) => {
+        setConfigs(prev => {
+          const newConfigs = prev.map(c => ({...c}));
+          const oldRatio = newConfigs[cIdx].paletteRatio || (100 / prev.length);
+          const clampedRatio = Math.max(5, Math.min(95, newRatio)); 
+
+          const oldRemaining = 100 - oldRatio;
+          const newRemaining = 100 - clampedRatio;
+
+          newConfigs[cIdx].paletteRatio = clampedRatio;
+
+          if (oldRemaining <= 0.001) {
+            const share = newRemaining / Math.max(1, newConfigs.length - 1);
+            for (let i = 0; i < newConfigs.length; i++) {
+              if (i !== cIdx) newConfigs[i].paletteRatio = share;
+            }
+          } else {
+            for (let i = 0; i < newConfigs.length; i++) {
+              if (i !== cIdx) {
+                const proportion = (newConfigs[i].paletteRatio || (100/prev.length)) / oldRemaining;
+                newConfigs[i].paletteRatio = proportion * newRemaining;
+              }
+            }
+          }
+          return newConfigs;
+        });
+      };
+
+      const onWheelPointerDown = (index) => (e) => {
+        e.stopPropagation();
+        wheelDragIndex.current = index;
+        document.body.style.cursor = 'crosshair';
+      };
+
+      useEffect(() => {
+        const onPointerMove = (e) => {
+          if (wheelDragIndex.current !== null && wheelRef.current) {
+            const rect = wheelRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const dx = e.clientX - centerX;
+            const dy = e.clientY - centerY;
+            
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            let hue = (angle + 90) % 360;
+            if (hue < 0) hue += 360;
+            
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const maxRadius = rect.width / 2;
+            const sat = Math.min(100, Math.max(0, (dist / (maxRadius * 0.85)) * 100));
+
+            setConfigs(prev => {
+              const newConfigs = [...prev];
+              const cfg = { ...newConfigs[activeTab] };
+              const newPal = cfg.palette.map(c => ({...c}));
+              const idx = wheelDragIndex.current;
+              
+              if (!newPal[idx]) return prev;
+
+              const oldHsl = rgbToHsl(...Object.values(hexToRgb(newPal[idx].hex)));
+              const deltaH = hue - oldHsl.h;
+              const deltaS = sat - oldHsl.s;
+
+              if (cfg.harmonyLock) {
+                for (let i = 0; i < newPal.length; i++) {
+                  const cHsl = rgbToHsl(...Object.values(hexToRgb(newPal[i].hex)));
+                  const newH = (cHsl.h + deltaH + 360) % 360;
+                  const newS = Math.max(0, Math.min(100, cHsl.s + deltaS));
+                  newPal[i].hex = hslToHex(newH, newS, cHsl.l);
+                }
+              } else {
+                newPal[idx].hex = hslToHex(hue, sat, oldHsl.l);
+              }
+              
+              cfg.palette = newPal;
+              newConfigs[activeTab] = cfg;
+              return newConfigs;
+            });
+          }
+
+          if (bezierDragData.current && bezierSvgRef.current) {
+            const rect = bezierSvgRef.current.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const svgX = (mouseX / rect.width) * 1000;
+            const svgY = (mouseY / rect.height) * 200;
+
+            const { segIdx, handleIdx, tab } = bezierDragData.current;
+            const cfg = configs[activeTab];
+            const N = cfg.inputs.length;
+            
+            const PADDING_X = 100;
+            const WIDTH = 800;
+            
+            const Kx_i = PADDING_X + segIdx * (WIDTH / (N - 1));
+            const Ky_i = (segIdx % 2 === 0) ? 150 : 50;
+            const Kx_next = PADDING_X + (segIdx + 1) * (WIDTH / (N - 1));
+            const Ky_next = ((segIdx + 1) % 2 === 0) ? 150 : 50;
+            
+            const Dx = Kx_next - Kx_i;
+            const Dy = Ky_next - Ky_i;
+
+            let newX = (svgX - Kx_i) / Dx;
+            let newY = (svgY - Ky_i) / Dy;
+
+            newX = Math.max(0, Math.min(1, newX));
+
+            setConfigs(prev => {
+              const newConfigs = [...prev];
+              const activeCfg = { ...newConfigs[activeTab] };
+              
+              if (!activeCfg.easings) {
+                activeCfg.easings = generateDefaultEasings(activeCfg.inputs.length);
+              }
+
+              const newEasings = { ...activeCfg.easings };
+              newEasings[tab] = (newEasings[tab] || []).map(e => ({...e}));
+              
+              while (newEasings[tab].length <= segIdx) {
+                newEasings[tab].push({ x1: 0.33, y1: 0.33, x2: 0.67, y2: 0.67 });
+              }
+              
+              if (handleIdx === 1) {
+                newEasings[tab][segIdx].x1 = newX;
+                newEasings[tab][segIdx].y1 = newY;
+              } else {
+                newEasings[tab][segIdx].x2 = newX;
+                newEasings[tab][segIdx].y2 = newY;
+              }
+              
+              activeCfg.easings = newEasings;
+              newConfigs[activeTab] = generatePaletteForConfig(activeCfg);
+              return newConfigs;
+            });
+          }
+        };
+
+        const onPointerUp = () => {
+          if (wheelDragIndex.current !== null) wheelDragIndex.current = null;
+          if (bezierDragData.current !== null) bezierDragData.current = null;
+          document.body.style.cursor = 'default';
+        };
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        return () => {
+          document.removeEventListener('pointermove', onPointerMove);
+          document.removeEventListener('pointerup', onPointerUp);
+        };
+      }, [activeTab, configs]);
+
+      const generateSvgString = () => {
+        if (appMode === 'multi') {
+          const totalWidth = 1200;
+          const height = 800;
+          const gap = 32; 
+          
+          let svg = `<svg width="${totalWidth}" height="${height}" viewBox="0 0 ${totalWidth} ${height}" xmlns="http://www.w3.org/2000/svg">\n`;
+          
+          const usableWidth = totalWidth - (gap * (configs.length + 1));
+          let currentX = gap;
+          
+          configs.forEach((config) => {
+            const currentPaletteWidth = (config.paletteRatio / 100) * usableWidth;
+            let colorX = currentX;
+            
+            config.palette.forEach((color) => {
+              const blockWidth = (color.ratio / 100) * currentPaletteWidth;
+              svg += `  <rect x="${colorX}" y="0" width="${blockWidth}" height="${height}" fill="${color.hex}" />\n`;
+              colorX += blockWidth;
+            });
+            
+            currentX += currentPaletteWidth + gap;
+          });
+          
+          svg += `</svg>`;
+          return svg;
+        } else {
+          const width = 1000;
+          const height = 400;
+          let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">\n`;
+          let currentX = 0;
+          
+          activeConfig.palette.forEach((color) => {
+            const blockWidth = (color.ratio / 100) * width;
+            svg += `  <rect x="${currentX}" y="0" width="${blockWidth}" height="${height}" fill="${color.hex}" />\n`;
+            currentX += blockWidth;
+          });
+          
+          svg += `</svg>`;
+          return svg;
+        }
+      };
+
+      const copySvg = async () => {
+        try {
+          await navigator.clipboard.writeText(generateSvgString());
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+          const textArea = document.createElement("textarea");
+          textArea.value = generateSvgString();
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      };
+
+      const renderBezierEditor = () => {
+        if (activeConfig.inputs.length < 2) return null;
+        const N = activeConfig.inputs.length;
+        const PADDING_X = 100;
+        const WIDTH = 800;
+
+        const segments = [];
+        const htmlOverlays = [];
+
+        for (let i = 0; i < N - 1; i++) {
+          const Kx_i = PADDING_X + i * (WIDTH / (N - 1));
+          const Ky_i = (i % 2 === 0) ? 150 : 50; 
+          const Kx_next = PADDING_X + (i + 1) * (WIDTH / (N - 1));
+          const Ky_next = ((i + 1) % 2 === 0) ? 150 : 50;
+          
+          const Dx = Kx_next - Kx_i;
+          const Dy = Ky_next - Ky_i;
+
+          const e = getEasing(activeConfig, activeCurveTab, i);
+          const H1x = Kx_i + e.x1 * Dx;
+          const H1y = Ky_i + e.y1 * Dy;
+          const H2x = Kx_i + e.x2 * Dx;
+          const H2y = Ky_i + e.y2 * Dy;
+
+          const guideColor = appTheme === 'dark' ? '#52525b' : '#d4d4d8';
+          
+          let strokeColor = '#3B82F6';
+          if (activeCurveTab === 'h') strokeColor = 'url(#grad-h)';
+          else if (activeCurveTab === 's') strokeColor = 'url(#grad-s)';
+          else if (activeCurveTab === 'l') strokeColor = 'url(#grad-l)';
+
+          segments.push(
+            <g key={`seg-${i}`}>
+              <path d={`M ${Kx_i} ${Ky_i} C ${H1x} ${H1y}, ${H2x} ${H2y}, ${Kx_next} ${Ky_next}`} fill="none" stroke={strokeColor} strokeWidth="4" strokeLinecap="round" />
+              <line x1={Kx_i} y1={Ky_i} x2={H1x} y2={H1y} stroke={guideColor} strokeWidth="2" strokeDasharray="4 4" />
+              <line x1={Kx_next} y1={Ky_next} x2={H2x} y2={H2y} stroke={guideColor} strokeWidth="2" strokeDasharray="4 4" />
+            </g>
+          );
+
+          htmlOverlays.push(
+            <div key={`h1-${i}`} className="absolute w-4 h-4 rounded-full bg-zinc-400 cursor-grab hover:bg-white transition-colors shadow-md border border-white dark:border-zinc-900 z-10"
+                 style={{ left: `calc(${(H1x / 1000) * 100}% - 8px)`, top: `calc(${(H1y / 200) * 100}% - 8px)` }}
+                 onPointerDown={(evt) => { evt.stopPropagation(); bezierDragData.current = { segIdx: i, handleIdx: 1, tab: activeCurveTab }; document.body.style.cursor = 'grabbing'; }} />
+          );
+          htmlOverlays.push(
+            <div key={`h2-${i}`} className="absolute w-4 h-4 rounded-full bg-zinc-400 cursor-grab hover:bg-white transition-colors shadow-md border border-white dark:border-zinc-900 z-10"
+                 style={{ left: `calc(${(H2x / 1000) * 100}% - 8px)`, top: `calc(${(H2y / 200) * 100}% - 8px)` }}
+                 onPointerDown={(evt) => { evt.stopPropagation(); bezierDragData.current = { segIdx: i, handleIdx: 2, tab: activeCurveTab }; document.body.style.cursor = 'grabbing'; }} />
+          );
+
+          htmlOverlays.push(
+            <div key={`anchor-${i}`} className="absolute w-6 h-6 rounded-full border-4 border-zinc-100 dark:border-zinc-950 shadow-lg z-20"
+                 style={{ left: `calc(${(Kx_i / 1000) * 100}% - 12px)`, top: `calc(${(Ky_i / 200) * 100}% - 12px)`, backgroundColor: activeConfig.inputs[i] }} />
+          );
+          if (i === N - 2) {
+            htmlOverlays.push(
+              <div key={`anchor-${i+1}`} className="absolute w-6 h-6 rounded-full border-4 border-zinc-100 dark:border-zinc-950 shadow-lg z-20"
+                   style={{ left: `calc(${(Kx_next / 1000) * 100}% - 12px)`, top: `calc(${(Ky_next / 200) * 100}% - 12px)`, backgroundColor: activeConfig.inputs[i+1] }} />
+            );
+          }
+        }
+
+        const count = activeConfig.numColors;
+        for (let i = 0; i < count; i++) {
+           let globalFactor = count > 1 ? i / (count - 1) : 0;
+           let svgX, svgY;
+
+           if (globalFactor === 1) {
+              svgX = PADDING_X + WIDTH;
+              svgY = ((N - 1) % 2 === 0) ? 150 : 50;
+           } else {
+              let segIdx = Math.floor(globalFactor * (N - 1));
+              segIdx = Math.min(segIdx, N - 2);
+              
+              let segmentSize = 1 / (N - 1);
+              let localFactor = (globalFactor - segIdx * segmentSize) / segmentSize;
+              
+              let e_active = getEasing(activeConfig, activeCurveTab, segIdx);
+              let e_all = getEasing(activeConfig, 'all', segIdx);
+              
+              // Find the visual position of the dot.
+              // X is driven by the true linear progression.
+              svgX = PADDING_X + globalFactor * WIDTH;
+              
+              const Ky_0 = (segIdx % 2 === 0) ? 150 : 50;
+              const Ky_1 = ((segIdx + 1) % 2 === 0) ? 150 : 50;
+              
+              // If we are on the 'all' tab, the dot is on the 'all' curve.
+              // If on h/s/l, the dot sits on the h/s/l curve, BUT its x-position along the segment is dictated by the 'all' curve mapping.
+              let evalFactor = localFactor;
+              if (activeCurveTab !== 'all') {
+                  evalFactor = solveBezier(localFactor, e_all.x1, e_all.y1, e_all.x2, e_all.y2);
+              }
+              
+              let easedY = solveBezier(evalFactor, e_active.x1, e_active.y1, e_active.x2, e_active.y2);
+              svgY = Ky_0 + easedY * (Ky_1 - Ky_0);
+           }
+           
+           if (activeConfig.palette[i]) {
+             htmlOverlays.push(
+                <div key={`dot-${i}`} className="absolute w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-zinc-900 z-0 transition-all duration-75"
+                     style={{ left: `calc(${(svgX / 1000) * 100}% - 7px)`, top: `calc(${(svgY / 200) * 100}% - 7px)`, backgroundColor: activeConfig.palette[i].hex }} />
+             );
+           }
+        }
+
+        return (
+          <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/50 space-y-3">
+            <div className="flex items-center justify-between">
+               <label className="text-xs text-zinc-500 dark:text-zinc-400">Distribution Splines</label>
+            </div>
+            
+            {/* TABS */}
+            <div className="flex bg-zinc-100 dark:bg-zinc-900/80 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-inner">
+               {[
+                 { id: 'all', label: 'Spacing' },
+                 { id: 'h', label: 'Hue' },
+                 { id: 's', label: 'Sat' },
+                 { id: 'l', label: 'Lum' }
+               ].map(tab => (
+                 <button
+                   key={tab.id}
+                   onClick={() => setActiveCurveTab(tab.id)}
+                   className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${activeCurveTab === tab.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
+                 >
+                   {tab.label}
+                 </button>
+               ))}
+            </div>
+
+            <div ref={bezierSvgRef} className="w-full h-40 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg relative shadow-sm dark:shadow-inner overflow-visible">
+               <svg viewBox="0 0 1000 200" preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none">
+                 <defs>
+                   <linearGradient id="grad-h" x1="0%" y1="0%" x2="100%" y2="0%">
+                     <stop offset="0%" stopColor="#ef4444" />
+                     <stop offset="20%" stopColor="#eab308" />
+                     <stop offset="40%" stopColor="#22c55e" />
+                     <stop offset="60%" stopColor="#06b6d4" />
+                     <stop offset="80%" stopColor="#3b82f6" />
+                     <stop offset="100%" stopColor="#d946ef" />
+                   </linearGradient>
+                   <linearGradient id="grad-s" x1="0%" y1="0%" x2="100%" y2="0%">
+                     <stop offset="0%" stopColor="#fb7185" />
+                     <stop offset="100%" stopColor="#a1a1aa" />
+                   </linearGradient>
+                   <linearGradient id="grad-l" x1="0%" y1="0%" x2="100%" y2="0%">
+                     <stop offset="0%" stopColor="#ffffff" />
+                     <stop offset="100%" stopColor="#3f3f46" />
+                   </linearGradient>
+                 </defs>
+                 {segments}
+               </svg>
+               {htmlOverlays}
+            </div>
+          </div>
+        );
+      };
+
+      const renderColorWheel = () => {
+        if (!activeConfig) return null;
+        return (
+          <div 
+            ref={wheelRef}
+            className="relative w-48 h-48 mx-auto mt-2 mb-6 rounded-full touch-none bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-sm dark:shadow-none"
+          >
+            <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+              <div className="w-full h-full" style={{
+                background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)',
+                opacity: 0.25
+              }}></div>
+              <div className="absolute inset-4 rounded-full border border-zinc-200 dark:border-zinc-800"></div>
+              <div className="absolute inset-10 rounded-full border border-zinc-200 dark:border-zinc-800"></div>
+              <div className="absolute inset-[4.5rem] rounded-full border border-zinc-300 dark:border-zinc-700"></div>
+            </div>
+            
+            {activeConfig.palette.map((color, i) => {
+              if (!color) return null;
+              const hsl = rgbToHsl(...Object.values(hexToRgb(color.hex)));
+              const angle = (hsl.h - 90) * (Math.PI / 180); 
+              const radius = (hsl.s / 100) * 85; 
+              
+              const x = 96 + radius * Math.cos(angle); 
+              const y = 96 + radius * Math.sin(angle);
+              
+              return (
+                <div 
+                  key={color.id}
+                  onPointerDown={onWheelPointerDown(i)}
+                  className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-2 border-white shadow-lg z-10 cursor-crosshair hover:scale-125 transition-transform ${color.isBase ? 'ring-2 ring-blue-500 scale-110' : ''}`}
+                  style={{ left: `${x}px`, top: `${y}px`, backgroundColor: color.hex }}
+                  title={`Drag to tune ${color.hex}`}
+                />
+              );
+            })}
+          </div>
+        );
+      };
+
+      const renderFineTunePopup = () => {
+        if (activeTune.cIdx === null || activeTune.colorIdx === null) return null;
+        const config = configs[activeTune.cIdx];
+        if (!config || !config.palette[activeTune.colorIdx]) return null;
+
+        const color = config.palette[activeTune.colorIdx];
+        const hsl = rgbToHsl(...Object.values(hexToRgb(color.hex)));
+        
+        const updateHsl = (h, s, l) => {
+          const newHex = hslToHex(h, s, l);
+          setConfigs(prev => {
+            const newConfigs = [...prev];
+            const cfg = { ...newConfigs[activeTune.cIdx] };
+            const newPal = [...cfg.palette];
+            newPal[activeTune.colorIdx].hex = newHex;
+            cfg.palette = newPal;
+            newConfigs[activeTune.cIdx] = cfg;
+            return newConfigs;
+          });
+        };
+
+        return (
+          <div className="absolute bottom-6 right-6 bg-white/95 dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-zinc-700/80 rounded-xl p-5 shadow-2xl z-50 w-72 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center mb-5 text-zinc-900 dark:text-zinc-200">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full shadow-inner border border-black/10 dark:border-white/20" style={{backgroundColor: color.hex}} />
+                <h3 className="text-sm font-semibold uppercase font-mono tracking-wider">{color.hex}</h3>
+              </div>
+              <button onClick={() => setActiveTune({ cIdx: null, colorIdx: null })} className="text-zinc-500 hover:text-zinc-800 dark:hover:text-white transition-colors">
+                <Icons.Plus className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2 font-medium">
+                  <span>Width Ratio</span>
+                  <span>{(color.ratio || 0).toFixed(1)}%</span>
+                </div>
+                <input 
+                  type="range" min="1" max="99" step="0.1"
+                  value={color.ratio || 0}
+                  onChange={(e) => updateRatio(activeTune.cIdx, activeTune.colorIdx, parseFloat(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-zinc-200 dark:bg-zinc-800 accent-blue-500"
+                />
+              </div>
+              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800/50">
+                <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2 font-medium">
+                  <span>Hue</span>
+                  <span>{Math.round(hsl.h)}°</span>
+                </div>
+                <input 
+                  type="range" min="0" max="360" 
+                  value={hsl.h}
+                  onChange={(e) => updateHsl(Number(e.target.value), hsl.s, hsl.l)}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer border border-zinc-200 dark:border-zinc-800"
+                  style={{ background: 'linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)' }}
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2 font-medium">
+                  <span>Saturation</span>
+                  <span>{Math.round(hsl.s)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="100" 
+                  value={hsl.s}
+                  onChange={(e) => updateHsl(hsl.h, Number(e.target.value), hsl.l)}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer border border-zinc-200 dark:border-zinc-800"
+                  style={{ background: `linear-gradient(to right, hsl(${hsl.h}, 0%, ${hsl.l}%), hsl(${hsl.h}, 100%, ${hsl.l}%))` }}
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2 font-medium">
+                  <span>Brightness</span>
+                  <span>{Math.round(hsl.l)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="100" 
+                  value={hsl.l}
+                  onChange={(e) => updateHsl(hsl.h, hsl.s, Number(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer border border-zinc-200 dark:border-zinc-800"
+                  style={{ background: `linear-gradient(to right, black, hsl(${hsl.h}, ${hsl.s}%, 50%), white)` }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      if (!activeConfig) return null;
+      
+      const isPreviewLight = previewMode === 'custom' ? previewGrey > 50 : appTheme === 'light';
+      
+      const getToolbarStyle = () => {
+        if (previewMode === 'custom') {
+           return isPreviewLight 
+             ? { backgroundColor: `hsla(0, 0%, ${previewGrey}%, 0.7)`, borderColor: 'rgba(0,0,0,0.1)', color: '#18181b' }
+             : { backgroundColor: `hsla(0, 0%, ${previewGrey}%, 0.7)`, borderColor: 'rgba(255,255,255,0.1)', color: '#f4f4f5' };
+        }
+        if (appTheme === 'light') return { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: 'rgba(0,0,0,0.1)', color: '#18181b' }; 
+        return { backgroundColor: 'rgba(16,16,19,0.7)', borderColor: 'rgba(255,255,255,0.1)', color: '#f4f4f5' };
+      };
+      
+      const btnStyle = isPreviewLight
+        ? "bg-black/5 hover:bg-black/10 text-zinc-700 border-black/10"
+        : "bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10";
+        
+      const getPreviewBg = () => {
+         if (previewMode === 'custom') return `hsl(0, 0%, ${previewGrey}%)`;
+         return appTheme === 'dark' ? '#101013' : '#ffffff';
+      };
+
+      const markerColor = isPreviewLight ? 'text-zinc-600' : 'text-zinc-300';
+
+      return (
+        <div className={`${appTheme} w-full h-full`}>
+          <div className="flex flex-col lg:flex-row h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-200 font-sans overflow-hidden selection:bg-blue-500/30">
+            
+            {/* LEFT PANEL: Controls */}
+            <div className="w-full lg:w-[400px] h-1/2 lg:h-full flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col overflow-y-auto z-20 custom-scrollbar">
+              <div className="p-6 pb-2">
+                <div className="flex items-center gap-3 text-zinc-900 dark:text-white mb-6">
+                  <Icons.GlobeIcon className="w-8 h-8" />
+                  <h1 className="text-xl font-bold tracking-tight">Colour Worlds</h1>
+                </div>
+                
+                {/* MASTER MODE SWITCH */}
+                <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg mb-4 border border-zinc-200 dark:border-zinc-800 shadow-inner">
+                  {['harmony', 'blend', 'multi'].map((m) => (
+                     <button 
+                       key={m}
+                       className={`flex-1 py-1.5 text-xs font-medium uppercase tracking-wider rounded-md transition-all ${appMode === m ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-white shadow' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                       onClick={() => switchAppMode(m)}
+                     >
+                       {m}
+                     </button>
+                  ))}
+                </div>
+
+                {/* MULTI-PALETTE TABS */}
+                {appMode === 'multi' && (
+                  <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-2 overflow-x-auto custom-scrollbar">
+                    {configs.map((c, i) => (
+                      <div key={c.id} className={`flex items-center pb-2 pt-2 border-b-2 transition-colors ${activeTab === i ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' : 'border-transparent text-zinc-500 dark:text-zinc-600 hover:text-zinc-800 dark:hover:text-zinc-400'} px-3`}>
+                        <button 
+                          className="text-xs font-bold uppercase tracking-wider flex items-center gap-2"
+                          onClick={() => setActiveTab(i)}
+                        >
+                          <Icons.Layers className="w-3 h-3" /> {c.id}
+                        </button>
+                        {configs.length > 1 && (
+                          <button onClick={(e) => handleRemovePalette(e, i)} className="ml-2 text-zinc-500 hover:text-red-500 dark:text-zinc-600 dark:hover:text-red-400 opacity-50 hover:opacity-100 transition-colors">
+                            <Icons.X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {configs.length < 6 && (
+                      <button onClick={handleAddPalette} className="px-3 pb-2 pt-2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors">
+                        <Icons.Plus className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 pt-2 space-y-8 flex-1">
+                {/* Input Colors Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500">Base Inputs</h2>
+                    <div className="flex items-center gap-2">
+                      {activeConfig.inputs.length > 1 && (
+                        <button onClick={handleSwapInputs} className="p-1 text-zinc-400 hover:text-blue-500 dark:text-zinc-500 dark:hover:text-blue-400 transition-colors" title="Swap Inputs">
+                          <Icons.ArrowLeftRight className="w-4 h-4" />
+                        </button>
+                      )}
+                      {activeConfig.inputs.length < 5 && appMode !== 'harmony' && (
+                        <button onClick={handleAddInput} className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 transition-colors bg-blue-100 dark:bg-blue-400/10 px-2 py-1 rounded">
+                          <Icons.Plus className="w-3 h-3" /> Add Input
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {activeConfig.inputs.map((hex, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2 rounded-lg group">
+                        <div className="relative w-10 h-10 rounded shadow-inner overflow-hidden flex-shrink-0 border border-black/10 dark:border-white/10">
+                          <input 
+                            type="color" value={hex} onChange={(e) => updateInputColor(i, e.target.value)}
+                            className="absolute -top-2 -left-2 w-16 h-16 cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-500 mb-0.5">Input {i + 1}</div>
+                          <input 
+                            type="text" value={hex} onChange={(e) => updateInputColor(i, e.target.value)}
+                            className="bg-transparent text-sm font-mono text-zinc-800 dark:text-zinc-300 w-full outline-none uppercase"
+                          />
+                        </div>
+                        {activeConfig.inputs.length > 1 && (
+                          <button onClick={() => handleRemoveInput(i)} className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                            <Icons.Minus className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* SPLINE EDITOR */}
+                  {renderBezierEditor()}
+                </div>
+
+                {/* Configuration Section */}
+                <div className="space-y-6">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">System</h2>
+                  
+                  <div className="space-y-3">
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                      <span>Output Count</span>
+                      <span className="text-zinc-800 dark:text-zinc-200">{activeConfig.numColors} Colors</span>
+                    </label>
+                    <input 
+                      type="range" min="2" max="20" 
+                      value={activeConfig.numColors}
+                      onChange={(e) => updateConfig(activeTab, { numColors: parseInt(e.target.value) })}
+                      className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  {appMode === 'multi' && (
+                    <div className="space-y-3">
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                        <span>Palette Width</span>
+                        <span className="text-zinc-800 dark:text-zinc-200">{(activeConfig.paletteRatio || (100/configs.length)).toFixed(1)}%</span>
+                      </label>
+                      <input 
+                        type="range" min="5" max="95" step="0.1"
+                        value={activeConfig.paletteRatio || (100/configs.length)}
+                        onChange={(e) => updatePaletteRatio(activeTab, parseFloat(e.target.value))}
+                        className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  )}
+
+                  {activeConfig.inputs.length === 1 && (
+                    <div className="space-y-3">
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400">Harmony Model</label>
+                      <select 
+                        value={activeConfig.mode} 
+                        onChange={(e) => updateConfig(activeTab, { mode: e.target.value })}
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-800 dark:text-zinc-200 p-2.5 rounded-lg outline-none focus:border-blue-500 transition-colors"
+                      >
+                        <optgroup label="Standard">
+                          <option value="monochromatic">Monochromatic (Value Shift)</option>
+                          <option value="analogous">Analogous (Neighboring)</option>
+                          <option value="discordant">Discordant (Vibrating)</option>
+                        </optgroup>
+                        <optgroup label="Geometric">
+                          <option value="complementary">Complementary (Contrasting)</option>
+                          <option value="split-complementary">Split-Complementary (150°, 210°)</option>
+                          <option value="triadic">Triadic (120° Spread)</option>
+                          <option value="tetradic">Tetradic (Double Comp)</option>
+                          <option value="square">Square (90° Spread)</option>
+                        </optgroup>
+                        <optgroup label="Itten's Contrasts">
+                          <option value="itten-light-dark">Light-Dark (Value Extremes)</option>
+                          <option value="itten-cold-warm">Cold-Warm (Temperature)</option>
+                          <option value="itten-saturation">Saturation (Vivid vs. Dull)</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  )}
+
+                  {activeConfig.inputs.length === 1 && activeConfig.mode === 'discordant' && (
+                    <div className="space-y-3">
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                        <span>Discordance Enhancer</span>
+                        <span className="text-zinc-800 dark:text-zinc-200">{activeConfig.discordance || 50}%</span>
+                      </label>
+                      <input 
+                        type="range" min="0" max="100" 
+                        value={activeConfig.discordance !== undefined ? activeConfig.discordance : 50}
+                        onChange={(e) => updateConfig(activeTab, { discordance: parseInt(e.target.value) })}
+                        className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mt-4 p-3 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <div className="flex flex-col">
+                      <span className="text-sm text-zinc-800 dark:text-zinc-300 font-medium">Perceptually Uniform</span>
+                      <span className="text-[10px] text-zinc-500">Oklab color space blending</span>
+                    </div>
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => updateConfig(activeTab, { perceptuallyUniform: !activeConfig.perceptuallyUniform })}>
+                      <div className={`w-8 h-4 rounded-full p-0.5 transition-colors relative flex items-center ${activeConfig.perceptuallyUniform ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}>
+                        <div className={`w-3 h-3 rounded-full bg-white transition-transform shadow-sm ${activeConfig.perceptuallyUniform ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Global Adjustments Section */}
+                <div className="space-y-6 pt-6 border-t border-zinc-200 dark:border-zinc-800/50">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+                    Global Adjustments
+                  </h2>
+                  
+                  <div className="space-y-3">
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                      <span>Hue Shift</span>
+                      <span className="text-zinc-800 dark:text-zinc-200">{activeConfig.globalAdjustments.h}°</span>
+                    </label>
+                    <input 
+                      type="range" min="-180" max="180" 
+                      value={activeConfig.globalAdjustments.h}
+                      onChange={(e) => updateConfig(activeTab, { globalAdjustments: { ...activeConfig.globalAdjustments, h: parseInt(e.target.value) } })}
+                      className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                      <span>Saturation</span>
+                      <span className="text-zinc-800 dark:text-zinc-200">{activeConfig.globalAdjustments.s > 0 ? '+' : ''}{activeConfig.globalAdjustments.s}%</span>
+                    </label>
+                    <input 
+                      type="range" min="-100" max="100" 
+                      value={activeConfig.globalAdjustments.s}
+                      onChange={(e) => updateConfig(activeTab, { globalAdjustments: { ...activeConfig.globalAdjustments, s: parseInt(e.target.value) } })}
+                      className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+                      <span>Brightness</span>
+                      <span className="text-zinc-800 dark:text-zinc-200">{activeConfig.globalAdjustments.l > 0 ? '+' : ''}{activeConfig.globalAdjustments.l}%</span>
+                    </label>
+                    <input 
+                      type="range" min="-100" max="100" 
+                      value={activeConfig.globalAdjustments.l}
+                      onChange={(e) => updateConfig(activeTab, { globalAdjustments: { ...activeConfig.globalAdjustments, l: parseInt(e.target.value) } })}
+                      className="w-full accent-blue-500 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Visualizer */}
+                <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Interactive Matrix</h2>
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => updateConfig(activeTab, { harmonyLock: !activeConfig.harmonyLock })}>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Harmony Lock</span>
+                      <div className={`w-7 h-3.5 rounded-full p-0.5 transition-colors relative flex items-center ${activeConfig.harmonyLock ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}>
+                        <div className={`w-2.5 h-2.5 rounded-full bg-white transition-transform shadow-sm ${activeConfig.harmonyLock ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-tight mb-3">Drag nodes to manually tweak hues</p>
+                  {renderColorWheel()}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT PANEL: The Canvas */}
+            <div 
+              className="flex-1 flex flex-col h-1/2 lg:h-full relative overflow-hidden transition-colors duration-300"
+              style={{ backgroundColor: getPreviewBg() }}
+            >
+              
+              {/* Dynamic Toolbar */}
+              <div 
+                className="h-16 flex items-center justify-between px-6 border-b z-10 flex-shrink-0 transition-colors duration-300"
+                style={getToolbarStyle()}
+              >
+                <div className="flex items-center gap-4">
+                   <button 
+                      onClick={handleAutoBalance}
+                      className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors border ${btnStyle}`}
+                      title="Balance active palette ratios by visual weight"
+                    >
+                      <Icons.Wand2 className="w-4 h-4" />
+                      Auto-Balance
+                    </button>
+                   <button 
+                      onClick={handleReset}
+                      className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors border ${btnStyle}`}
+                    >
+                      <Icons.RefreshCw className="w-4 h-4" />
+                      Reset Config
+                    </button>
+                </div>
+                
+                <div className="flex items-center">
+                  
+                  {/* Theme & Custom Background Toggles */}
+                  <div className="flex items-center bg-black/5 dark:bg-black/30 p-1 rounded-lg border border-black/5 dark:border-white/10 mr-4 shadow-inner">
+                    
+                    <button
+                      onClick={() => { setAppTheme('light'); setPreviewMode('theme'); }}
+                      className={`w-7 h-7 flex items-center justify-center rounded-md mx-0.5 transition-all shadow-sm ${appTheme === 'light' && previewMode === 'theme' ? 'bg-white text-zinc-900 ring-1 ring-black/10 scale-110 z-10' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:scale-105'}`}
+                      title="Light Theme"
+                    >
+                      <Icons.Sun className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => { setAppTheme('dark'); setPreviewMode('theme'); }}
+                      className={`w-7 h-7 flex items-center justify-center rounded-md mx-0.5 transition-all shadow-sm ${appTheme === 'dark' && previewMode === 'theme' ? 'bg-zinc-800 text-white ring-1 ring-white/10 scale-110 z-10' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:scale-105'}`}
+                      title="Dark Theme"
+                    >
+                      <Icons.Moon className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 mx-1.5"></div>
+
+                    <button
+                      onClick={() => setPreviewMode(previewMode === 'custom' ? 'theme' : 'custom')}
+                      className={`w-7 h-7 flex items-center justify-center rounded-md mx-0.5 transition-all shadow-sm ${previewMode === 'custom' ? 'bg-zinc-500 text-white ring-1 ring-zinc-600 scale-110 z-10' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:scale-105'}`}
+                      title="Custom Preview Background"
+                    >
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-r from-white to-black border border-current"></div>
+                    </button>
+                    
+                    {previewMode === 'custom' && (
+                      <input
+                        type="range" min="0" max="100"
+                        value={previewGrey}
+                        onChange={(e) => setPreviewGrey(parseInt(e.target.value))}
+                        className="w-20 ml-2 mr-1 accent-zinc-500 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                      />
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={copySvg}
+                    className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg font-medium transition-all ${
+                      copied 
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                        : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20'
+                    }`}
+                  >
+                    {copied ? <Icons.Check className="w-4 h-4" /> : <Icons.Download className="w-4 h-4" />}
+                    {copied ? 'SVG Copied!' : 'Export SVG'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Stacked Canvas Area with Universal Margins */}
+              <div className="flex-1 flex w-full relative p-4 gap-4 flex-row">
+                {configs.map((config, cIdx) => {
+                   const titleColor = isPreviewLight ? 'text-zinc-800' : 'text-zinc-400';
+                   const lineColor = isPreviewLight ? 'bg-zinc-300' : 'bg-zinc-700';
+                   const capColor = isPreviewLight ? 'bg-zinc-400' : 'bg-zinc-500';
+
+                   return (
+                     <div 
+                       key={config.id} 
+                       className={`flex flex-col relative flex-1 h-full`}
+                       style={appMode === 'multi' ? { width: `${config.paletteRatio || (100/configs.length)}%`, flex: 'none' } : {}}
+                     >
+                        <div className={`flex flex-col mb-3 px-1 flex-shrink-0 transition-opacity ${appMode === 'multi' ? 'opacity-100' : 'opacity-0 select-none'}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 text-center transition-colors ${titleColor}`}>
+                          Palette {config.id}
+                        </span>
+                        <div className={`w-full h-[1px] relative transition-colors ${lineColor}`}>
+                           <div className={`absolute left-[2px] -top-[2px] w-[1px] h-[5px] transition-colors ${capColor}`} />
+                           <div className={`absolute right-[2px] -top-[2px] w-[1px] h-[5px] transition-colors ${capColor}`} />
+                        </div>
+                      </div>
+
+                      <div className={`flex-1 flex w-full relative group rounded-md shadow-2xl border ${isPreviewLight ? 'border-black/10' : 'border-white/5'}`}>
+                        {config.palette.map((color, colorIdx) => {
+                          if (!color) return null;
+                          const isFirst = colorIdx === 0;
+                            const isLast = colorIdx === config.palette.length - 1;
+                            return (
+                              <div 
+                                key={color.id}
+                                className={`relative h-full flex flex-col items-center justify-end pb-8 transition-all duration-75 group/block ${isFirst ? 'rounded-l-[5px]' : ''} ${isLast ? 'rounded-r-[5px]' : ''}`}
+                                style={{ width: `${color.ratio || 0}%`, backgroundColor: color.hex }}
+                              >
+                                {color.isBase && (
+                                    <svg className={`absolute -top-[15px] left-1/2 -translate-x-1/2 w-[15px] h-[15px] drop-shadow-sm z-30 transition-colors ${markerColor}`} viewBox="0 0 24 24" fill="currentColor">
+                                        <polygon points="12,22 2,2 22,2" />
+                                    </svg>
+                                )}
+                                <div 
+                                  onClick={() => setActiveTune({ cIdx, colorIdx })}
+                                  className={`absolute inset-0 z-10 cursor-pointer transition-colors ${activeTune.cIdx === cIdx && activeTune.colorIdx === colorIdx ? 'bg-white/20 ring-2 ring-inset ring-white' : ''}`}
+                                  title="Click to fine-tune"
+                                />
+                                <div className="opacity-0 group-hover/block:opacity-100 transition-opacity absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 text-zinc-900 dark:bg-zinc-950/80 dark:text-white px-3 py-2 rounded-xl border border-black/5 dark:border-white/10 shadow-2xl flex flex-col items-center gap-1 z-20 pointer-events-none whitespace-nowrap">
+                                  <span className="font-mono text-sm tracking-wider uppercase font-bold">{color.hex}</span>
+                                  <span className="text-[10px] font-medium opacity-75">{(color.ratio || 0).toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                     </div>
+                   )
+                })}
+              </div>
+              
+              {renderFineTunePopup()}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

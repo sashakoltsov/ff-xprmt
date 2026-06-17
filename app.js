@@ -101,38 +101,103 @@ function toolView(m, sid, slug) {
         </div>
       </div>`
     : `<iframe src="${esc(t.path)}" sandbox="${esc(sandbox)}" allow="camera; microphone" title="${esc(t.name)}"></iframe>`;
-  return `<div class="toolview">
+  return `<div class="toolview" data-tool-path="${esc(t.path)}">
     <div class="toolbar">
       <a class="back" href="#/${encodeURIComponent(sid)}">← back to tools</a>
       <span class="label">${esc(t.name)} <span class="by">by</span> ${esc(t.author)}</span>
+      <button class="copy-code" type="button" aria-expanded="false"><span class="cc-label">Copy code</span></button>
     </div>
     ${body}
+    <div class="code-panel" aria-hidden="true">
+      <div class="code-veil"></div>
+      <div class="ai-card">
+        <p class="ai-eyebrow">Code</p>
+        <h2 class="ai-title">Take this tool's code</h2>
+        <p class="ai-text">Copy the code below and keep exploring the tool — or paste it into Gemini or Claude to build your own version by prompting.</p>
+        <textarea class="code-text" readonly spellcheck="false">Loading the tool source…</textarea>
+        <div class="ai-actions">
+          <button class="code-copy" type="button">Copy code</button>
+          <a class="ai-open" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer">Open Gemini ↗</a>
+          <a class="ai-open" href="https://claude.ai/new" target="_blank" rel="noopener noreferrer">Open Claude ↗</a>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
-// ---- AI gate: fetch the tool's HTML, build the Gemini prompt, wire copy ----
-function enhanceAITool() {
-  const gate = document.querySelector('.ai-gate');
-  if (!gate) return;
-  const ta = gate.querySelector('.ai-prompt');
-  const btn = gate.querySelector('.ai-copy');
-  fetch(gate.dataset.aiPath, { cache: 'no-store' })
-    .then(r => r.text())
-    .then(html => {
-      ta.value = `I have this tool, can you run it in canvas:\n\n${html}`;
-    })
-    .catch(e => { ta.value = `Couldn't load the tool source: ${e.message}`; });
+// ---- tool view: fetch source once, wire the AI gate + code panel ----
+function wireCopy(btn, ta, label) {
+  if (!btn || !ta) return;
   btn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(ta.value);
-    } catch {
-      ta.select();
-      document.execCommand('copy');
-    }
+    try { await navigator.clipboard.writeText(ta.value); }
+    catch { ta.select(); document.execCommand('copy'); }
     btn.textContent = 'Copied ✓';
-    setTimeout(() => { btn.textContent = 'Copy prompt'; }, 1500);
+    setTimeout(() => { btn.textContent = label; }, 1500);
   });
 }
+
+function enhanceToolView() {
+  const tv = document.querySelector('.toolview');
+  if (!tv) return;
+  const path = tv.dataset.toolPath;
+
+  const gatePrompt = document.querySelector('.ai-gate .ai-prompt'); // AI tools only
+  const codeText = document.querySelector('.code-panel .code-text');
+
+  if (path && (gatePrompt || codeText)) {
+    fetch(path, { cache: 'no-store' })
+      .then(r => r.text())
+      .then(html => {
+        if (gatePrompt) gatePrompt.value = `I have this tool, can you run it in canvas:\n\n${html}`;
+        if (codeText) codeText.value = html;
+      })
+      .catch(e => {
+        const msg = `Couldn't load the tool source: ${e.message}`;
+        if (gatePrompt) gatePrompt.value = msg;
+        if (codeText) codeText.value = msg;
+      });
+  }
+
+  wireCopy(document.querySelector('.ai-copy'), gatePrompt, 'Copy prompt');
+  wireCopy(document.querySelector('.code-copy'), codeText, 'Copy code');
+
+  // toolbar toggle ⇄ code panel
+  const toggle = document.querySelector('.copy-code');
+  const panel = document.querySelector('.code-panel');
+  if (toggle && panel) {
+    const label = toggle.querySelector('.cc-label');
+    const setOpen = (open) => {
+      panel.classList.toggle('is-open', open);
+      panel.setAttribute('aria-hidden', String(!open));
+      toggle.setAttribute('aria-expanded', String(open));
+      const w0 = toggle.offsetWidth;
+      // soft fade the label down and back up
+      label.animate(
+        [{ opacity: 1 }, { opacity: 0, offset: 0.45 }, { opacity: 1 }],
+        { duration: 300, easing: 'cubic-bezier(0.33, 1, 0.68, 1)' }
+      );
+      // swap text at the dim midpoint, then stretch the button width to fit
+      setTimeout(() => {
+        label.textContent = open ? 'Close code' : 'Copy code';
+        const w1 = toggle.offsetWidth;
+        toggle.animate(
+          [{ width: `${w0}px` }, { width: `${w1}px` }],
+          { duration: 280, easing: 'cubic-bezier(0.33, 1, 0.68, 1)' }
+        );
+      }, 135);
+    };
+    toggle.addEventListener('click', () => setOpen(!panel.classList.contains('is-open')));
+    panel.querySelector('.code-veil').addEventListener('click', () => setOpen(false));
+  }
+}
+
+// close the code panel on Escape (registered once)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!document.querySelector('.code-panel.is-open')) return;
+  const toggle = document.querySelector('.copy-code');
+  if (toggle) toggle.click();   // animated close
+});
 
 function notFound() {
   return `<div class="wrap">
@@ -245,7 +310,7 @@ async function render() {
   document.body.classList.toggle('is-tool', !!tool);
   if (!session) { $app.innerHTML = sessionsView(m); enhanceSessionCovers(); }
   else if (!tool) $app.innerHTML = sessionView(m, session);
-  else { $app.innerHTML = toolView(m, session, tool); enhanceAITool(); }
+  else { $app.innerHTML = toolView(m, session, tool); enhanceToolView(); }
   if (!tool) window.scrollTo(0, 0);
 }
 
