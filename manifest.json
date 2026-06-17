@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T19:24:40.838Z",
+  "generated": "2026-06-17T19:39:19.659Z",
   "sessions": [
     {
       "id": "s04",
@@ -46,6 +46,13 @@
           "author": "Eddie",
           "path": "tools/s05/brush-tool-eddie/index.html",
           "cover": "tools/s05/brush-tool-eddie/cover.jpg"
+        },
+        {
+          "slug": "burbujator",
+          "name": "Burbujator",
+          "author": "Laurence",
+          "path": "tools/s05/burbujator/index.html",
+          "cover": "tools/s05/burbujator/cover.jpg"
         },
         {
           "slug": "pixelterra",
