@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-17T19:52:27.532Z",
+  "generated": "2026-06-18T11:17:58.312Z",
   "sessions": [
     {
       "id": "s04",
@@ -97,6 +97,13 @@
           "author": "David H.",
           "path": "tools/work/advanced-grids/index.html",
           "cover": "tools/work/advanced-grids/cover.jpg"
+        },
+        {
+          "slug": "bv-pattern-gen",
+          "name": "BV Pattern Generator",
+          "author": "Luis",
+          "path": "tools/work/bv-pattern-gen/index.html",
+          "cover": "tools/work/bv-pattern-gen/cover.png"
         },
         {
           "slug": "colour-worlds",
