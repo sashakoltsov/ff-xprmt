@@ -326,7 +326,7 @@ async function render() {
   if (!session) { $app.innerHTML = sessionsView(m); enhanceSessionCovers(); staggerByRow(); }
   else if (!tool) { $app.innerHTML = sessionView(m, session); staggerByRow(); }
   else { $app.innerHTML = toolView(m, session, tool); enhanceToolView(); }
-  if (!tool) window.scrollTo(0, 0);
+  window.scrollTo(0, 0);   // reset on every navigation (incl. opening a tool)
 }
 
 window.addEventListener('hashchange', render);

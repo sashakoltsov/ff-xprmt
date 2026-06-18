@@ -55,6 +55,7 @@ body::after {
   z-index: 0;
 }
 body.is-tool::after { display: none; }
+body.is-tool { overflow: hidden; }   /* tool view is a fixed 100vh app — no scroll */
 
 /* fixed brandmark bleeding off the bottom edge, over the yellow gradient.
    Full width with a flexible vw padding (≈60px at a 1550px window), and
