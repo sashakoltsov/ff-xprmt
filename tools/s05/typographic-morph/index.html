@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typographic Morph</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .scrollbar-hide {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+  </style>
+</head>
+<body class="bg-neutral-900 text-white font-sans overflow-hidden">
+  <div id="container" class="w-full h-screen bg-neutral-900 overflow-hidden relative">
+    <canvas id="mainCanvas" class="block w-full h-full"></canvas>
+    
+    <!-- Minimized Button -->
+    <button 
+      id="openPanelBtn"
+      class="hidden absolute bottom-6 left-6 w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl items-center justify-center hover:bg-white/20 transition-colors z-50"
+      title="Expand Control Panel"
+    >
+      <i data-lucide="maximize-2" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Expanded Panel -->
+    <div 
+      id="controlPanel"
+      class="absolute bottom-6 left-6 w-80 bg-black/40 backdrop-blur-xl border border-white/20 p-5 rounded-2xl shadow-2xl flex flex-col gap-6 max-h-[85vh] overflow-hidden flex-shrink-0 z-50 transition-all duration-300 ease-in-out"
+    >
+      
+      <!-- Header / Global Controls -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <h1 class="text-sm font-bold tracking-tight flex items-center gap-2">
+          <i data-lucide="type" class="w-4 h-4"></i> Typographic Morph
+        </h1>
+        <div class="flex gap-2">
+          <button 
+            id="recordBtn"
+            class="p-1.5 rounded-lg border bg-white/10 border-white/10 hover:bg-white/20 text-white/80 transition-colors"
+            title="Record Video"
+          >
+            <i id="recordIcon" data-lucide="video" class="w-3.5 h-3.5"></i>
+          </button>
+          <button 
+            id="closePanelBtn"
+            class="p-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors text-white/80"
+            title="Minimize Panel"
+          >
+            <i data-lucide="minimize-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-y-auto pr-2 scrollbar-hide flex flex-col gap-6">
+        <!-- Sliders Stack -->
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-white/70 flex justify-between">
+              <span>Text Content</span>
+            </label>
+            <input 
+              id="textInput"
+              type="text" 
+              value="M"
+              class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-white/50 transition-colors"
+              placeholder="Type characters..."
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-white/70 flex justify-between">
+              <span class="flex items-center gap-1"><i data-lucide="type" class="w-3.5 h-3.5"></i> Font Family</span>
+            </label>
+            <select 
+              id="fontInput"
+              class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-white/50 transition-colors text-white appearance-none cursor-pointer"
+            >
+              <option value="Montserrat" selected>Montserrat</option>
+              <option value="Inter">Inter</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Oswald">Oswald</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Space Mono">Space Mono</option>
+              <option value="Abril Fatface">Abril Fatface</option>
+              <option value="Pacifico">Pacifico</option>
+            </select>
+          </div>
+          
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-white/70 flex justify-between">
+              <span class="flex items-center gap-1"><i data-lucide="grid" class="w-3.5 h-3.5"></i> Point Spacing</span>
+              <span id="spacingLabel">14px</span>
+            </label>
+            <input 
+              id="spacingInput"
+              type="range" min="8" max="32" step="1" value="14"
+              class="accent-white h-1.5 bg-black/40 rounded-full appearance-none cursor-pointer"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-white/70 flex justify-between">
+              <span class="flex items-center gap-1"><i data-lucide="maximize" class="w-3.5 h-3.5"></i> Font Size</span>
+              <span id="fontSizeLabel">16px</span>
+            </label>
+            <input 
+              id="fontSizeInput"
+              type="range" min="10" max="64" step="1" value="16"
+              class="accent-white h-1.5 bg-black/40 rounded-full appearance-none cursor-pointer"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-medium text-white/70 flex items-center gap-1">
+                <i data-lucide="settings" class="w-3.5 h-3.5"></i> Morph Progress
+              </label>
+              <button 
+                id="playBtn"
+                class="flex items-center gap-1 bg-white/10 hover:bg-white/20 transition-colors px-2 py-0.5 rounded text-[10px] font-semibold"
+              >
+                <i id="playIcon" data-lucide="pause" class="w-2.5 h-2.5"></i>
+                <span id="playText">Pause</span>
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-xs text-white/50 mb-[-4px]">
+              <span>0%</span>
+              <span id="progressPercentLabel">0%</span>
+            </div>
+            <input 
+              id="progressInput"
+              type="range" min="0" max="6" step="0.01" value="0"
+              class="accent-white h-1.5 bg-black/40 rounded-full appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+
+        <!-- Sequence Editor -->
+        <div class="flex flex-col gap-3 pt-4 border-t border-white/10">
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-bold text-white/90">Shape Sequence</label>
+            
+            <!-- Sequence Adders -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center bg-black/30 border border-white/10 rounded-lg p-1">
+                <input 
+                  id="newShapeText"
+                  type="text" 
+                  placeholder="Add text shape..." 
+                  class="bg-transparent text-xs flex-1 outline-none px-2 text-white placeholder-white/40" 
+                />
+                <button id="addTextBtn" class="p-1.5 bg-white/10 hover:bg-white/20 rounded transition-colors text-white/90">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <label class="flex items-center justify-center gap-1.5 bg-black/30 border border-white/10 hover:bg-white/20 cursor-pointer rounded-lg px-3 py-2 text-xs transition-colors font-medium text-white/80 w-full">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Upload Image Shape
+                <input id="imageUpload" type="file" accept="image/*" class="hidden" />
+              </label>
+            </div>
+          </div>
+          
+          <!-- Vertical Sequence List -->
+          <div id="sequenceList" class="flex flex-col gap-1.5 bg-black/20 p-1.5 rounded-lg border border-white/5 max-h-48 overflow-y-auto">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Initial Data ---
+    const initialSequence = [
+      { id: 'clover', color: '#2ca046', type: 'function', name: 'Clover', draw: (c, cx, cy) => {
+        c.beginPath(); c.arc(cx - 50, cy - 50, 70, 0, Math.PI * 2); c.arc(cx + 50, cy - 50, 70, 0, Math.PI * 2); c.arc(cx - 50, cy + 50, 70, 0, Math.PI * 2); c.arc(cx + 50, cy + 50, 70, 0, Math.PI * 2); c.fill();
+      }},
+      { id: 'heart', color: '#f03a3a', type: 'function', name: 'Heart', draw: (c, cx, cy) => {
+        c.save(); c.translate(cx, cy - 40); c.scale(8, 8); c.beginPath(); for (let t = 0; t < Math.PI * 2; t += 0.1) { let x = 16 * Math.pow(Math.sin(t), 3); let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)); if (t === 0) c.moveTo(x, y); else c.lineTo(x, y); } c.fill(); c.restore();
+      }},
+      { id: 'animal', color: '#f2b713', type: 'function', name: 'Animal', draw: (c, cx, cy) => {
+        c.beginPath(); c.rect(cx - 100, cy - 80, 60, 50); c.rect(cx - 40, cy - 30, 130, 60); c.rect(cx - 40, cy + 30, 35, 90); c.rect(cx + 55, cy + 30, 35, 90); c.rect(cx + 80, cy - 60, 25, 70); c.fill();
+      }},
+      { id: 'x-shape', color: '#2c67e8', type: 'function', name: 'X Shape', draw: (c, cx, cy) => {
+        c.save(); c.translate(cx, cy); c.rotate(Math.PI / 4); c.fillRect(-160, -35, 320, 70); c.fillRect(-35, -160, 70, 320); c.restore();
+      }},
+      { id: 'triangle', color: '#873ce3', type: 'function', name: 'Triangle', draw: (c, cx, cy) => {
+        c.beginPath(); c.moveTo(cx, cy - 150); c.lineTo(cx + 160, cy + 130); c.lineTo(cx - 160, cy + 130); c.fill();
+      }},
+      { id: 'star', color: '#2ca046', type: 'function', name: 'Star', draw: (c, cx, cy) => {
+        c.beginPath(); for (let i = 0; i < 5; i++) { let angle = (i * Math.PI * 2) / 5 - Math.PI / 2; let outerX = cx + Math.cos(angle) * 160; let outerY = cy + Math.sin(angle) * 160; if (i === 0) c.moveTo(outerX, outerY); else c.lineTo(outerX, outerY); let innerAngle = angle + Math.PI / 5; let innerX = cx + Math.cos(innerAngle) * 70; let innerY = cy + Math.sin(innerAngle) * 70; c.lineTo(innerX, innerY); } c.fill();
+      }}
+    ];
+
+    // --- State Variables ---
+    const state = {
+      progress: 0,
+      text: 'M',
+      spacing: 14,
+      fontSize: 16,
+      fontFamily: 'Montserrat',
+      autoPlay: true,
+      sequence: [...initialSequence],
+      isPanelOpen: true,
+      isRecording: false,
+      editState: null
+    };
+
+    let params = { 
+      ...state, 
+      colors: state.sequence.map(s => s.color) 
+    };
+    
+    let targetsRef = [];
+    let requestRef = null;
+    let mediaRecorderRef = null;
+    let draggedIdx = null;
+
+    // --- DOM Elements ---
+    const canvas = document.getElementById('mainCanvas');
+    const container = document.getElementById('container');
+    const panel = document.getElementById('controlPanel');
+    const openPanelBtn = document.getElementById('openPanelBtn');
+    
+    // Inputs
+    const textInput = document.getElementById('textInput');
+    const fontInput = document.getElementById('fontInput');
+    const spacingInput = document.getElementById('spacingInput');
+    const fontSizeInput = document.getElementById('fontSizeInput');
+    const progressInput = document.getElementById('progressInput');
+    const newShapeText = document.getElementById('newShapeText');
+    
+    // Buttons
+    const recordBtn = document.getElementById('recordBtn');
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    const playBtn = document.getElementById('playBtn');
+    const addTextBtn = document.getElementById('addTextBtn');
+    const imageUpload = document.getElementById('imageUpload');
+    
+    // Labels
+    const spacingLabel = document.getElementById('spacingLabel');
+    const fontSizeLabel = document.getElementById('fontSizeLabel');
+    const progressPercentLabel = document.getElementById('progressPercentLabel');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const sequenceListEl = document.getElementById('sequenceList');
+
+    // --- Initialization ---
+    lucide.createIcons();
+    
+    function init() {
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      setupEventListeners();
+      loadFont(state.fontFamily);
+      updateSequenceList();
+    }
+
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+
+    // --- Animation Logic ---
+    const hexToRgb = (hex) => {
+      let h = (hex || '#000000').replace('#', '');
+      if (h.length === 3) h = h.split('').map(c => c + c).join(''); 
+      return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+    };
+
+    async function generateTargets() {
+      const W = 800;
+      const H = 800;
+      const cx = W / 2;
+      const cy = H / 2;
+      
+      const offscreen = document.createElement('canvas');
+      offscreen.width = W;
+      offscreen.height = H;
+      const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+
+      const allShapeTargets = [];
+      let maxPoints = 0;
+
+      for (const item of state.sequence) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#000';
+        
+        if (item.type === 'function') {
+          item.draw(ctx, cx, cy);
+        } else if (item.type === 'text') {
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const dynamicFontSize = Math.min(250, 800 / (item.text.length * 0.6));
+          ctx.font = `bold ${dynamicFontSize}px "${params.fontFamily}", sans-serif`;
+          ctx.fillText(item.text, cx, cy);
+        } else if (item.type === 'image') {
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              const maxSize = 500;
+              const scale = Math.min(maxSize / img.width, maxSize / img.height);
+              const w = img.width * scale;
+              const h = img.height * scale;
+              ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+              resolve();
+            };
+            img.onerror = resolve; 
+            img.src = item.src;
+          });
+        }
+
+        const imgData = ctx.getImageData(0, 0, W, H).data;
+        const pts = [];
+        
+        for (let y = 0; y < H; y += params.spacing) {
+          for (let x = 0; x < W; x += params.spacing) {
+            const alpha = imgData[(y * W + x) * 4 + 3];
+            if (alpha > 128) {
+              pts.push({ x: x - cx, y: y - cy }); 
+            }
+          }
+        }
+        
+        pts.sort((a, b) => a.y - b.y || a.x - b.x);
+        allShapeTargets.push(pts);
+        if (pts.length > maxPoints) maxPoints = pts.length;
+      }
+
+      allShapeTargets.forEach(pts => {
+        const originalLength = pts.length;
+        if (originalLength === 0) return;
+        let i = 0;
+        while (pts.length < maxPoints) {
+          pts.push({ x: pts[i].x, y: pts[i].y });
+          i = (i + 1) % originalLength;
+        }
+        pts.sort((a, b) => a.y - b.y || a.x - b.x);
+      });
+
+      targetsRef = allShapeTargets;
+    }
+
+    function renderLoop() {
+      const ctx = canvas.getContext('2d');
+      const allTargets = targetsRef;
+
+      if (allTargets.length > 0) {
+        if (params.autoPlay) {
+          params.progress += 0.005;
+          if (params.progress >= allTargets.length) {
+            params.progress -= allTargets.length;
+          }
+          state.progress = params.progress;
+          // Update UI without triggering event
+          progressInput.value = state.progress;
+          updateProgressUI();
+        }
+
+        const safeProg = Math.max(0, Math.min(params.progress, allTargets.length));
+        let i1 = Math.floor(safeProg);
+        if (i1 >= allTargets.length) i1 = 0;
+        const i2 = (i1 + 1) % allTargets.length;
+        const t = safeProg - Math.floor(safeProg);
+
+        const color1 = params.colors[i1 % params.colors.length] || '#000000';
+        const color2 = params.colors[i2 % params.colors.length] || '#000000';
+        
+        const c1 = hexToRgb(color1);
+        const c2 = hexToRgb(color2);
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const globalScale = Math.min(1, window.innerWidth / 900);
+
+        ctx.fillStyle = '#000000';
+        ctx.font = `bold ${params.fontSize * globalScale}px "${params.fontFamily}", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+
+        const targets1 = allTargets[i1];
+        const targets2 = allTargets[i2];
+        
+        const easeT = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const displayStr = params.text || 'M';
+
+        for (let j = 0; j < targets1.length; j++) {
+          const p1 = targets1[j];
+          const p2 = targets2[j];
+          
+          const x = cx + (p1.x + (p2.x - p1.x) * easeT) * globalScale;
+          const y = cy + (p1.y + (p2.y - p1.y) * easeT) * globalScale;
+          
+          const char = displayStr[j % displayStr.length];
+          ctx.fillText(char, x, y);
+        }
+      }
+      requestRef = requestAnimationFrame(renderLoop);
+    }
+
+    // --- State Handlers & UI Updates ---
+    function updateProgressUI() {
+      const maxProgress = Math.max(0, state.sequence.length);
+      const pct = maxProgress > 0 ? Math.round((state.progress / maxProgress) * 100) : 0;
+      progressPercentLabel.textContent = `${pct}%`;
+      
+      // Update active sequence styling
+      const activeIdx = Math.floor(state.progress) % state.sequence.length;
+      Array.from(sequenceListEl.children).forEach((el, idx) => {
+        if (!state.editState || state.editState.id !== state.sequence[idx].id) {
+            if (idx === activeIdx) {
+                el.className = el.className.replace('border-transparent text-white/60 hover:bg-white/5 hover:text-white/80', 'bg-white/10 text-white border-white/30 font-medium');
+            } else {
+                el.className = el.className.replace('bg-white/10 text-white border-white/30 font-medium', 'border-transparent text-white/60 hover:bg-white/5 hover:text-white/80');
+                if(!el.className.includes('border-transparent')) {
+                   // Ensure fallback classes if replacement failed due to whitespace
+                   el.classList.remove('bg-white/10', 'text-white', 'border-white/30', 'font-medium');
+                   el.classList.add('border-transparent', 'text-white/60', 'hover:bg-white/5', 'hover:text-white/80');
+                }
+            }
+        }
+      });
+    }
+
+    function syncParams() {
+      params = { ...state, colors: state.sequence.map(s => s.color) };
+    }
+
+    function loadFont(fontName) {
+      const fontId = `font-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
+      if (!document.getElementById(fontId)) {
+        const link = document.createElement('link');
+        link.id = fontId;
+        link.rel = 'stylesheet';
+        const formattedName = fontName.replace(/\s+/g, '+');
+        link.href = `https://fonts.googleapis.com/css2?family=${formattedName}:wght@400;800&display=swap`;
+        document.head.appendChild(link);
+      }
+      document.fonts.ready.then(() => {
+        generateTargets().then(() => {
+          if (!requestRef) {
+            requestRef = requestAnimationFrame(renderLoop);
+          }
+        });
+      });
+    }
+
+    function togglePlay() {
+      state.autoPlay = !state.autoPlay;
+      params.autoPlay = state.autoPlay;
+      playIcon.setAttribute('data-lucide', state.autoPlay ? 'pause' : 'play');
+      playText.textContent = state.autoPlay ? 'Pause' : 'Play';
+      lucide.createIcons();
+    }
+
+    function updateSequenceList() {
+      sequenceListEl.innerHTML = '';
+      progressInput.max = Math.max(0, state.sequence.length);
+
+      state.sequence.forEach((seq, idx) => {
+        const isActive = Math.floor(state.progress) % state.sequence.length === idx;
+        const isEditing = state.editState?.id === seq.id;
+        
+        const itemEl = document.createElement('div');
+        itemEl.draggable = !isEditing;
+        itemEl.className = `group relative flex items-center justify-between px-3 py-2 text-xs rounded-md border transition-colors select-none ${
+          isActive 
+            ? 'bg-white/10 text-white border-white/30 font-medium' 
+            : 'border-transparent text-white/60 hover:bg-white/5 hover:text-white/80'
+        }`;
+
+        // Drag handlers
+        itemEl.ondragstart = () => draggedIdx = idx;
+        itemEl.ondragover = (e) => e.preventDefault();
+        itemEl.ondrop = (e) => {
+          e.preventDefault();
+          if (draggedIdx === null || draggedIdx === idx) return;
+          const draggedItem = state.sequence.splice(draggedIdx, 1)[0];
+          state.sequence.splice(idx, 0, draggedItem);
+          draggedIdx = null;
+          syncParams();
+          generateTargets();
+          updateSequenceList();
+        };
+
+        const leftSide = document.createElement('div');
+        leftSide.className = 'flex items-center gap-2 flex-1 overflow-hidden cursor-pointer';
+        if(!isEditing) leftSide.onclick = () => {
+            state.progress = idx;
+            params.progress = idx;
+            state.autoPlay = false;
+            params.autoPlay = false;
+            progressInput.value = idx;
+            playIcon.setAttribute('data-lucide', 'play');
+            playText.textContent = 'Play';
+            lucide.createIcons();
+            updateProgressUI();
+        };
+
+        const grabber = document.createElement('i');
+        grabber.setAttribute('data-lucide', 'grip-horizontal');
+        grabber.className = 'w-3.5 h-3.5 opacity-30 group-hover:opacity-100 cursor-grab active:cursor-grabbing flex-shrink-0';
+        leftSide.appendChild(grabber);
+
+        if (isEditing) {
+          const editWrapper = document.createElement('div');
+          editWrapper.className = 'flex items-center gap-1 flex-1 pr-2';
+          editWrapper.onclick = (e) => e.stopPropagation();
+
+          const editInput = document.createElement('input');
+          editInput.value = state.editState.val;
+          editInput.className = 'bg-black/30 text-white px-1.5 py-0.5 rounded outline-none w-full text-xs font-normal border border-white/20 focus:border-white/50';
+          editInput.oninput = (e) => state.editState.val = e.target.value;
+          editInput.onkeydown = (e) => { if(e.key === 'Enter') handleEditSave(); };
+          
+          const saveBtn = document.createElement('button');
+          saveBtn.className = 'text-green-400 hover:text-green-300';
+          saveBtn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
+          saveBtn.onclick = handleEditSave;
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.className = 'text-white/50 hover:text-red-400';
+          cancelBtn.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5"></i>';
+          cancelBtn.onclick = (e) => { e.stopPropagation(); state.editState = null; updateSequenceList(); };
+
+          editWrapper.append(editInput, saveBtn, cancelBtn);
+          leftSide.appendChild(editWrapper);
+          setTimeout(() => editInput.focus(), 10);
+        } else {
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'truncate';
+          nameSpan.textContent = seq.name;
+          leftSide.appendChild(nameSpan);
+        }
+        
+        itemEl.appendChild(leftSide);
+
+        if (!isEditing) {
+          const rightSide = document.createElement('div');
+          rightSide.className = 'flex items-center gap-2 flex-shrink-0 ml-2';
+
+          const colorWrapper = document.createElement('div');
+          colorWrapper.className = 'relative w-5 h-5 rounded-full overflow-hidden border border-white/20 shadow-sm cursor-pointer';
+          colorWrapper.title = 'Edit Background Color';
+          
+          const colorInput = document.createElement('input');
+          colorInput.type = 'color';
+          colorInput.value = seq.color || '#000000';
+          colorInput.className = 'absolute -top-2 -left-2 w-10 h-10 cursor-pointer';
+          colorInput.oninput = (e) => {
+            seq.color = e.target.value;
+            syncParams();
+          };
+          colorWrapper.appendChild(colorInput);
+          rightSide.appendChild(colorWrapper);
+
+          const controlsWrapper = document.createElement('div');
+          controlsWrapper.className = 'hidden group-hover:flex items-center gap-1.5 pl-1.5 border-l border-white/10';
+
+          const editBtn = document.createElement('button');
+          editBtn.className = 'text-white/40 hover:text-white transition-colors';
+          editBtn.title = 'Edit Name';
+          editBtn.innerHTML = '<i data-lucide="edit-2" class="w-3 h-3"></i>';
+          editBtn.onclick = (e) => {
+            e.stopPropagation();
+            state.editState = { id: seq.id, val: seq.type === 'text' ? seq.text : seq.name };
+            updateSequenceList();
+          };
+          controlsWrapper.appendChild(editBtn);
+
+          if (state.sequence.length > 1) {
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'text-white/40 hover:text-red-400 transition-colors';
+            removeBtn.title = 'Remove Shape';
+            removeBtn.innerHTML = '<i data-lucide="trash-2" class="w-3 h-3"></i>';
+            removeBtn.onclick = (e) => {
+              e.stopPropagation();
+              state.sequence = state.sequence.filter(x => x.id !== seq.id);
+              const newMax = Math.max(0, state.sequence.length - 1); 
+              if (state.progress > newMax) {
+                state.progress = Math.max(0, newMax - 0.01);
+                params.progress = state.progress;
+                progressInput.value = state.progress;
+              }
+              syncParams();
+              generateTargets();
+              updateSequenceList();
+            };
+            controlsWrapper.appendChild(removeBtn);
+          }
+
+          rightSide.appendChild(controlsWrapper);
+          itemEl.appendChild(rightSide);
+        }
+
+        sequenceListEl.appendChild(itemEl);
+      });
+
+      lucide.createIcons();
+    }
+
+    function handleEditSave() {
+      if (!state.editState || !state.editState.val.trim()) {
+        state.editState = null;
+        updateSequenceList();
+        return;
+      }
+      state.sequence = state.sequence.map(seq => {
+        if (seq.id === state.editState.id) {
+          if (seq.type === 'text') {
+            return { ...seq, text: state.editState.val.trim(), name: `"${state.editState.val.trim()}"` };
+          }
+          return { ...seq, name: state.editState.val.trim() };
+        }
+        return seq;
+      });
+      state.editState = null;
+      syncParams();
+      generateTargets();
+      updateSequenceList();
+    }
+
+    // --- Setup Listeners ---
+    function setupEventListeners() {
+      // Inputs
+      textInput.addEventListener('input', (e) => {
+        state.text = e.target.value;
+        params.text = e.target.value;
+      });
+
+      fontInput.addEventListener('change', (e) => {
+        state.fontFamily = e.target.value;
+        params.fontFamily = e.target.value;
+        loadFont(e.target.value);
+      });
+
+      spacingInput.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        spacingLabel.textContent = `${val}px`;
+        state.spacing = val;
+        params.spacing = val;
+        generateTargets();
+      });
+
+      fontSizeInput.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        fontSizeLabel.textContent = `${val}px`;
+        state.fontSize = val;
+        params.fontSize = val;
+      });
+
+      progressInput.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        state.progress = val;
+        params.progress = val;
+        state.autoPlay = false;
+        params.autoPlay = false;
+        playIcon.setAttribute('data-lucide', 'play');
+        playText.textContent = 'Play';
+        lucide.createIcons();
+        updateProgressUI();
+      });
+
+      // Panel Toggles
+      closePanelBtn.addEventListener('click', () => {
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+        openPanelBtn.classList.remove('hidden');
+        openPanelBtn.classList.add('flex');
+      });
+
+      openPanelBtn.addEventListener('click', () => {
+        openPanelBtn.classList.add('hidden');
+        openPanelBtn.classList.remove('flex');
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+      });
+
+      // Buttons
+      playBtn.addEventListener('click', togglePlay);
+
+      // Sequence Adding
+      const handleAddTextShape = () => {
+        const txt = newShapeText.value.trim();
+        if (txt) {
+          state.sequence.push({ 
+            type: 'text', 
+            id: Date.now().toString(), 
+            text: txt, 
+            name: `"${txt}"`,
+            color: '#873ce3'
+          });
+          newShapeText.value = '';
+          syncParams();
+          generateTargets();
+          updateSequenceList();
+        }
+      };
+
+      addTextBtn.addEventListener('click', handleAddTextShape);
+      newShapeText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleAddTextShape();
+      });
+
+      imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            state.sequence.push({ 
+              type: 'image', 
+              id: Date.now().toString(), 
+              src: event.target.result, 
+              name: 'Image',
+              color: '#ffffff'
+            });
+            syncParams();
+            generateTargets();
+            updateSequenceList();
+          };
+          reader.readAsDataURL(file);
+        }
+        // Reset file input
+        e.target.value = '';
+      });
+
+      // Recording
+      recordBtn.addEventListener('click', () => {
+        if (state.isRecording) {
+          mediaRecorderRef?.stop();
+          state.isRecording = false;
+          recordBtn.className = 'p-1.5 rounded-lg border bg-white/10 border-white/10 hover:bg-white/20 text-white/80 transition-colors';
+          document.getElementById('recordIcon').setAttribute('data-lucide', 'video');
+        } else {
+          try {
+            const stream = canvas.captureStream(60);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+            
+            recorder.ondataavailable = (e) => {
+              if (e.data.size > 0) chunks.push(e.data);
+            };
+            
+            recorder.onstop = () => {
+              const blob = new Blob(chunks, { type: 'video/webm' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `morph-animation-${Date.now()}.webm`;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+            
+            recorder.start();
+            mediaRecorderRef = recorder;
+            state.isRecording = true;
+            
+            recordBtn.className = 'p-1.5 rounded-lg border transition-colors bg-red-500/20 border-red-500/50 text-red-400';
+            document.getElementById('recordIcon').setAttribute('data-lucide', 'square');
+          } catch (err) {
+            console.error('Error starting video recording:', err);
+            // Custom message box fallback for alerts inside iframe
+            const alertBox = document.createElement('div');
+            alertBox.className = 'absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded shadow-lg z-[100]';
+            alertBox.textContent = 'Video recording is not supported in this browser environment.';
+            document.body.appendChild(alertBox);
+            setTimeout(() => alertBox.remove(), 3000);
+          }
+        }
+        lucide.createIcons();
+      });
+    }
+
+    // Run
+    init();
+
+  </script>
+</body>
+</html>

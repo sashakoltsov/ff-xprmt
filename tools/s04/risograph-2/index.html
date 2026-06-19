@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risograph Effect Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            color: #1f2937;
+        }
+        
+        /* Custom scrollbar for a nicer look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+
+        .canvas-container {
+            background-image: 
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+        
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        input[type=range]:focus::-webkit-slider-runnable-track {
+            background: #9ca3af;
+        }
+        
+        .color-picker {
+            -webkit-appearance: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            padding: 0;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col h-screen overflow-hidden">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0 z-10 relative shadow-sm">
+        <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+            <h1 class="text-xl font-bold text-gray-800 tracking-tight">Risograph Studio</h1>
+        </div>
+        <div class="flex gap-3">
+            <button id="downloadBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Download Art
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex overflow-hidden">
+        <!-- Sidebar Controls -->
+        <aside class="w-80 bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 relative">
+            
+            <!-- Upload Section -->
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Image Source</h2>
+                <label for="imageUpload" class="cursor-pointer group block">
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-indigo-500 group-hover:bg-indigo-50 transition-all">
+                        <svg class="mx-auto h-10 w-10 text-gray-400 group-hover:text-indigo-500 mb-2 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="mt-2 block text-sm font-medium text-gray-700 group-hover:text-indigo-600">
+                            Select an Image
+                        </span>
+                        <span class="mt-1 block text-xs text-gray-500">
+                            PNG, JPG up to 10MB
+                        </span>
+                    </div>
+                    <input id="imageUpload" type="file" accept="image/*" class="hidden">
+                </label>
+                
+                <button id="loadSampleBtn" class="mt-4 w-full py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-colors">
+                    Load Reference Image
+                </button>
+            </div>
+
+            <!-- Effect Controls -->
+            <div id="controlsSection" class="p-6 opacity-50 pointer-events-none transition-opacity duration-300 flex-1">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-6">Risograph Settings</h2>
+                
+                <!-- Colors -->
+                <div class="mb-6 space-y-4">
+                    <h3 class="text-xs font-semibold text-gray-700">Ink Colors</h3>
+                    
+                    <div class="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <label for="color1" class="text-sm text-gray-700 font-medium">Dark Ink</label>
+                        <div class="flex items-center gap-3">
+                            <div id="color1Swatch" class="w-6 h-6 rounded-full shadow-inner ring-1 ring-black/10 shrink-0" style="background-color: #3D5588;"></div>
+                            <select id="color1" class="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-md py-1.5 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="#FF48B0">Fluorescent Pink</option>
+                                <option value="#FFB511">Sunflower Yellow</option>
+                                <option value="#3D5588" selected>Federal Blue</option>
+                                <option value="#62A8E5">Cornflower Blue</option>
+                                <option value="#00838A">Teal</option>
+                                <option value="#5EC8E5">Aqua</option>
+                                <option value="#62C2A1">Sea Foam</option>
+                                <option value="#67B346">Kelly Green</option>
+                                <option value="#E45D50">Crimson</option>
+                                <option value="#FF6C2F">Orange</option>
+                                <option value="#914E72">Burgundy</option>
+                                <option value="#000000">Black</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <label for="color2" class="text-sm text-gray-700 font-medium">Light Ink</label>
+                        <div class="flex items-center gap-3">
+                            <div id="color2Swatch" class="w-6 h-6 rounded-full shadow-inner ring-1 ring-black/10 shrink-0" style="background-color: #FF48B0;"></div>
+                            <select id="color2" class="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-md py-1.5 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="#FF48B0" selected>Fluorescent Pink</option>
+                                <option value="#FFB511">Sunflower Yellow</option>
+                                <option value="#3D5588">Federal Blue</option>
+                                <option value="#62A8E5">Cornflower Blue</option>
+                                <option value="#00838A">Teal</option>
+                                <option value="#5EC8E5">Aqua</option>
+                                <option value="#62C2A1">Sea Foam</option>
+                                <option value="#67B346">Kelly Green</option>
+                                <option value="#E45D50">Crimson</option>
+                                <option value="#FF6C2F">Orange</option>
+                                <option value="#914E72">Burgundy</option>
+                                <option value="#000000">Black</option>
+                            </select>
+                        </div>
+                    </div>
+
+                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <span class="text-sm text-gray-700 font-medium">Paper Color</span>
+                        <div class="flex items-center gap-2">
+                            <span id="paperColorHex" class="text-xs text-gray-500 font-mono w-16 text-right">#f4f1ea</span>
+                            <input type="color" id="paperColor" value="#f4f1ea" class="color-picker shadow-sm ring-1 ring-black ring-opacity-10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halftone Size -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="dotSize" class="text-sm font-medium text-gray-700">Halftone Dot Size</label>
+                        <span id="dotSizeVal" class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">3px</span>
+                    </div>
+                    <input type="range" id="dotSize" min="1" max="15" value="3" step="0.5">
+                    <p class="text-xs text-gray-400 mt-1">Controls the size of the print dots.</p>
+                </div>
+
+                <!-- Threshold -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="threshold" class="text-sm font-medium text-gray-700">Separation Balance</label>
+                        <span id="thresholdVal" class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">128</span>
+                    </div>
+                    <input type="range" id="threshold" min="0" max="255" value="128">
+                    <p class="text-xs text-gray-400 mt-1">Adjusts the split between light and dark inks.</p>
+                </div>
+
+                <!-- Contrast -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="contrast" class="text-sm font-medium text-gray-700">Contrast</label>
+                        <span id="contrastVal" class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">1.2</span>
+                    </div>
+                    <input type="range" id="contrast" min="0.5" max="3" value="1.2" step="0.1">
+                </div>
+
+                <!-- Noise/Texture -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="noise" class="text-sm font-medium text-gray-700">Paper Grain</label>
+                        <span id="noiseVal" class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">15%</span>
+                    </div>
+                    <input type="range" id="noise" min="0" max="50" value="15">
+                </div>
+                
+                <!-- Registration Offset -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="offset" class="text-sm font-medium text-gray-700">Misregistration</label>
+                        <span id="offsetVal" class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">2px</span>
+                    </div>
+                    <input type="range" id="offset" min="0" max="10" value="2" step="0.5">
+                    <p class="text-xs text-gray-400 mt-1">Simulates imperfect printing alignment.</p>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <section class="flex-1 bg-gray-200 relative overflow-auto canvas-container flex items-center justify-center p-8">
+            <!-- Loading Indicator -->
+            <div id="loading" class="hidden absolute inset-0 z-20 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-sm font-medium text-gray-600">Processing Image...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center">
+                <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <p class="text-gray-500 font-medium">Upload an image to start</p>
+            </div>
+
+            <!-- Render Canvas -->
+            <canvas id="mainCanvas" class="hidden max-w-full max-h-full shadow-2xl rounded-sm ring-1 ring-black/5" style="transform-origin: center center;"></canvas>
+            
+            <!-- Hidden canvas for original image data -->
+            <canvas id="sourceCanvas" class="hidden"></canvas>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const imageUpload = document.getElementById('imageUpload');
+            const loadSampleBtn = document.getElementById('loadSampleBtn');
+            const mainCanvas = document.getElementById('mainCanvas');
+            const sourceCanvas = document.getElementById('sourceCanvas');
+            const ctx = mainCanvas.getContext('2d', { willReadFrequently: true });
+            const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+            
+            const controlsSection = document.getElementById('controlsSection');
+            const emptyState = document.getElementById('emptyState');
+            const loading = document.getElementById('loading');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // Inputs
+            const color1Input = document.getElementById('color1');
+            const color2Input = document.getElementById('color2');
+            const paperColorInput = document.getElementById('paperColor');
+            const dotSizeInput = document.getElementById('dotSize');
+            const thresholdInput = document.getElementById('threshold');
+            const contrastInput = document.getElementById('contrast');
+            const noiseInput = document.getElementById('noise');
+            const offsetInput = document.getElementById('offset');
+
+            // Value displays
+            const color1Swatch = document.getElementById('color1Swatch');
+            const color2Swatch = document.getElementById('color2Swatch');
+            const paperColorHex = document.getElementById('paperColorHex');
+            const dotSizeVal = document.getElementById('dotSizeVal');
+            const thresholdVal = document.getElementById('thresholdVal');
+            const contrastVal = document.getElementById('contrastVal');
+            const noiseVal = document.getElementById('noiseVal');
+            const offsetVal = document.getElementById('offsetVal');
+
+            let originalImage = null;
+            let processTimeout = null;
+            let isProcessing = false;
+
+            // Helper: Hex to RGB
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 0, g: 0, b: 0 };
+            }
+
+            // Core processing function
+            function processImage() {
+                if (!originalImage || isProcessing) return;
+                
+                isProcessing = true;
+                loading.classList.remove('hidden');
+                
+                // Allow UI to update before heavy processing
+                setTimeout(() => {
+                    const width = mainCanvas.width;
+                    const height = mainCanvas.height;
+                    
+                    // Get Settings
+                    const c1 = hexToRgb(color1Input.value);
+                    const c2 = hexToRgb(color2Input.value);
+                    const paper = hexToRgb(paperColorInput.value);
+                    const dotSize = parseFloat(dotSizeInput.value);
+                    const threshold = parseInt(thresholdInput.value);
+                    const contrast = parseFloat(contrastInput.value);
+                    const noiseAmount = parseInt(noiseInput.value);
+                    const offset = parseFloat(offsetInput.value);
+
+                    // 1. Draw original to source canvas with contrast adjustment
+                    sourceCtx.filter = `contrast(${contrast * 100}%) grayscale(100%)`;
+                    sourceCtx.drawImage(originalImage, 0, 0, width, height);
+                    sourceCtx.filter = 'none'; // reset
+                    
+                    const sourceImageData = sourceCtx.getImageData(0, 0, width, height);
+                    const data = sourceImageData.data;
+
+                    // 2. Clear main canvas and fill with paper color
+                    ctx.fillStyle = paperColorInput.value;
+                    ctx.fillRect(0, 0, width, height);
+
+                    // 3. Create two temporary canvases for color separations
+                    const layer1Canvas = document.createElement('canvas');
+                    const layer2Canvas = document.createElement('canvas');
+                    layer1Canvas.width = width; layer1Canvas.height = height;
+                    layer2Canvas.width = width; layer2Canvas.height = height;
+                    const l1Ctx = layer1Canvas.getContext('2d');
+                    const l2Ctx = layer2Canvas.getContext('2d');
+
+                    // Apply a halftone effect to each layer based on intensity
+                    // We simulate halftone by drawing dots
+                    
+                    l1Ctx.fillStyle = color1Input.value;
+                    l2Ctx.fillStyle = color2Input.value;
+                    
+                    // Multiply blend mode simulates overlapping ink
+                    ctx.globalCompositeOperation = 'multiply';
+
+                    // Process in chunks for dot placement (Halftoning)
+                    const step = Math.max(1, dotSize);
+                    const radius = dotSize / 2;
+                    
+                    // Angle for dots to avoid moire patterns (typical in real printing)
+                    const angle1 = 15 * (Math.PI / 180);
+                    const angle2 = 75 * (Math.PI / 180);
+
+                    // Optimized halftone generation
+                    for (let y = 0; y < height; y += step) {
+                        for (let x = 0; x < width; x += step) {
+                            // Map grid x,y to actual pixel x,y considering angle
+                            
+                            // Get grayscale value from original
+                            const pixelIndex = (Math.floor(y) * width + Math.floor(x)) * 4;
+                            const brightness = data[pixelIndex]; // R channel (grayscale)
+                            
+                            // Map brightness (0-255) to a dot size multiplier (1 to 0)
+                            // 0 = black (max dot), 255 = white (no dot)
+                            const intensity = 1 - (brightness / 255);
+                            
+                            if (intensity <= 0.05) continue; // Skip very light areas
+
+                            // Separation logic based on threshold
+                            // Darker areas get Color 1, Lighter midtones get Color 2
+                            
+                            let r1 = 0;
+                            let r2 = 0;
+
+                            if (brightness < threshold) {
+                                // Dark areas: mostly color 1, some color 2
+                                r1 = radius * (1 - (brightness / threshold)); // Scales 1 to 0
+                                // Add a bit of color 2 for depth in darks
+                                r2 = radius * 0.3 * (1 - (brightness / threshold));
+                            } else {
+                                // Light areas: mostly color 2
+                                const range = 255 - threshold;
+                                r2 = radius * (1 - ((brightness - threshold) / range)); // Scales 1 to 0
+                            }
+
+                            // Draw Layer 1 (Dark Ink) - Angle 1
+                            if (r1 > 0.5) {
+                                l1Ctx.beginPath();
+                                l1Ctx.arc(x + radius, y + radius, r1, 0, Math.PI * 2);
+                                l1Ctx.fill();
+                            }
+
+                            // Draw Layer 2 (Light Ink) - Angle 2
+                            // Offset grid slightly to simulate screen angle difference
+                            if (r2 > 0.5) {
+                                const ox = x + (step/2);
+                                const oy = y + (step/2);
+                                l2Ctx.beginPath();
+                                l2Ctx.arc(ox, oy, r2, 0, Math.PI * 2);
+                                l2Ctx.fill();
+                            }
+                        }
+                    }
+
+                    // 4. Draw layers onto main canvas with offset (misregistration)
+                    // Draw Layer 2 (Lighter color first)
+                    ctx.drawImage(layer2Canvas, -offset/2, -offset/2);
+                    
+                    // Draw Layer 1 (Darker color on top)
+                    ctx.drawImage(layer1Canvas, offset/2, offset/2);
+
+                    // 5. Add Paper Grain / Noise
+                    if (noiseAmount > 0) {
+                        ctx.globalCompositeOperation = 'overlay';
+                        const noiseCanvas = document.createElement('canvas');
+                        noiseCanvas.width = width;
+                        noiseCanvas.height = height;
+                        const nCtx = noiseCanvas.getContext('2d');
+                        const nData = nCtx.createImageData(width, height);
+                        
+                        for (let i = 0; i < nData.data.length; i += 4) {
+                            // Generate noise between 128-range and 128+range
+                            const val = 128 + (Math.random() - 0.5) * (noiseAmount * 5); 
+                            nData.data[i] = val;
+                            nData.data[i+1] = val;
+                            nData.data[i+2] = val;
+                            nData.data[i+3] = 255; // Alpha
+                        }
+                        nCtx.putImageData(nData, 0, 0);
+                        
+                        // Set opacity of noise
+                        ctx.globalAlpha = 0.4;
+                        ctx.drawImage(noiseCanvas, 0, 0);
+                        ctx.globalAlpha = 1.0;
+                    }
+                    
+                    // Reset composite operation
+                    ctx.globalCompositeOperation = 'source-over';
+
+                    loading.classList.add('hidden');
+                    isProcessing = false;
+                }, 10);
+            }
+
+            // Update Displays and Trigger Processing
+            function updateDisplayAndProcess(input, displayEl, unit = '') {
+                if (input.tagName === 'SELECT') {
+                    displayEl.style.backgroundColor = input.value;
+                } else if (input.type === 'color') {
+                     // small hack to update hex display for colors
+                     displayEl.textContent = input.value;
+                } else {
+                     displayEl.textContent = input.value + unit;
+                }
+                
+                // Debounce the processing so slider dragging isn't laggy
+                clearTimeout(processTimeout);
+                processTimeout = setTimeout(processImage, 150);
+            }
+
+            // Event Listeners for Controls
+            color1Input.addEventListener('change', () => updateDisplayAndProcess(color1Input, color1Swatch));
+            color2Input.addEventListener('change', () => updateDisplayAndProcess(color2Input, color2Swatch));
+            paperColorInput.addEventListener('input', () => updateDisplayAndProcess(paperColorInput, paperColorHex));
+            
+            dotSizeInput.addEventListener('input', () => updateDisplayAndProcess(dotSizeInput, dotSizeVal, 'px'));
+            thresholdInput.addEventListener('input', () => updateDisplayAndProcess(thresholdInput, thresholdVal));
+            contrastInput.addEventListener('input', () => updateDisplayAndProcess(contrastInput, contrastVal));
+            noiseInput.addEventListener('input', () => updateDisplayAndProcess(noiseInput, noiseVal, '%'));
+            offsetInput.addEventListener('input', () => updateDisplayAndProcess(offsetInput, offsetVal, 'px'));
+
+
+            // Image Loading Logic
+            function loadImage(src) {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    
+                    // Calculate optimal canvas size (max 1200px dimension for performance)
+                    const MAX_DIM = 1200;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > MAX_DIM || height > MAX_DIM) {
+                        if (width > height) {
+                            height = Math.round((height * MAX_DIM) / width);
+                            width = MAX_DIM;
+                        } else {
+                            width = Math.round((width * MAX_DIM) / height);
+                            height = MAX_DIM;
+                        }
+                    }
+
+                    // Set actual canvas resolution
+                    mainCanvas.width = width;
+                    mainCanvas.height = height;
+                    sourceCanvas.width = width;
+                    sourceCanvas.height = height;
+                    
+                    // Update UI state
+                    emptyState.classList.add('hidden');
+                    mainCanvas.classList.remove('hidden');
+                    controlsSection.classList.remove('opacity-50', 'pointer-events-none');
+                    downloadBtn.classList.remove('hidden');
+
+                    processImage();
+                };
+                img.src = src;
+            }
+
+            // Upload handler
+            imageUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        loadImage(event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Sample image handler
+            loadSampleBtn.addEventListener('click', () => {
+                // Since I cannot read local files directly, I will provide a placeholder image
+                // that mimics a similar composition to the user's reference.
+                // In a real environment, they would upload "5d7fc841270f1a688136d3c3bcb4ea20.jpg"
+                
+                // Using a placeholder that has organic shapes and contrast to show off the effect
+                const sampleImageUrl = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'; // Abstract paint image
+                
+                // Set default colors matching the user's reference image
+                color1Input.value = '#3D5588'; // Federal Blue
+                color2Input.value = '#FF48B0'; // Fluorescent Pink
+                paperColorInput.value = '#f2efe9'; // Off-white paper
+                
+                // Update displays manually for sample
+                color1Swatch.style.backgroundColor = color1Input.value;
+                color2Swatch.style.backgroundColor = color2Input.value;
+                paperColorHex.textContent = paperColorInput.value;
+                
+                // Trigger load
+                loadImage(sampleImageUrl);
+            });
+
+            // Download handler
+            downloadBtn.addEventListener('click', () => {
+                if (!originalImage) return;
+                
+                const link = document.createElement('a');
+                link.download = 'risograph-art.png';
+                link.href = mainCanvas.toDataURL('image/png');
+                link.click();
+            });
+            
+            // Drag and drop support for the whole window
+            window.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            window.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type.match('image.*')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            loadImage(event.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

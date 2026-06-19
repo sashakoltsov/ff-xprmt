@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentric Shape Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for sidebar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <div class="min-h-screen flex flex-col md:flex-row">
+      
+        <!-- Sidebar Controls -->
+        <div class="w-full md:w-80 bg-white p-6 shadow-xl flex flex-col gap-6 z-10 md:h-screen md:overflow-y-auto border-r border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Concentric Shape Generator</h1>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Parametric Engine</p>
+            </div>
+
+            <div class="flex flex-col gap-5">
+                
+                <!-- Base Symmetry -->
+                <div class="flex flex-col gap-2 pb-4 border-b border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-semibold text-gray-700">Points (N)</label>
+                        <span id="numPointsVal" class="text-sm font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">5</span>
+                    </div>
+                    <input type="range" id="numPoints" min="3" max="12" value="5" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                </div>
+
+                <!-- Wireframe Guide Controls -->
+                <div class="flex flex-col gap-3 pb-4 border-b border-gray-100">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="showGuide" checked class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" onchange="updateGenerator()" />
+                        <span class="text-sm font-semibold text-red-600">Show Star Guide</span>
+                    </label>
+                    
+                    <div id="guideControls" class="bg-red-50 p-3 rounded-lg flex flex-col gap-3 border border-red-100">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-red-800">Guide Size</label>
+                                <span id="guideSizeVal" class="text-xs font-mono text-red-800">70px</span>
+                            </div>
+                            <input type="range" id="guideSize" min="20" max="150" value="70" class="w-full accent-red-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-red-800">Inner Ratio</label>
+                                <span id="guideRatioVal" class="text-xs font-mono text-red-800">0.40</span>
+                            </div>
+                            <input type="range" id="guideRatio" min="0.1" max="0.9" step="0.05" value="0.4" class="w-full accent-red-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parametric Shape Controls -->
+                <div class="flex flex-col gap-4">
+                    <label class="text-sm font-semibold text-gray-700">Shape Sculpting</label>
+                    
+                    <div class="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Top Width</label>
+                                <span id="topWidthVal" class="text-xs font-mono text-gray-500">40px</span>
+                            </div>
+                            <input type="range" id="topWidth" min="0" max="100" value="40" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Bottom Width</label>
+                                <span id="bottomWidthVal" class="text-xs font-mono text-gray-500">40px</span>
+                            </div>
+                            <input type="range" id="bottomWidth" min="0" max="100" value="40" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Top Point Extrusion</label>
+                                <span id="topPointVal" class="text-xs font-mono text-gray-500">0px</span>
+                            </div>
+                            <input type="range" id="topPoint" min="-50" max="100" value="0" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Bottom Point Extrusion</label>
+                                <span id="bottomPointVal" class="text-xs font-mono text-gray-500">-20px</span>
+                            </div>
+                            <input type="range" id="bottomPoint" min="-100" max="100" value="-20" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+                        
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Total Length</label>
+                                <span id="lengthVal" class="text-xs font-mono text-gray-500">120px</span>
+                            </div>
+                            <input type="range" id="length" min="20" max="250" value="120" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+                    </div>
+
+                    <label class="text-sm font-semibold text-gray-700 mt-2">Positioning & Rotation</label>
+                    <div class="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Center Offset</label>
+                                <span id="offsetVal" class="text-xs font-mono text-gray-500">80px</span>
+                            </div>
+                            <input type="range" id="offset" min="0" max="250" value="80" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-medium text-gray-600">Aperture Tilt</label>
+                                <span id="tiltVal" class="text-xs font-mono text-gray-500">-35°</span>
+                            </div>
+                            <input type="range" id="tilt" min="-180" max="180" value="-35" class="w-full accent-blue-600 cursor-pointer" oninput="updateGenerator()" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Controls -->
+                <div class="flex flex-col gap-3 pt-4 border-t border-gray-100">
+                    <label class="text-sm font-semibold text-gray-700">Palette</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Background</label>
+                            <input type="color" id="bgColor" value="#111827" class="w-full h-10 cursor-pointer rounded-lg border border-gray-200 p-0 overflow-hidden" oninput="updateGenerator()" />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-600">Shape Color</label>
+                            <input type="color" id="primaryColor" value="#E5E7EB" class="w-full h-10 cursor-pointer rounded-lg border border-gray-200 p-0 overflow-hidden" oninput="updateGenerator()" />
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="mt-auto pt-6 pb-2">
+                <button 
+                    onclick="handleExport()" 
+                    class="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex justify-center items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export SVG
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="flex-1 flex flex-col items-center justify-center p-8 bg-gray-200/50 min-h-[500px]">
+            <div id="svgContainer" class="shadow-2xl rounded-2xl overflow-hidden transition-all duration-300 ring-1 ring-black/5 relative" style="width: 500px; height: 500px; background-color: #111827;">
+                <svg id="mainSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%" style="background-color: #111827;">
+                    <!-- Content will be injected here by JS -->
+                </svg>
+            </div>
+            <p class="mt-6 text-sm text-gray-500 font-medium tracking-wide">Preview (500x500 Canvas)</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Math to generate the wireframe star path
+        const getStarPath = (cx, cy, spikes, outerRadius, innerRadius) => {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+            let path = `M ${cx} ${cy - outerRadius}`;
+            
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                path += ` L ${x} ${y}`;
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                path += ` L ${x} ${y}`;
+                rot += step;
+            }
+            path += ' Z';
+            return path;
+        };
+
+        // Construct the custom polygon points
+        const getParametricShapePts = (cx, cy, topWidth, bottomWidth, topPoint, bottomPoint, length) => {
+            const halfLen = length / 2;
+            const tHalf = topWidth / 2;
+            const bHalf = bottomWidth / 2;
+
+            const pts = [];
+            
+            // Top tip
+            if (topPoint !== 0) pts.push(`${cx},${cy - halfLen - topPoint}`);
+            // Top right
+            pts.push(`${cx + tHalf},${cy - halfLen}`);
+            // Bottom right
+            pts.push(`${cx + bHalf},${cy + halfLen}`);
+            // Bottom tip
+            if (bottomPoint !== 0) pts.push(`${cx},${cy + halfLen + bottomPoint}`);
+            // Bottom left
+            pts.push(`${cx - bHalf},${cy + halfLen}`);
+            // Top left
+            pts.push(`${cx - tHalf},${cy - halfLen}`);
+
+            return pts.join(' ');
+        };
+
+        const updateGenerator = () => {
+            // Read all input values
+            const numPoints = parseInt(document.getElementById('numPoints').value);
+            const showGuide = document.getElementById('showGuide').checked;
+            const guideSize = parseInt(document.getElementById('guideSize').value);
+            const guideRatio = parseFloat(document.getElementById('guideRatio').value);
+            const topWidth = parseInt(document.getElementById('topWidth').value);
+            const bottomWidth = parseInt(document.getElementById('bottomWidth').value);
+            const topPoint = parseInt(document.getElementById('topPoint').value);
+            const bottomPoint = parseInt(document.getElementById('bottomPoint').value);
+            const length = parseInt(document.getElementById('length').value);
+            const offset = parseInt(document.getElementById('offset').value);
+            const tilt = parseInt(document.getElementById('tilt').value);
+            const bgColor = document.getElementById('bgColor').value;
+            const primaryColor = document.getElementById('primaryColor').value;
+
+            // Update UI labels
+            document.getElementById('numPointsVal').innerText = numPoints;
+            document.getElementById('guideSizeVal').innerText = guideSize + 'px';
+            document.getElementById('guideRatioVal').innerText = guideRatio.toFixed(2);
+            document.getElementById('topWidthVal').innerText = topWidth + 'px';
+            document.getElementById('bottomWidthVal').innerText = bottomWidth + 'px';
+            document.getElementById('topPointVal').innerText = topPoint + 'px';
+            document.getElementById('bottomPointVal').innerText = bottomPoint + 'px';
+            document.getElementById('lengthVal').innerText = length + 'px';
+            document.getElementById('offsetVal').innerText = offset + 'px';
+            document.getElementById('tiltVal').innerText = tilt + '°';
+
+            // Toggle guide controls visibility
+            document.getElementById('guideControls').style.display = showGuide ? 'flex' : 'none';
+
+            // Update container and SVG background colors
+            const svgContainer = document.getElementById('svgContainer');
+            const mainSvg = document.getElementById('mainSvg');
+            svgContainer.style.backgroundColor = bgColor;
+            mainSvg.style.backgroundColor = bgColor;
+
+            // Build SVG content
+            let svgContent = '';
+            const center = 250; 
+            const angleStep = 360 / numPoints;
+
+            // Generate Satellites
+            for (let i = 0; i < numPoints; i++) {
+                const groupRotation = i * angleStep;
+                const shapeCenterX = center;
+                const shapeCenterY = center - offset;
+                const pts = getParametricShapePts(shapeCenterX, shapeCenterY, topWidth, bottomWidth, topPoint, bottomPoint, length);
+
+                svgContent += `
+                    <g transform="rotate(${groupRotation} ${center} ${center})">
+                        <g transform="rotate(${tilt} ${shapeCenterX} ${shapeCenterY})">
+                            <polygon points="${pts}" fill="${primaryColor}" />
+                        </g>
+                    </g>
+                `;
+            }
+
+            // Draw Wireframe Guide overlaid on top
+            if (showGuide) {
+                const pathData = getStarPath(250, 250, numPoints, guideSize, guideSize * guideRatio);
+                svgContent += `
+                    <path 
+                        id="star-guide"
+                        d="${pathData}" 
+                        fill="none" 
+                        stroke="#EF4444" 
+                        stroke-width="1"
+                        stroke-dasharray="4 4"
+                        opacity="0.8"
+                    />
+                `;
+            }
+
+            // Inject into SVG DOM element
+            mainSvg.innerHTML = svgContent;
+        };
+
+        // Export functionality
+        const handleExport = () => {
+            const svgElement = document.getElementById('mainSvg');
+            if (!svgElement) return;
+            
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(svgElement);
+            
+            // Remove the red guide from the export if it's currently showing
+            svgString = svgString.replace(/<path id="star-guide"[^>]*><\/path>/g, '');
+            // Also handle self-closing tags just in case
+            svgString = svgString.replace(/<path id="star-guide"[^>]*\/>/g, '');
+            
+            if (!svgString.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+                svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'concentric-shape.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+
+        // Initial render on page load
+        window.onload = updateGenerator;
+
+    </script>
+</body>
+</html>

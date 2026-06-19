@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starburst image</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; color: #eee; font-family: sans-serif; }
+        #app { display: flex; height: 100vh; width: 100vw; }
+        #panel { width: 280px; background: #1a1a1a; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; border-right: 1px solid #333; z-index: 10; overflow-y: auto; }
+        #canvas-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a0a0a; position: relative; }
+        canvas { max-width: 90%; max-height: 90%; object-fit: contain; }
+        label { display: flex; flex-direction: column; font-size: 12px; gap: 6px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        select, input[type="file"], button, input[type="color"] { width: 100%; background: #222; color: #eee; border: 1px solid #444; padding: 6px; border-radius: 4px; }
+        input[type="color"] { padding: 2px; height: 32px; cursor: pointer; }
+        .row { display: flex; gap: 10px; }
+        .row > label { flex: 1; }
+        button { background: #333; cursor: pointer; padding: 10px; text-transform: uppercase; letter-spacing: 1px; transition: background 0.2s; }
+        button:hover { background: #444; }
+        h1 { font-size: 16px; margin: 0; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="panel">
+            <h1>Starburst image</h1>
+            
+            <label>Upload <input type="file" id="upload" accept="image/*"></label>
+            
+            <label>Pixel density <input type="range" id="density" min="10" max="150" value="60"></label>
+            <label>Star size <input type="range" id="size" min="0.1" max="3" step="0.1" value="1.2"></label>
+            <label>Fidelity <input type="range" id="fidelity" min="0" max="1" step="0.1" value="0.8"></label>
+            
+            <label>Dropdown
+                <select id="dropdown">
+                    <option value="4">4 Points</option>
+                    <option value="8" selected>8 Points</option>
+                    <option value="12">12 Points</option>
+                    <option value="16">16 Points</option>
+                    <option value="32">32 Points</option>
+                    <option value="64">64 Points</option>
+                </select>
+            </label>
+            
+            <label>Switcher
+                <select id="switcher">
+                    <option value="fill" selected>Fill</option>
+                    <option value="outline">Outline</option>
+                </select>
+            </label>
+            
+            <label>Color Mode
+                <select id="colorMode">
+                    <option value="original">Original</option>
+                    <option value="duotone" selected>Duotone</option>
+                    <option value="tritone">Tritone</option>
+                </select>
+            </label>
+            
+            <div class="row">
+                <label>C1 <input type="color" id="color1" value="#0a0a0a"></label>
+                <label>C2 <input type="color" id="color2" value="#888888"></label>
+                <label>C3 <input type="color" id="color3" value="#ffffff"></label>
+            </div>
+            
+            <button id="export">Export</button>
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const els = {
+            upload: document.getElementById('upload'),
+            density: document.getElementById('density'),
+            size: document.getElementById('size'),
+            fidelity: document.getElementById('fidelity'),
+            dropdown: document.getElementById('dropdown'),
+            switcher: document.getElementById('switcher'),
+            colorMode: document.getElementById('colorMode'),
+            color1: document.getElementById('color1'),
+            color2: document.getElementById('color2'),
+            color3: document.getElementById('color3'),
+            exportBtn: document.getElementById('export'),
+            canvas: document.getElementById('canvas')
+        };
+        
+        const ctx = els.canvas.getContext('2d');
+        let currentImg = null;
+        let offCanvas = document.createElement('canvas');
+        let offCtx = offCanvas.getContext('2d');
+        let debounceTimer;
+
+        function hexToRgb(hex) {
+            let bigint = parseInt(hex.slice(1), 16);
+            return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+        }
+
+        function drawStar(cx, cy, maxRadius, points, style, color, lum, fidelity) {
+            ctx.beginPath();
+            
+            // Fidelity controls how much luminance affects the core/points
+            const sizeMult = 1 - (fidelity * (1 - lum)); 
+            const outerR = maxRadius * sizeMult;
+            const innerR = outerR * (0.15 + (0.3 * (1 - fidelity))); 
+
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (i * Math.PI) / points - Math.PI / 2;
+                let r;
+                if (i % 2 === 0) {
+                    r = outerR; // Long points
+                } else {
+                    // For 8+ points, alternate between deep inner radius and a mid radius
+                    if (points >= 8 && (i - 1) % 4 !== 0) {
+                        r = outerR * 0.5;
+                    } else {
+                        r = innerR;
+                    }
+                }
+                ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+            }
+            
+            ctx.closePath();
+            
+            if (style === 'fill') {
+                ctx.fillStyle = color;
+                ctx.fill();
+            } else {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(0.5, outerR * 0.1);
+                ctx.stroke();
+            }
+        }
+
+        function render() {
+            if (!currentImg) return;
+            
+            const w = els.canvas.width;
+            const h = els.canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const step = 160 - parseInt(els.density.value); 
+            const size = parseFloat(els.size.value);
+            const fidelity = parseFloat(els.fidelity.value);
+            const points = parseInt(els.dropdown.value);
+            const style = els.switcher.value;
+            const colorMode = els.colorMode.value;
+            
+            const c1 = hexToRgb(els.color1.value);
+            const c2 = hexToRgb(els.color2.value);
+            const c3 = hexToRgb(els.color3.value);
+
+            const imgData = offCtx.getImageData(0, 0, w, h).data;
+            const maxRadius = (step / 2) * size;
+
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
+                    const cx = x + step / 2;
+                    const cy = y + step / 2;
+
+                    const sx = Math.min(Math.floor(cx), w - 1);
+                    const sy = Math.min(Math.floor(cy), h - 1);
+
+                    const i = (sy * w + sx) * 4;
+                    const r = imgData[i];
+                    const g = imgData[i+1];
+                    const b = imgData[i+2];
+                    const a = imgData[i+3];
+
+                    if (a < 10) continue;
+
+                    // Luminance mapping
+                    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    
+                    let finalColor;
+                    if (colorMode === 'original') {
+                        finalColor = `rgb(${r}, ${g}, ${b})`;
+                    } else if (colorMode === 'duotone') {
+                        const dr = Math.round(c1.r + (c2.r - c1.r) * lum);
+                        const dg = Math.round(c1.g + (c2.g - c1.g) * lum);
+                        const db = Math.round(c1.b + (c2.b - c1.b) * lum);
+                        finalColor = `rgb(${dr}, ${dg}, ${db})`;
+                    } else if (colorMode === 'tritone') {
+                        let dr, dg, db;
+                        if (lum < 0.5) {
+                            const norm = lum * 2; 
+                            dr = Math.round(c1.r + (c2.r - c1.r) * norm);
+                            dg = Math.round(c1.g + (c2.g - c1.g) * norm);
+                            db = Math.round(c1.b + (c2.b - c1.b) * norm);
+                        } else {
+                            const norm = (lum - 0.5) * 2; 
+                            dr = Math.round(c2.r + (c3.r - c2.r) * norm);
+                            dg = Math.round(c2.g + (c3.g - c2.g) * norm);
+                            db = Math.round(c2.b + (c3.b - c2.b) * norm);
+                        }
+                        finalColor = `rgb(${dr}, ${dg}, ${db})`;
+                    }
+
+                    drawStar(cx, cy, maxRadius, points, style, finalColor, lum, fidelity);
+                }
+            }
+        }
+
+        function queueRender() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(render, 100);
+        }
+
+        els.upload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentImg = img;
+                    let w = img.width;
+                    let h = img.height;
+                    const max = 1600;
+                    if (w > max || h > max) {
+                        const ratio = Math.min(max / w, max / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    els.canvas.width = offCanvas.width = w;
+                    els.canvas.height = offCanvas.height = h;
+                    offCtx.clearRect(0, 0, w, h);
+                    offCtx.drawImage(img, 0, 0, w, h);
+                    render();
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        els.exportBtn.addEventListener('click', () => {
+            if (!currentImg) return;
+            const link = document.createElement('a');
+            link.download = 'starburst-export.png';
+            link.href = els.canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Attach events to all inputs to trigger re-render
+        [els.density, els.size, els.fidelity, els.dropdown, els.switcher, els.colorMode, els.color1, els.color2, els.color3].forEach(el => {
+            el.addEventListener('input', queueRender);
+        });
+    </script>
+</body>
+</html>

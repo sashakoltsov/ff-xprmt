@@ -1,10 +1,17 @@
 {
-  "generated": "2026-06-18T16:31:30.546Z",
+  "generated": "2026-06-19T15:39:19.414Z",
   "sessions": [
     {
       "id": "s04",
       "title": "Image Filter Tools",
       "tools": [
+        {
+          "slug": "emojizer pro",
+          "name": "Emojizer Pro",
+          "author": "Laurence",
+          "path": "tools/s04/emojizer pro/index.html",
+          "cover": "tools/s04/emojizer pro/cover.jpg"
+        },
         {
           "slug": "gradient",
           "name": "Gradient",
@@ -33,6 +40,28 @@
           "author": "Juan F.",
           "path": "tools/s04/risograph/index.html",
           "cover": "tools/s04/risograph/cover.jpg"
+        },
+        {
+          "slug": "risograph-2",
+          "name": "Risograph",
+          "author": "Joyce",
+          "path": "tools/s04/risograph-2/index.html",
+          "cover": "tools/s04/risograph-2/cover.jpg"
+        },
+        {
+          "slug": "schematic-creator",
+          "name": "Schematic Creator",
+          "author": "Sam",
+          "path": "tools/s04/schematic-creator/index.html",
+          "ai": true,
+          "cover": "tools/s04/schematic-creator/cover.jpg"
+        },
+        {
+          "slug": "starburst-image",
+          "name": "Starburst Image",
+          "author": "Lucia",
+          "path": "tools/s04/starburst-image/index.html",
+          "cover": "tools/s04/starburst-image/cover.jpg"
         }
       ],
       "cover": "tools/s04/cover.jpg"
@@ -69,6 +98,20 @@
           "author": "Sam",
           "path": "tools/s05/rovers/index.html",
           "cover": "tools/s05/rovers/cover.jpg"
+        },
+        {
+          "slug": "typographic-morph",
+          "name": "Typographic Morph",
+          "author": "Joyce",
+          "path": "tools/s05/typographic-morph/index.html",
+          "cover": "tools/s05/typographic-morph/cover.jpg"
+        },
+        {
+          "slug": "typographic-voxel-tool",
+          "name": "Typographic Voxel Tool",
+          "author": "Lucia",
+          "path": "tools/s05/typographic-voxel-tool/index.html",
+          "cover": "tools/s05/typographic-voxel-tool/cover.jpg"
         },
         {
           "slug": "variable-type-sasha",
@@ -111,6 +154,13 @@
           "author": "Sasha",
           "path": "tools/work/colour-worlds/index.html",
           "cover": "tools/work/colour-worlds/cover.jpg"
+        },
+        {
+          "slug": "concentric-shape",
+          "name": "Concentric Shape Generator",
+          "author": "Lucia",
+          "path": "tools/work/concentric-shape/index.html",
+          "cover": "tools/work/concentric-shape/cover.jpg"
         },
         {
           "slug": "cupra-hse",

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schematic Style Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Apple-esque slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        .spotlight-bg {
+            background: radial-gradient(circle at center, #1f1f21 0%, #000000 100%);
+        }
+        
+        /* Apple HUD Loading Spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-bottom-color: #ffffff;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* iOS Style Toggle */
+        .ios-toggle:checked {
+            background-color: #34C759 !important;
+        }
+    </style>
+</head>
+<body class="bg-black text-zinc-100 h-screen overflow-hidden flex font-sans antialiased selection:bg-zinc-800">
+
+    <!-- Left Control Panel -->
+    <aside class="w-[340px] bg-[#1c1c1e]/80 backdrop-blur-3xl border-r border-white/10 flex flex-col h-full z-10 shrink-0">
+        <div class="p-6 pt-8">
+            <h1 class="text-xl font-semibold tracking-tight text-white flex items-center gap-2">
+                <i data-lucide="layers" class="w-5 h-5 text-zinc-400"></i>
+                Schematic
+            </h1>
+        </div>
+
+        <div class="p-6 pt-2 flex-1 overflow-y-auto space-y-8">
+            
+            <!-- Upload Section -->
+            <div class="space-y-4">
+                <div class="flex flex-col gap-3">
+                    <input type="file" id="fileUpload" accept="image/*" class="hidden" />
+                    <button id="uploadBtn" class="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 transition-colors duration-200 text-sm font-medium">
+                        <i data-lucide="image-plus" class="w-4 h-4"></i>
+                        <span>Choose Image...</span>
+                    </button>
+                    
+                    <button id="aiStyleBtn" class="w-full bg-white hover:bg-zinc-200 disabled:bg-[#2c2c2e] disabled:text-zinc-500 disabled:cursor-not-allowed text-black rounded-xl py-3 px-4 flex items-center justify-center gap-2 transition-all duration-200 text-sm font-semibold shadow-sm" disabled>
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Generate Schematic</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Adjustments Section -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-medium text-zinc-400">Adjustments</label>
+                    <button id="resetFiltersBtn" class="text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors" disabled>Reset</button>
+                </div>
+
+                <!-- Exposure -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-xs font-medium text-zinc-400">
+                        <span>Exposure</span>
+                        <span id="exposureVal">0</span>
+                    </div>
+                    <input type="range" id="exposure" min="-100" max="100" value="0" disabled>
+                </div>
+
+                <!-- Contrast -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-xs font-medium text-zinc-400">
+                        <span>Contrast</span>
+                        <span id="contrastVal">0</span>
+                    </div>
+                    <input type="range" id="contrast" min="-100" max="100" value="0" disabled>
+                </div>
+
+                <!-- Levels (Gamma) -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-xs font-medium text-zinc-400">
+                        <span>Levels</span>
+                        <span id="levelsVal">1.0</span>
+                    </div>
+                    <input type="range" id="levels" min="10" max="300" value="100" disabled>
+                </div>
+
+                <!-- Monochrome -->
+                <div class="flex items-center justify-between pt-2">
+                    <label class="text-sm font-medium text-zinc-200 cursor-pointer flex items-center gap-2" for="monochromeToggle">
+                        Monochrome
+                    </label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="monochromeToggle" class="sr-only peer ios-toggle" disabled>
+                        <div class="w-11 h-6 bg-[#39393d] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#34C759] shadow-inner"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 pt-4 pb-8 bg-[#1c1c1e]/80">
+            <button id="downloadBtn" class="w-full bg-[#0071e3] hover:bg-[#0077ED] disabled:bg-[#2c2c2e] disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-medium rounded-xl py-3 px-4 flex items-center justify-center gap-2 transition-colors duration-200 text-sm" disabled>
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Export</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Preview Canvas -->
+    <main class="flex-1 relative spotlight-bg flex items-center justify-center overflow-hidden">
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-zinc-500 pointer-events-none z-0">
+            <i data-lucide="image" class="w-12 h-12 mb-4 opacity-40 font-light"></i>
+            <p class="text-lg font-medium text-zinc-300 tracking-tight">No Image Selected</p>
+            <p class="text-sm mt-1 opacity-70">Choose an image to begin.</p>
+        </div>
+
+        <!-- Canvas Container -->
+        <div id="canvasContainer" class="relative w-full h-full flex items-center justify-center p-12 hidden opacity-0 transition-opacity duration-500">
+            <canvas id="previewCanvas" class="max-w-full max-h-full object-contain shadow-2xl rounded-sm"></canvas>
+        </div>
+
+        <!-- Apple HUD Loading Overlay -->
+        <div id="loadingOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-md flex flex-col items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-[#2c2c2e]/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl flex flex-col items-center border border-white/10">
+                <div class="loader w-10 h-10 mb-5"></div>
+                <p id="loadingTitle" class="text-white font-medium tracking-tight">Generating Schematic</p>
+                <p id="loadingDesc" class="text-xs text-zinc-400 mt-2 max-w-[200px] text-center">Processing textures and wireframes...</p>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="absolute bottom-10 left-1/2 -translate-x-1/2 bg-[#2c2c2e]/90 backdrop-blur-xl text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-400 z-50 font-medium text-sm">
+            <i data-lucide="info" class="w-4 h-4 text-zinc-400" id="toastIcon"></i>
+            <span id="toastMsg">Notification</span>
+        </div>
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // --- State Management ---
+        const state = {
+            sourceImage: null,      // Image object of original upload
+            sourceBase64: null,     // Base64 string for API
+            sourceMimeType: null,   // Mime type for API
+            activeImage: null,      // Image object currently being edited (either source or AI result)
+            filters: {
+                exposure: 0,        // -100 to 100
+                contrast: 0,        // -100 to 100
+                levels: 1.0,        // Gamma: 0.1 to 3.0 (stored as 10 to 300 from slider)
+                monochrome: false   // True/False
+            },
+            isProcessing: false
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            fileUpload: document.getElementById('fileUpload'),
+            uploadBtn: document.getElementById('uploadBtn'),
+            aiStyleBtn: document.getElementById('aiStyleBtn'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            resetFiltersBtn: document.getElementById('resetFiltersBtn'),
+            exposureSlider: document.getElementById('exposure'),
+            contrastSlider: document.getElementById('contrast'),
+            levelsSlider: document.getElementById('levels'),
+            monochromeToggle: document.getElementById('monochromeToggle'),
+            exposureVal: document.getElementById('exposureVal'),
+            contrastVal: document.getElementById('contrastVal'),
+            levelsVal: document.getElementById('levelsVal'),
+            canvas: document.getElementById('previewCanvas'),
+            ctx: document.getElementById('previewCanvas').getContext('2d', { willReadFrequently: true }),
+            emptyState: document.getElementById('emptyState'),
+            canvasContainer: document.getElementById('canvasContainer'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            loadingTitle: document.getElementById('loadingTitle'),
+            loadingDesc: document.getElementById('loadingDesc'),
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toastMsg')
+        };
+
+        // --- Utility Functions ---
+        
+        // Show/Hide Loading Overlay
+        function setLoading(isLoading) {
+            state.isProcessing = isLoading;
+            if (isLoading) {
+                els.loadingOverlay.classList.remove('hidden');
+                setTimeout(() => els.loadingOverlay.classList.remove('opacity-0'), 10);
+            } else {
+                els.loadingOverlay.classList.add('opacity-0');
+                setTimeout(() => els.loadingOverlay.classList.add('hidden'), 300);
+            }
+            toggleControls(!isLoading && state.activeImage !== null);
+        }
+
+        // Show Toast Message
+        function showToast(message, isError = true) {
+            els.toastMsg.textContent = message;
+            const icon = document.getElementById('toastIcon');
+            
+            if (isError) {
+                icon.setAttribute('data-lucide', 'alert-circle');
+                icon.className = 'w-4 h-4 text-red-500';
+            } else {
+                icon.setAttribute('data-lucide', 'check-circle-2');
+                icon.className = 'w-4 h-4 text-green-500';
+            }
+            lucide.createIcons();
+            
+            els.toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                els.toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4000);
+        }
+
+        // Toggle UI Control States
+        function toggleControls(enable) {
+            els.aiStyleBtn.disabled = !enable || state.isProcessing;
+            els.downloadBtn.disabled = !enable || state.isProcessing;
+            els.exposureSlider.disabled = !enable;
+            els.contrastSlider.disabled = !enable;
+            els.levelsSlider.disabled = !enable;
+            els.monochromeToggle.disabled = !enable;
+            els.resetFiltersBtn.disabled = !enable;
+        }
+
+        // --- Image Loading & Handling ---
+
+        els.uploadBtn.addEventListener('click', () => els.fileUpload.click());
+
+        els.fileUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Update state
+                    state.sourceImage = img;
+                    state.activeImage = img;
+                    state.sourceBase64 = event.target.result.split(',')[1];
+                    state.sourceMimeType = file.type;
+                    
+                    // Reset filters on new upload
+                    resetFilters();
+                    
+                    // UI Updates
+                    els.emptyState.classList.add('hidden');
+                    els.canvasContainer.classList.remove('hidden');
+                    setTimeout(() => els.canvasContainer.classList.remove('opacity-0'), 10);
+                    toggleControls(true);
+                    
+                    renderCanvas();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // --- Canvas Rendering & Filters ---
+
+        function renderCanvas() {
+            if (!state.activeImage) return;
+
+            // Set canvas dimensions to match image to preserve resolution for download
+            // (CSS handles the responsive scaling via object-contain)
+            els.canvas.width = state.activeImage.width;
+            els.canvas.height = state.activeImage.height;
+
+            // Draw base image
+            els.ctx.drawImage(state.activeImage, 0, 0);
+
+            // Get pixels for processing
+            const imageData = els.ctx.getImageData(0, 0, els.canvas.width, els.canvas.height);
+            const data = imageData.data;
+
+            // Pre-calculate filter values for performance
+            const exposureFactor = Math.pow(2, state.filters.exposure / 50); // Maps -100..100 to approx 0.25..4.0
+            const contrastLevel = state.filters.contrast; // -100 to 100
+            const contrastFactor = (259 * (contrastLevel + 255)) / (255 * (259 - contrastLevel));
+            const gamma = state.filters.levels; // 0.1 to 3.0
+            const gammaCorrection = 1 / gamma;
+
+            // Apply pixel-level manipulation
+            for (let i = 0; i < data.length; i += 4) {
+                // 1. Exposure
+                let r = data[i] * exposureFactor;
+                let g = data[i + 1] * exposureFactor;
+                let b = data[i + 2] * exposureFactor;
+
+                // 2. Contrast
+                r = contrastFactor * (r - 128) + 128;
+                g = contrastFactor * (g - 128) + 128;
+                b = contrastFactor * (b - 128) + 128;
+
+                // 3. Levels (Gamma Correction)
+                r = 255 * Math.pow((r / 255), gammaCorrection);
+                g = 255 * Math.pow((g / 255), gammaCorrection);
+                b = 255 * Math.pow((b / 255), gammaCorrection);
+
+                // Clamp values between 0 and 255
+                r = Math.max(0, Math.min(255, r));
+                g = Math.max(0, Math.min(255, g));
+                b = Math.max(0, Math.min(255, b));
+
+                // 4. Monochrome
+                if (state.filters.monochrome) {
+                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    r = luminance;
+                    g = luminance;
+                    b = luminance;
+                }
+
+                data[i] = r;
+                data[i + 1] = g;
+                data[i + 2] = b;
+            }
+
+            els.ctx.putImageData(imageData, 0, 0);
+        }
+
+        // --- Filter Event Listeners ---
+
+        function updateFilters() {
+            state.filters.exposure = parseInt(els.exposureSlider.value);
+            state.filters.contrast = parseInt(els.contrastSlider.value);
+            state.filters.levels = parseInt(els.levelsSlider.value) / 100; // Convert 10..300 back to 0.1..3.0
+            state.filters.monochrome = els.monochromeToggle.checked;
+
+            els.exposureVal.textContent = state.filters.exposure;
+            els.contrastVal.textContent = state.filters.contrast;
+            els.levelsVal.textContent = state.filters.levels.toFixed(1);
+
+            // Re-render canvas with new filters
+            // Using requestAnimationFrame prevents UI freezing if sliding rapidly on huge images
+            requestAnimationFrame(renderCanvas);
+        }
+
+        function resetFilters() {
+            els.exposureSlider.value = 0;
+            els.contrastSlider.value = 0;
+            els.levelsSlider.value = 100;
+            els.monochromeToggle.checked = false;
+            updateFilters();
+        }
+
+        els.exposureSlider.addEventListener('input', updateFilters);
+        els.contrastSlider.addEventListener('input', updateFilters);
+        els.levelsSlider.addEventListener('input', updateFilters);
+        els.monochromeToggle.addEventListener('change', updateFilters);
+        els.resetFiltersBtn.addEventListener('click', resetFilters);
+
+        // --- API Integration (Gemini 2.5 Flash Image Preview) ---
+
+        // Helper for exponential backoff retries
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                         const errText = await response.text();
+                         throw new Error(`HTTP ${response.status}: ${errText}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        // Generalized AI generation logic
+        async function runAIGeneration(promptText, titleText, descText) {
+            if (!state.sourceBase64) return;
+            
+            els.loadingTitle.textContent = titleText;
+            els.loadingDesc.textContent = descText;
+            setLoading(true);
+            const apiKey = ""; // Provided by execution environment
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: promptText },
+                        {
+                            inlineData: {
+                                mimeType: state.sourceMimeType,
+                                data: state.sourceBase64
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ["TEXT", "IMAGE"]
+                }
+            };
+
+            try {
+                const response = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                // Extract the image from the multi-modal response
+                const b64Data = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                
+                if (b64Data) {
+                    const newImg = new Image();
+                    newImg.onload = () => {
+                        state.activeImage = newImg;
+                        // Keep current filter values, just apply them to the new AI image
+                        renderCanvas();
+                        setLoading(false);
+                        showToast("AI processing applied successfully!", false);
+                    };
+                    newImg.src = `data:image/png;base64,${b64Data}`;
+                } else {
+                    throw new Error("No image data returned from AI.");
+                }
+            } catch (error) {
+                console.error("AI Generation Error:", error);
+                showToast("Failed to process image. Please try again.");
+                setLoading(false);
+            }
+        }
+
+        els.aiStyleBtn.addEventListener('click', () => {
+            const prompt = "Apply a strict style transfer to this image. DO NOT change the composition, subject matter, layout, or underlying geometry. ONLY alter the visual appearance (color, linework, texture) to match a dark, highly precise technical schematic style. Use a dark, heavily textured, grainy background (like dark asphalt or stippled paper) with precise, fine white and light-grey wireframe linework. Incorporate atmospheric stippled shading, dot-matrix textures, and minimal data overlays. Make it look like a highly precise, monochromatic architectural perspective study or dark technical blueprint. Preserve the exact structure of the original image without exploding or adding new components.";
+            runAIGeneration(prompt, "Generating Schematic", "Analyzing textures and wireframe linework.");
+        });
+
+        // --- Export Feature ---
+
+        els.downloadBtn.addEventListener('click', () => {
+            if (!state.activeImage) return;
+            
+            // Generate full-quality data URL from the canvas
+            const dataUrl = els.canvas.toDataURL('image/png');
+            
+            // Create a temporary link element to trigger the download
+            const link = document.createElement('a');
+            link.download = `schematic-edited-${Date.now()}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+    </script>
+</body>
+</html>
